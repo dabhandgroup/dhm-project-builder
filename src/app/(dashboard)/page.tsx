@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,19 +13,12 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Plus, FolderKanban, DollarSign, Users, Gauge } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { projectStatuses } from "@/constants/project-statuses";
+import { mockProjects, mockClients } from "@/lib/mock-data";
 import type { ProjectStatus } from "@/types/database";
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-
-  // Fetch stats
-  const [projectsResult, clientsResult] = await Promise.all([
-    supabase.from("projects").select("id, title, status, domain_name, recurring_revenue, one_off_revenue, created_at").order("created_at", { ascending: false }),
-    supabase.from("clients").select("id", { count: "exact", head: true }),
-  ]);
-
-  const projects = projectsResult.data ?? [];
-  const clientCount = clientsResult.count ?? 0;
+export default function DashboardPage() {
+  const projects = mockProjects;
+  const clientCount = mockClients.length;
 
   const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "draft");
   const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);

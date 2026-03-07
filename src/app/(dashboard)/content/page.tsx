@@ -1,21 +1,16 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PenTool, Plus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { mockContentPlans, getProjectById } from "@/lib/mock-data";
 
-export default async function ContentPage() {
-  const supabase = await createClient();
-
-  const { data: contentPlans } = await supabase
-    .from("content_plans")
-    .select("*, projects(title)")
-    .order("created_at", { ascending: false });
-
-  const plans = contentPlans ?? [];
+export default function ContentPage() {
+  const plans = mockContentPlans;
 
   return (
     <div className="space-y-6">
@@ -38,7 +33,7 @@ export default async function ContentPage() {
       ) : (
         <div className="space-y-3">
           {plans.map((plan) => {
-            const project = plan.projects as { title: string } | null;
+            const project = getProjectById(plan.project_id);
             return (
               <Link key={plan.id} href={`/content/${plan.project_id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">

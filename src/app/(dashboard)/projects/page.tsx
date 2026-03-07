@@ -1,33 +1,27 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Plus, FolderKanban } from "lucide-react";
 import { ProjectsViewToggle } from "./view-toggle";
+import { mockProjects, getClientName } from "@/lib/mock-data";
 import type { ProjectStatus } from "@/types/database";
 
-export default async function ProjectsPage() {
-  const supabase = await createClient();
-
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, title, domain_name, status, one_off_revenue, recurring_revenue, ai_model, preview_url, created_at, client_id, clients(name)")
-    .neq("status", "draft")
-    .order("created_at", { ascending: false });
-
-  const formattedProjects = (projects ?? []).map((p) => ({
-    id: p.id,
-    title: p.title,
-    domain_name: p.domain_name,
-    status: p.status as ProjectStatus,
-    one_off_revenue: p.one_off_revenue,
-    recurring_revenue: p.recurring_revenue,
-    ai_model: p.ai_model,
-    preview_url: p.preview_url,
-    created_at: p.created_at,
-    clientName: ((p.clients as { name: string }[])?.[0])?.name ?? null,
-  }));
+export default function ProjectsPage() {
+  const formattedProjects = mockProjects
+    .filter((p) => p.status !== "draft")
+    .map((p) => ({
+      id: p.id,
+      title: p.title,
+      domain_name: p.domain_name,
+      status: p.status as ProjectStatus,
+      one_off_revenue: p.one_off_revenue,
+      recurring_revenue: p.recurring_revenue,
+      ai_model: p.ai_model,
+      preview_url: p.preview_url,
+      created_at: p.created_at,
+      clientName: getClientName(p.client_id),
+    }));
 
   return (
     <div className="space-y-6">

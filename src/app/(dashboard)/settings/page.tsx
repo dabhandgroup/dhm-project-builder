@@ -6,24 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "@/components/ui/toast";
 import { Loader2, Save } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user, profile, isLoading } = useUser();
-  const [fullName, setFullName] = useState("");
+  const { user, profile } = useUser();
+  const [fullName, setFullName] = useState(profile?.full_name ?? "");
   const [saving, setSaving] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
-
-  // Init name when profile loads
-  useState(() => {
-    if (profile?.full_name) setFullName(profile.full_name);
-  });
 
   const initials = (profile?.full_name || fullName || "DH")
     .split(" ")
@@ -33,19 +27,10 @@ export default function SettingsPage() {
     .slice(0, 2);
 
   async function handleSaveProfile() {
-    if (!user) return;
     setSaving(true);
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("profiles")
-      .update({ full_name: fullName })
-      .eq("id", user.id);
-
-    if (error) {
-      toast({ title: "Failed to update profile", variant: "destructive" });
-    } else {
-      toast({ title: "Profile updated" });
-    }
+    // Mock: simulate save
+    await new Promise((r) => setTimeout(r, 500));
+    toast({ title: "Profile updated" });
     setSaving(false);
   }
 
@@ -60,25 +45,12 @@ export default function SettingsPage() {
     }
 
     setChangingPassword(true);
-    const supabase = createClient();
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-
-    if (error) {
-      toast({ title: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Password updated" });
-      setNewPassword("");
-      setConfirmPassword("");
-    }
+    // Mock: simulate password change
+    await new Promise((r) => setTimeout(r, 500));
+    toast({ title: "Password updated" });
+    setNewPassword("");
+    setConfirmPassword("");
     setChangingPassword(false);
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
   }
 
   return (
@@ -93,7 +65,6 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
               <AvatarFallback className="text-lg">{initials}</AvatarFallback>
             </Avatar>
             <div>
@@ -106,7 +77,7 @@ export default function SettingsPage() {
             <Label htmlFor="fullName">Full Name</Label>
             <Input
               id="fullName"
-              value={fullName || profile?.full_name || ""}
+              value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Your full name"
             />

@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Plus, Mail, Phone, MapPin } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { projectStatuses } from "@/constants/project-statuses";
+import { getClientById, getClientProjects } from "@/lib/mock-data";
 import type { ProjectStatus } from "@/types/database";
 
 export default async function ClientDetailPage({
@@ -16,24 +16,13 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-
-  const { data: client } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const client = getClientById(id);
 
   if (!client) notFound();
 
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, title, status, domain_name, recurring_revenue, one_off_revenue, created_at")
-    .eq("client_id", id)
-    .order("created_at", { ascending: false });
-
-  const totalMRR = (projects ?? []).reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
-  const totalOneOff = (projects ?? []).reduce((sum, p) => sum + (p.one_off_revenue ?? 0), 0);
+  const projects = getClientProjects(id);
+  const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
+  const totalOneOff = projects.reduce((sum, p) => sum + (p.one_off_revenue ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -51,13 +40,13 @@ export default async function ClientDetailPage({
           {/* Projects */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Projects ({(projects ?? []).length})</CardTitle>
+              <CardTitle className="text-base">Projects ({projects.length})</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {(projects ?? []).length === 0 ? (
+              {projects.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No projects yet.</p>
               ) : (
-                (projects ?? []).map((p) => {
+                projects.map((p) => {
                   const config = projectStatuses[p.status as ProjectStatus];
                   return (
                     <Link

@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -6,18 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { mockVoiceMemos, getProjectById } from "@/lib/mock-data";
 
-export default async function VoiceMemosPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  const { data: memos } = await supabase
-    .from("voice_memos")
-    .select("*, projects(title)")
-    .eq("created_by", user?.id ?? "")
-    .order("created_at", { ascending: false });
-
-  const allMemos = memos ?? [];
+export default function VoiceMemosPage() {
+  const allMemos = mockVoiceMemos;
 
   return (
     <div className="space-y-6">
@@ -35,7 +26,7 @@ export default async function VoiceMemosPage() {
       ) : (
         <div className="space-y-3">
           {allMemos.map((memo) => {
-            const project = memo.projects as { title: string } | null;
+            const project = memo.project_id ? getProjectById(memo.project_id) : null;
             return (
               <Card key={memo.id}>
                 <CardContent className="p-4">

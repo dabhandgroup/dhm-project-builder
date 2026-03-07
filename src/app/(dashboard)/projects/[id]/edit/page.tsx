@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EditProjectFormWrapper } from "./form-wrapper";
+import { getProjectById, getClientById } from "@/lib/mock-data";
 
 export default async function EditProjectPage({
   params,
@@ -9,29 +9,12 @@ export default async function EditProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-
-  const { data: project } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const project = getProjectById(id);
 
   if (!project) notFound();
 
-  const { data: client } = project.client_id
-    ? await supabase
-        .from("clients")
-        .select("name")
-        .eq("id", project.client_id)
-        .single()
-    : { data: null };
-
-  const contactInfo = project.contact_info as {
-    phone?: string;
-    email?: string;
-    address?: string;
-  } | null;
+  const client = project.client_id ? getClientById(project.client_id) : null;
+  const contactInfo = project.contact_info;
 
   const initialData = {
     title: project.title,

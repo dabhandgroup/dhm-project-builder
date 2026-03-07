@@ -1,61 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/types/user";
-import type { User } from "@supabase/supabase-js";
+import { mockProfiles } from "@/lib/mock-data";
+
+interface MockProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  role: "admin" | "member";
+  must_change_password: boolean;
+  created_at: string;
+}
 
 interface UseUserReturn {
-  user: User | null;
-  profile: Profile | null;
+  user: { id: string; email: string } | null;
+  profile: MockProfile | null;
   isAdmin: boolean;
   isLoading: boolean;
 }
 
 export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-        setProfile(profile);
-      }
-
-      setIsLoading(false);
-    }
-
-    loadUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setProfile(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
+  const mock = mockProfiles[0];
 
   return {
-    user,
-    profile,
-    isAdmin: profile?.role === "admin",
-    isLoading,
+    user: { id: mock.id, email: mock.email },
+    profile: {
+      id: mock.id,
+      full_name: mock.full_name,
+      avatar_url: mock.avatar_url,
+      role: mock.role,
+      must_change_password: mock.must_change_password,
+      created_at: mock.created_at,
+    },
+    isAdmin: mock.role === "admin",
+    isLoading: false,
   };
 }

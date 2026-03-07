@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
@@ -9,16 +8,10 @@ import {
 import { formatCurrency } from "@/lib/utils";
 import { DollarSign, TrendingUp, BarChart3, FolderKanban } from "lucide-react";
 import { FinancialTable } from "./financial-table";
+import { mockProjects, getClientName } from "@/lib/mock-data";
 
-export default async function FinancialsPage() {
-  const supabase = await createClient();
-
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, title, status, one_off_revenue, recurring_revenue, created_at, clients(name)")
-    .order("created_at", { ascending: false });
-
-  const allProjects = projects ?? [];
+export default function FinancialsPage() {
+  const allProjects = mockProjects;
   const totalOneOff = allProjects.reduce((s, p) => s + (p.one_off_revenue ?? 0), 0);
   const totalMRR = allProjects.reduce((s, p) => s + (p.recurring_revenue ?? 0), 0);
   const totalARR = totalMRR * 12;
@@ -32,7 +25,7 @@ export default async function FinancialsPage() {
     one_off_revenue: p.one_off_revenue,
     recurring_revenue: p.recurring_revenue,
     created_at: p.created_at,
-    clientName: ((p.clients as { name: string }[])?.[0])?.name ?? null,
+    clientName: getClientName(p.client_id),
   }));
 
   return (

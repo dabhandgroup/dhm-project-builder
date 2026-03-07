@@ -1,21 +1,14 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Users, Mail, Phone, FolderKanban } from "lucide-react";
+import { mockClients, getClientProjects } from "@/lib/mock-data";
 
-export default async function ClientsPage() {
-  const supabase = await createClient();
-
-  const { data: clients } = await supabase
-    .from("clients")
-    .select("*, projects(id, recurring_revenue)")
-    .order("name");
-
-  const formattedClients = (clients ?? []).map((c) => {
-    const projects = (c.projects ?? []) as { id: string; recurring_revenue: number }[];
+export default function ClientsPage() {
+  const formattedClients = mockClients.map((c) => {
+    const projects = getClientProjects(c.id);
     return {
       ...c,
       projectCount: projects.length,

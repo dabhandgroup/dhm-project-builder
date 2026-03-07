@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
+import { getAuditById } from "@/lib/mock-data";
 
 export default async function AuditDetailPage({
   params,
@@ -11,18 +11,12 @@ export default async function AuditDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-
-  const { data: audit } = await supabase
-    .from("audits")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const audit = getAuditById(id);
 
   if (!audit) notFound();
 
-  const pagespeedBefore = audit.pagespeed_before as Record<string, number> | null;
-  const pagespeedAfter = audit.pagespeed_after as Record<string, number> | null;
+  const pagespeedBefore = audit.pagespeed_before;
+  const pagespeedAfter = audit.pagespeed_after;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -104,7 +98,7 @@ export default async function AuditDetailPage({
 
       <p className="text-xs text-muted-foreground text-center">
         Audit created {formatDate(audit.created_at)}
-        {audit.completed_at && ` &middot; Completed ${formatDate(audit.completed_at)}`}
+        {audit.completed_at && ` · Completed ${formatDate(audit.completed_at)}`}
       </p>
     </div>
   );

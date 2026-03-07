@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FileText } from "lucide-react";
+import { getContentPlanByProjectId, getProjectById } from "@/lib/mock-data";
+
 interface MonthPlan {
   month: string;
   topic: string;
@@ -18,18 +19,12 @@ export default async function ContentPlanDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = await params;
-  const supabase = await createClient();
-
-  const { data: plan } = await supabase
-    .from("content_plans")
-    .select("*, projects(title, target_locations)")
-    .eq("project_id", projectId)
-    .single();
+  const plan = getContentPlanByProjectId(projectId);
 
   if (!plan) notFound();
 
-  const project = plan.projects as { title: string; target_locations: string[] | null } | null;
-  const planData = (plan.plan_data as unknown as MonthPlan[]) ?? [];
+  const project = getProjectById(plan.project_id);
+  const planData = (plan.plan_data as MonthPlan[]) ?? [];
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
