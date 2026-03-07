@@ -1,0 +1,155 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Plus, FolderKanban, DollarSign, Users, Gauge } from "lucide-react";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import { projectStatuses } from "@/constants/project-statuses";
+import type { ProjectStatus } from "@/types/database";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+
+  // Fetch stats
+  const [projectsResult, clientsResult] = await Promise.all([
+    supabase.from("projects").select("id, title, status, domain_name, recurring_revenue, one_off_revenue, created_at").order("created_at", { ascending: false }),
+    supabase.from("clients").select("id", { count: "exact", head: true }),
+  ]);
+
+  const projects = projectsResult.data ?? [];
+  const clientCount = clientsResult.count ?? 0;
+
+  const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "draft");
+  const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
+  const recentProjects = projects.slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="Dashboard" description="Welcome to DHM Project Builder">
+        <Link href="/projects/new">
+          <Button>
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </Link>
+      </PageHeader>
+
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+            <FolderKanban className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{projects.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+            <Gauge className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeProjects.length}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalMRR)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Clients</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{clientCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <Link href="/projects/new">
+          <Button variant="outline" size="sm">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </Link>
+        <Link href="/audit">
+          <Button variant="outline" size="sm">
+            <Gauge className="h-4 w-4" />
+            Run Audit
+          </Button>
+        </Link>
+      </div>
+
+      {/* Recent Projects */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Projects</CardTitle>
+          <CardDescription>Your latest projects</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {recentProjects.length === 0 ? (
+            <EmptyState
+              icon={FolderKanban}
+              title="No projects yet"
+              description="Create your first project to get started."
+            >
+              <Link href="/projects/new">
+                <Button size="sm">
+                  <Plus className="h-4 w-4" />
+                  New Project
+                </Button>
+              </Link>
+            </EmptyState>
+          ) : (
+            <div className="space-y-3">
+              {recentProjects.map((project) => {
+                const statusConfig = projectStatuses[project.status as ProjectStatus];
+                return (
+                  <Link
+                    key={project.id}
+                    href={`/projects/${project.id}`}
+                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">
+                        {project.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {project.domain_name || "No domain"} &middot;{" "}
+                        {formatDate(project.created_at)}
+                      </p>
+                    </div>
+                    <Badge
+                      className={`${statusConfig.bgColor} ${statusConfig.textColor} border-0 shrink-0 ml-2`}
+                    >
+                      {statusConfig.label}
+                    </Badge>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
