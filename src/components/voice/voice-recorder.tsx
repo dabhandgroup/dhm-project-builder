@@ -64,7 +64,8 @@ export function VoiceRecorder() {
               <button
                 type="button"
                 onClick={startRecording}
-                className="flex h-20 w-20 items-center justify-center rounded-full bg-red-500 text-white shadow-lg hover:bg-red-600 transition-all hover:scale-105 active:scale-95"
+                className="flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg transition-all hover:scale-105 active:scale-95"
+                style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}
               >
                 <Mic className="h-8 w-8" />
               </button>
@@ -78,20 +79,21 @@ export function VoiceRecorder() {
             <>
               <div className="relative">
                 {state === "recording" && (
-                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                  <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(54, 167, 245, 0.2)" }} />
                 )}
                 <button
                   type="button"
                   onClick={stopRecording}
-                  className="relative flex h-20 w-20 items-center justify-center rounded-full bg-red-600 text-white shadow-lg hover:bg-red-700 transition-all"
+                  className="relative flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg transition-all"
+                  style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}
                 >
                   <Square className="h-6 w-6" />
                 </button>
               </div>
               <div className="flex items-center gap-3">
                 <Badge
-                  variant={state === "paused" ? "secondary" : "destructive"}
-                  className={`gap-1.5 ${state === "recording" ? "animate-pulse" : ""}`}
+                  variant="secondary"
+                  className={`gap-1.5 ${state === "recording" ? "animate-pulse text-[#36A7F5]" : ""}`}
                 >
                   <span className={`h-2 w-2 rounded-full ${state === "paused" ? "bg-muted-foreground" : "bg-white"}`} />
                   {state === "paused" ? "Paused" : "Recording"}

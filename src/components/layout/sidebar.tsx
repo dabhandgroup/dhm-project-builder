@@ -48,19 +48,19 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
-        <Link href="/" className="flex items-center gap-2 font-bold">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://www.dabhandmarketing.com/assets/images/61a448de805ef0ab7c7c6309_5fd49badb4d94e90bf469db6_dhm-logo-4.svg"
-            alt="DHM"
-            className="h-12 w-12 shrink-0 rounded-lg object-contain"
-          />
-          {!collapsed && (
-            <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
-              dab hand marketing
-            </span>
-          )}
+      <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "justify-center px-4")}>
+        <Link href="/" className="flex items-center font-bold">
+          <svg
+            viewBox="0 0 288.1 450.3"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-10 w-10 shrink-0"
+            aria-label="DHM"
+          >
+            <path
+              fill="currentColor"
+              d="M282.6,138.1l-4.1-47.9c0,0-11.1-0.8-18.3,6.3c-7.5,7.5-3.1,38.7-3.1,38.7l-7.2,34l-3.6,4.4l3-18.7l5.3-62.6l-3.5-63.5c0,0-17.6,0.1-26.7,14c-8.6,13.1-1.2,51.1-1.2,51.1l-5.8,25.5l-12.8-51.7L181.8,6.1c0,0-17.2,7.2-24.3,19.1c-7.1,11.8,10.9,52.9,10.9,52.9l7.3,60.1l-1.1,9.2l-17.3-13.7l-58.1-12.3l-59,20.5c0,0,9.2,16.1,20,24.7c10.8,8.6,45.8-1.8,45.8-1.8l32.6,17.4l15.7,52l-32.2,25.4l-48.6-11.2L55,219.8c0,0,1-33.8-4.3-45.9c-5.3-12-32.1-16.9-32.1-16.9L6.3,257.4l71.9,122.5l0.6,28.4L207,443.9l-3-60.1c0,0,40.6-119.9,40.8-132.3c0-1.5-0.1-3.4-0.2-5.6l34.4-65.1L282.6,138.1z"
+            />
+          </svg>
         </Link>
       </div>
 

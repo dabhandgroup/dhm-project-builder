@@ -88,6 +88,8 @@ export default function ContentPlanDetailPage({
   const [editingValue, setEditingValue] = useState("");
   const [newTitle, setNewTitle] = useState<Record<number, string>>({});
   const [newTitleType, setNewTitleType] = useState<Record<number, ContentType>>({});
+  const [newSuburb, setNewSuburb] = useState<Record<number, string>>({});
+  const [suburbs, setSuburbs] = useState<Record<string, string>>({});
   const [contentStatus, setContentStatus] = useState<Record<number, ContentStatus>>({});
   const [wordCounts, setWordCounts] = useState<Record<string, number>>({});
   const [deleteTarget, setDeleteTarget] = useState<{ month: number; index: number } | null>(null);
@@ -152,6 +154,7 @@ export default function ContentPlanDetailPage({
     const title = newTitle[monthIndex]?.trim();
     if (!title) return;
     const type = newTitleType[monthIndex] ?? "blog";
+    const suburb = newSuburb[monthIndex]?.trim() ?? "";
     const newIdx = (blogTitles[monthIndex] || []).length;
     setBlogTitles((prev) => ({
       ...prev,
@@ -160,7 +163,11 @@ export default function ContentPlanDetailPage({
     const key = getContentTypeKey(monthIndex, newIdx);
     setContentTypes((prev) => ({ ...prev, [key]: type }));
     setWordCounts((prev) => ({ ...prev, [key]: defaultWordCounts[type] }));
+    if (type === "locational_page" && suburb) {
+      setSuburbs((prev) => ({ ...prev, [key]: suburb }));
+    }
     setNewTitle((prev) => ({ ...prev, [monthIndex]: "" }));
+    setNewSuburb((prev) => ({ ...prev, [monthIndex]: "" }));
   }
 
   function removeTitle(monthIndex: number, titleIndex: number) {
@@ -415,10 +422,15 @@ export default function ContentPlanDetailPage({
                                       ) : (
                                         <span className="text-sm">{title}</span>
                                       )}
-                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                           {contentTypeLabels[type]}
                                         </Badge>
+                                        {suburbs[getContentTypeKey(i, j)] && (
+                                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                            {suburbs[getContentTypeKey(i, j)]}
+                                          </Badge>
+                                        )}
                                         <span className="text-[10px] text-muted-foreground">
                                           {getWordCount(i, j).toLocaleString()} words
                                         </span>
@@ -483,6 +495,15 @@ export default function ContentPlanDetailPage({
                             <Plus className="h-3 w-3" />
                           </Button>
                         </div>
+                        {(newTitleType[i] ?? "blog") === "locational_page" && (
+                          <input
+                            type="text"
+                            value={newSuburb[i] || ""}
+                            onChange={(e) => setNewSuburb((prev) => ({ ...prev, [i]: e.target.value }))}
+                            placeholder="Target suburb e.g. Richmond, Brunswick, Bacchus Marsh..."
+                            className="w-full rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring h-9 sm:h-8"
+                          />
+                        )}
                         <p className="text-[10px] text-muted-foreground">
                           Default word count: {defaultWordCounts[newTitleType[i] ?? "blog"].toLocaleString()} words
                           {(newTitleType[i] ?? "blog") === "locational_page" && (
