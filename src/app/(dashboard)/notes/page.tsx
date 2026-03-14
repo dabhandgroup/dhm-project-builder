@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import {
   Plus,
@@ -15,7 +14,6 @@ import {
   Check,
   Trash2,
   StickyNote,
-  FolderKanban,
 } from "lucide-react";
 import { mockProjects } from "@/lib/mock-data";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
@@ -184,7 +182,6 @@ export default function NotesPage() {
       ) : (
         <div className="space-y-3">
           {filteredNotes.map((note) => {
-            const projectTitle = getProjectTitle(note.projectId);
             const isCopied = copiedId === note.id;
 
             return (
@@ -194,12 +191,6 @@ export default function NotesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-sm font-semibold truncate">{note.title}</h3>
-                        {projectTitle && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0 gap-1">
-                            <FolderKanban className="h-2.5 w-2.5" />
-                            {projectTitle}
-                          </Badge>
-                        )}
                       </div>
                       <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                         {note.content}

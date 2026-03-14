@@ -37,6 +37,13 @@ export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
     textColor: "text-orange-700",
     borderColor: "border-orange-300",
   },
+  awaiting_payment: {
+    label: "Awaiting Payment",
+    color: "text-purple-500",
+    bgColor: "bg-purple-100",
+    textColor: "text-purple-700",
+    borderColor: "border-purple-300",
+  },
   complete: {
     label: "Complete",
     color: "text-green-500",
@@ -51,5 +58,6 @@ export const kanbanStatuses: ProjectStatus[] = [
   "initial_draft",
   "awaiting_feedback",
   "revisions",
+  "awaiting_payment",
   "complete",
 ];

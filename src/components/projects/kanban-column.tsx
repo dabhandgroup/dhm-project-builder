@@ -1,7 +1,7 @@
 "use client";
 
 import { ProjectCard } from "./project-card";
-import { projectStatuses, kanbanStatuses } from "@/constants/project-statuses";
+import { projectStatuses } from "@/constants/project-statuses";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types/database";
 
@@ -17,10 +17,9 @@ interface KanbanColumnProps {
     preview_url: string | null;
     clientName?: string | null;
   }[];
-  onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
-export function KanbanColumn({ status, projects, onStatusChange }: KanbanColumnProps) {
+export function KanbanColumn({ status, projects }: KanbanColumnProps) {
   const config = projectStatuses[status];
 
   return (
@@ -54,8 +53,6 @@ export function KanbanColumn({ status, projects, onStatusChange }: KanbanColumnP
           <ProjectCard
             key={project.id}
             {...project}
-            availableStatuses={kanbanStatuses}
-            onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)}
           />
         ))}
 
