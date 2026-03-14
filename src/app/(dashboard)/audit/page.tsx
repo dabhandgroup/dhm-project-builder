@@ -29,20 +29,20 @@ export default function AuditPage() {
               <Link
                 key={audit.id}
                 href={`/audit/${audit.id}`}
-                className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent/50 transition-colors"
+                className="flex flex-col gap-2 rounded-lg border p-3 hover:bg-accent/50 transition-colors"
               >
-                <div>
-                  <p className="text-sm font-medium">{audit.current_url}</p>
-                  <p className="text-xs text-muted-foreground">
-                    vs {audit.new_url} &middot; {formatDate(audit.created_at)}
-                  </p>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium break-all min-w-0">{audit.current_url}</p>
+                  <Badge
+                    variant={audit.status === "complete" ? "default" : "secondary"}
+                    className="text-xs shrink-0"
+                  >
+                    {audit.status}
+                  </Badge>
                 </div>
-                <Badge
-                  variant={audit.status === "complete" ? "default" : "secondary"}
-                  className="text-xs"
-                >
-                  {audit.status}
-                </Badge>
+                <p className="text-xs text-muted-foreground break-all">
+                  vs {audit.new_url} &middot; {formatDate(audit.created_at)}
+                </p>
               </Link>
             ))}
           </CardContent>

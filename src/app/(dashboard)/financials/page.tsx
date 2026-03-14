@@ -127,13 +127,13 @@ export default function FinancialsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Currency tabs */}
-        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto touch-manipulation">
+        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto">
           {currencies.map((c) => (
             <button
               key={c.code}
               type="button"
-              onClick={() => setSelectedCurrency(c.code)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 touch-manipulation ${
+              onPointerDown={(e) => { e.preventDefault(); setSelectedCurrency(c.code); }}
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 select-none ${
                 selectedCurrency === c.code ? "bg-background shadow-sm" : "active:bg-background/50"
               }`}
             >
@@ -144,17 +144,17 @@ export default function FinancialsPage() {
                 alt={`${c.label} flag`}
                 className="h-3 w-4 object-cover rounded-[2px] pointer-events-none"
               />
-              {c.code}
+              <span className="pointer-events-none">{c.code}</span>
             </button>
           ))}
           <button
             type="button"
-            onClick={() => setSelectedCurrency("ALL")}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors shrink-0 touch-manipulation ${
+            onPointerDown={(e) => { e.preventDefault(); setSelectedCurrency("ALL"); }}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors shrink-0 select-none ${
               selectedCurrency === "ALL" ? "bg-background shadow-sm" : "active:bg-background/50"
             }`}
           >
-            All
+            <span className="pointer-events-none">All</span>
           </button>
         </div>
 

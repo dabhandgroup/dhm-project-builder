@@ -70,17 +70,17 @@ function DialogContent({
         className="fixed inset-0 bg-black/80 animate-in fade-in-0"
         onClick={() => setOpen(false)}
       />
-      <div className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2">
+      <div className="fixed inset-x-4 sm:inset-x-0 top-1/2 sm:left-1/2 z-50 -translate-y-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md mx-auto">
         <div
           className={cn(
-            "w-full max-w-lg rounded-lg border bg-background p-6 shadow-lg space-y-4",
+            "w-full rounded-2xl border bg-background p-6 shadow-2xl space-y-5",
             className
           )}
         >
           {children}
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
+            className="absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent"
             onClick={() => setOpen(false)}
           >
             <X className="h-4 w-4" />
@@ -141,7 +141,7 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:gap-3",
+        "flex gap-3 pt-2",
         className
       )}
       {...props}

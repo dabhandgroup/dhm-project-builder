@@ -169,23 +169,13 @@ export function ProjectForm({
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Project Title</Label>
-            <div className="flex items-center gap-1">
-              <Input
-                id="title"
-                value={form.title}
-                onChange={(e) => updateField("title", e.target.value)}
-                placeholder="e.g. Nationwide Towing Website"
-                required
-                className="flex-1"
-              />
-              <MicButton
-                onTranscription={(text) =>
-                  updateField("title", form.title ? `${form.title} ${text}` : text)
-                }
-                fieldName="title"
-                projectId={projectId}
-              />
-            </div>
+            <Input
+              id="title"
+              value={form.title}
+              onChange={(e) => updateField("title", e.target.value)}
+              placeholder="e.g. Nationwide Towing Website"
+              required
+            />
           </div>
 
           {/* Domain */}
@@ -691,11 +681,14 @@ export function ProjectForm({
                 <button
                   key={c.code}
                   type="button"
-                  onClick={() => updateField("currency", c.code)}
-                  className={`rounded-lg border-2 p-3 text-center transition-all ${
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    updateField("currency", c.code);
+                  }}
+                  className={`rounded-lg border-2 p-3 text-center transition-colors select-none ${
                     form.currency === c.code
                       ? "border-primary bg-primary/5"
-                      : "border-muted hover:border-muted-foreground/30"
+                      : "border-muted active:bg-accent"
                   }`}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -703,10 +696,10 @@ export function ProjectForm({
                     src={`https://flagcdn.com/w40/${c.flag}.png`}
                     srcSet={`https://flagcdn.com/w80/${c.flag}.png 2x`}
                     alt={`${c.desc} flag`}
-                    className="h-5 w-7 object-cover rounded-sm mx-auto mb-1.5"
+                    className="h-5 w-7 object-cover rounded-sm mx-auto mb-1.5 pointer-events-none"
                   />
-                  <p className="text-sm font-semibold">{c.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{c.desc}</p>
+                  <p className="text-sm font-semibold pointer-events-none">{c.label}</p>
+                  <p className="text-[10px] text-muted-foreground pointer-events-none">{c.desc}</p>
                 </button>
               ))}
             </div>

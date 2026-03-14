@@ -287,19 +287,24 @@ export function Topbar() {
 
       {/* Sign out confirmation dialog */}
       <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign out</DialogTitle>
+        <DialogContent className="text-center">
+          <DialogHeader className="text-center sm:text-center">
+            <DialogTitle className="text-lg">Sign out</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to sign out of your account?
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSignOutOpen(false)}>
+            <Button
+              variant="outline"
+              className="flex-1 h-11"
+              onClick={() => setSignOutOpen(false)}
+            >
               Cancel
             </Button>
             <Button
               variant="destructive"
+              className="flex-1 h-11"
               onClick={() => {
                 setSignOutOpen(false);
                 window.location.href = "/login";

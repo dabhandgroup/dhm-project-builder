@@ -64,8 +64,8 @@ function ComparisonRow({ metric }: { metric: MetricRow }) {
 
   return (
     <div className="border-b last:border-0 py-3.5 px-1">
-      <div className="flex items-start justify-between gap-4 mb-1.5">
-        <span className="text-sm font-semibold">{metric.label}</span>
+      <div className="flex items-start justify-between gap-2 mb-1.5 flex-wrap">
+        <span className="text-sm font-semibold min-w-0">{metric.label}</span>
         {hasBoth && typeof before === "number" && typeof after === "number" && (
           <ImprovementBadge before={before} after={after} lowerIsBetter={metric.lowerIsBetter !== false} />
         )}
@@ -185,7 +185,7 @@ export default function AuditDetailPage({
   const perfImprovement = perfAfter - perfBefore;
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 overflow-x-hidden">
       <PageHeader title="Audit Results">
         <div className="flex items-center gap-2">
           <Badge variant={audit.status === "complete" ? "default" : "secondary"}>
@@ -201,7 +201,7 @@ export default function AuditDetailPage({
       {shareLink && (
         <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-2.5">
           <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
-          <code className="flex-1 text-sm truncate">{shareLink}</code>
+          <code className="flex-1 text-xs sm:text-sm truncate min-w-0">{shareLink}</code>
           <CopyButton text={shareLink} label="Copy" />
         </div>
       )}
@@ -216,7 +216,7 @@ export default function AuditDetailPage({
                 <CardTitle className="text-base text-red-600">Old Website</CardTitle>
                 <Badge variant="outline" className="text-red-600 border-red-200">Before</Badge>
               </div>
-              <p className="text-xs text-muted-foreground truncate">{audit.current_url}</p>
+              <p className="text-xs text-muted-foreground truncate break-all">{audit.current_url}</p>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-center py-2">
@@ -246,7 +246,7 @@ export default function AuditDetailPage({
                 <CardTitle className="text-base text-green-600">New Build</CardTitle>
                 <Badge variant="outline" className="text-green-600 border-green-200">After</Badge>
               </div>
-              <p className="text-xs text-muted-foreground truncate">{audit.new_url}</p>
+              <p className="text-xs text-muted-foreground truncate break-all">{audit.new_url}</p>
             </CardHeader>
             <CardContent>
               {psAfter ? (
