@@ -1,11 +1,18 @@
+"use client";
+
+import { useState } from "react";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileDown, Info } from "lucide-react";
+import { CopyButton } from "@/components/shared/copy-button";
+import { FileDown, Share2, ArrowRight, TrendingUp, TrendingDown, Check, Link2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { getAuditById } from "@/lib/mock-data";
+import { toast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
+import { use } from "react";
 
 interface MetricRow {
   label: string;
@@ -13,46 +20,78 @@ interface MetricRow {
   valueAfter: string | number | null | undefined;
   unit?: string;
   description: string;
+  lowerIsBetter?: boolean;
 }
 
-function ScoreCircle({ score, size = "lg" }: { score: number; size?: "sm" | "lg" }) {
+function ScoreCircle({ score, label, size = "lg" }: { score: number; label?: string; size?: "sm" | "lg" }) {
   const color = score >= 90 ? "text-green-600" : score >= 50 ? "text-orange-500" : "text-red-600";
+  const ringColor = score >= 90 ? "ring-green-200" : score >= 50 ? "ring-orange-200" : "ring-red-200";
   const bg = score >= 90 ? "bg-green-50" : score >= 50 ? "bg-orange-50" : "bg-red-50";
-  const dim = size === "lg" ? "h-16 w-16 text-xl" : "h-10 w-10 text-sm";
+  const dim = size === "lg" ? "h-20 w-20 text-2xl" : "h-12 w-12 text-base";
   return (
-    <div className={`${dim} ${bg} ${color} rounded-full flex items-center justify-center font-bold`}>
-      {score}
+    <div className="flex flex-col items-center gap-1">
+      <div className={`${dim} ${bg} ${color} ${ringColor} rounded-full flex items-center justify-center font-bold ring-4`}>
+        {score}
+      </div>
+      {label && <p className="text-[11px] text-muted-foreground font-medium">{label}</p>}
     </div>
   );
 }
 
-function MetricRowDisplay({ metric }: { metric: MetricRow }) {
-  const before = metric.valueBefore ?? "—";
-  const after = metric.valueAfter ?? "—";
-  const unit = metric.unit || "";
+function ImprovementBadge({ before, after, unit, lowerIsBetter = true }: { before: number; after: number; unit?: string; lowerIsBetter?: boolean }) {
+  const diff = before - after;
+  const improved = lowerIsBetter ? diff > 0 : diff < 0;
+  const pct = before > 0 ? Math.abs(Math.round((diff / before) * 100)) : 0;
+
+  if (pct === 0) return null;
 
   return (
-    <div className="border-b last:border-0 py-3">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium">{metric.label}</span>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-red-600 font-mono">{before}{unit}</span>
-          <span className="text-muted-foreground">→</span>
-          <span className="text-green-600 font-mono">{after}{unit}</span>
+    <span className={cn(
+      "inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+      improved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+    )}>
+      {improved ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+      {pct}% {improved ? "better" : "worse"}
+    </span>
+  );
+}
+
+function ComparisonRow({ metric }: { metric: MetricRow }) {
+  const before = metric.valueBefore;
+  const after = metric.valueAfter;
+  const unit = metric.unit || "";
+  const hasBoth = before != null && after != null;
+
+  return (
+    <div className="border-b last:border-0 py-3.5 px-1">
+      <div className="flex items-start justify-between gap-4 mb-1.5">
+        <span className="text-sm font-semibold">{metric.label}</span>
+        {hasBoth && typeof before === "number" && typeof after === "number" && (
+          <ImprovementBadge before={before} after={after} lowerIsBetter={metric.lowerIsBetter !== false} />
+        )}
+      </div>
+      <div className="flex items-center gap-3 mb-2">
+        <div className="flex-1 rounded-md bg-red-50 border border-red-100 px-3 py-1.5 text-center">
+          <span className="text-sm font-mono font-semibold text-red-700">{before ?? "—"}{before != null ? unit : ""}</span>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div className="flex-1 rounded-md bg-green-50 border border-green-100 px-3 py-1.5 text-center">
+          <span className="text-sm font-mono font-semibold text-green-700">{after ?? "Pending"}{after != null ? unit : ""}</span>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">{metric.description}</p>
+      <p className="text-xs text-muted-foreground leading-relaxed">{metric.description}</p>
     </div>
   );
 }
 
-export default async function AuditDetailPage({
+export default function AuditDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id } = use(params);
   const audit = getAuditById(id);
+  const [shareLink, setShareLink] = useState("");
 
   if (!audit) notFound();
 
@@ -63,10 +102,17 @@ export default async function AuditDetailPage({
   const gtBefore = auditAny.gtmetrix_before ?? null;
   const gtAfter = auditAny.gtmetrix_after ?? null;
 
-  // Helper to safely get extended metric values
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getNum = (obj: any, key: string): number | undefined => obj?.[key] ?? undefined;
 
+  function handleShare() {
+    const url = `${window.location.origin}/audit/${id}/share`;
+    setShareLink(url);
+    navigator.clipboard.writeText(url);
+    toast({ title: "Share link copied to clipboard" });
+  }
+
+  // Core performance metrics - focused on what matters for the comparison
   const pagespeedMetrics: MetricRow[] = [
     {
       label: "Performance Score",
@@ -74,34 +120,7 @@ export default async function AuditDetailPage({
       valueAfter: psAfter?.performanceScore,
       unit: "/100",
       description: "Overall performance score from Google Lighthouse. 90+ is good, 50-89 needs improvement, below 50 is poor.",
-    },
-    {
-      label: "Accessibility Score",
-      valueBefore: getNum(psBefore, "accessibilityScore"),
-      valueAfter: getNum(psAfter, "accessibilityScore"),
-      unit: "/100",
-      description: "How accessible your site is for users with disabilities. Covers screen readers, keyboard navigation, colour contrast, and ARIA labels.",
-    },
-    {
-      label: "Best Practices Score",
-      valueBefore: getNum(psBefore, "bestPracticesScore"),
-      valueAfter: getNum(psAfter, "bestPracticesScore"),
-      unit: "/100",
-      description: "Checks for HTTPS, no console errors, correct image aspect ratios, and modern web standards compliance.",
-    },
-    {
-      label: "SEO Score",
-      valueBefore: getNum(psBefore, "seoScore"),
-      valueAfter: getNum(psAfter, "seoScore"),
-      unit: "/100",
-      description: "Search engine optimisation score. Checks meta tags, crawlability, structured data, mobile friendliness, and link text.",
-    },
-    {
-      label: "First Contentful Paint (FCP)",
-      valueBefore: getNum(psBefore, "firstContentfulPaint"),
-      valueAfter: getNum(psAfter, "firstContentfulPaint"),
-      unit: "ms",
-      description: "Time until the first piece of content is rendered. Impacts perceived load speed — users see something happening quickly.",
+      lowerIsBetter: false,
     },
     {
       label: "Largest Contentful Paint (LCP)",
@@ -121,21 +140,28 @@ export default async function AuditDetailPage({
       valueBefore: getNum(psBefore, "totalBlockingTime"),
       valueAfter: getNum(psAfter, "totalBlockingTime"),
       unit: "ms",
-      description: "Total time the main thread was blocked, preventing user input. Proxy for First Input Delay. Under 200ms is good.",
+      description: "Total time the main thread was blocked, preventing user input. Under 200ms is good.",
+    },
+    {
+      label: "First Contentful Paint (FCP)",
+      valueBefore: getNum(psBefore, "firstContentfulPaint"),
+      valueAfter: getNum(psAfter, "firstContentfulPaint"),
+      unit: "ms",
+      description: "Time until the first piece of content is rendered. Users see something happening quickly.",
     },
     {
       label: "Speed Index",
       valueBefore: psBefore?.speedIndex,
       valueAfter: psAfter?.speedIndex,
       unit: "ms",
-      description: "How quickly the visible area of the page is populated. Lower is better — measures overall visual progress.",
+      description: "How quickly the visible area of the page is populated. Lower is better.",
     },
     {
       label: "Time to First Byte (TTFB)",
       valueBefore: getNum(psBefore, "timeToFirstByte"),
       valueAfter: getNum(psAfter, "timeToFirstByte"),
       unit: "ms",
-      description: "Time from request to the first byte of the response. Indicates server response speed. Under 200ms is ideal.",
+      description: "Time from request to the first byte of the response. Under 200ms is ideal.",
     },
     {
       label: "Time to Interactive (TTI)",
@@ -153,131 +179,143 @@ export default async function AuditDetailPage({
     return `${(b / 1000).toFixed(0)}KB`;
   }
 
+  // Calculate overall improvement summary
+  const perfBefore = psBefore?.performanceScore ?? 0;
+  const perfAfter = psAfter?.performanceScore ?? 0;
+  const perfImprovement = perfAfter - perfBefore;
+
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader title="Audit Results">
-        <Badge variant={audit.status === "complete" ? "default" : "secondary"}>
-          {audit.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant={audit.status === "complete" ? "default" : "secondary"}>
+            {audit.status}
+          </Badge>
+          <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
+            <Share2 className="h-3.5 w-3.5" />
+            Share
+          </Button>
+        </div>
       </PageHeader>
 
-      {/* Score Overview */}
+      {shareLink && (
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-4 py-2.5">
+          <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+          <code className="flex-1 text-sm truncate">{shareLink}</code>
+          <CopyButton text={shareLink} label="Copy" />
+        </div>
+      )}
+
+      {/* Score Overview — focused on performance scores */}
       {psBefore && (
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
+          {/* Before card */}
+          <Card className="border-red-200">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-red-600">Before</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base text-red-600">Old Website</CardTitle>
+                <Badge variant="outline" className="text-red-600 border-red-200">Before</Badge>
+              </div>
               <p className="text-xs text-muted-foreground truncate">{audit.current_url}</p>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4">
-                <ScoreCircle score={psBefore.performanceScore} />
-                <div className="grid grid-cols-3 gap-3 flex-1">
-                  {getNum(psBefore, "accessibilityScore") != null && (
-                    <div className="text-center">
-                      <ScoreCircle score={getNum(psBefore, "accessibilityScore")!} size="sm" />
-                      <p className="text-[10px] text-muted-foreground mt-1">A11y</p>
-                    </div>
-                  )}
-                  {getNum(psBefore, "bestPracticesScore") != null && (
-                    <div className="text-center">
-                      <ScoreCircle score={getNum(psBefore, "bestPracticesScore")!} size="sm" />
-                      <p className="text-[10px] text-muted-foreground mt-1">Best Prac</p>
-                    </div>
-                  )}
-                  {getNum(psBefore, "seoScore") != null && (
-                    <div className="text-center">
-                      <ScoreCircle score={getNum(psBefore, "seoScore")!} size="sm" />
-                      <p className="text-[10px] text-muted-foreground mt-1">SEO</p>
-                    </div>
-                  )}
-                </div>
+              <div className="flex items-center justify-center py-2">
+                <ScoreCircle score={psBefore.performanceScore} label="Performance" />
               </div>
+              {gtBefore && (
+                <div className="mt-3 pt-3 border-t flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">GTmetrix Grade</span>
+                  <span className="font-bold text-red-600 text-lg">{gtBefore.grade as string}</span>
+                </div>
+              )}
               {audit.status === "complete" && (
                 <div className="flex gap-2 mt-4 pt-3 border-t">
                   <Button variant="outline" size="sm" className="gap-1.5 flex-1">
                     <FileDown className="h-3.5 w-3.5" />
-                    PageSpeed PDF
+                    Download PDF
                   </Button>
-                  {gtBefore && (
-                    <Button variant="outline" size="sm" className="gap-1.5 flex-1">
-                      <FileDown className="h-3.5 w-3.5" />
-                      GTmetrix PDF
-                    </Button>
-                  )}
                 </div>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          {/* After card */}
+          <Card className="border-green-200">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-green-600">After</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base text-green-600">New Build</CardTitle>
+                <Badge variant="outline" className="text-green-600 border-green-200">After</Badge>
+              </div>
               <p className="text-xs text-muted-foreground truncate">{audit.new_url}</p>
             </CardHeader>
             <CardContent>
               {psAfter ? (
                 <>
-                  <div className="flex items-center gap-4">
-                    <ScoreCircle score={psAfter.performanceScore} />
-                    <div className="grid grid-cols-3 gap-3 flex-1">
-                      {getNum(psAfter, "accessibilityScore") != null && (
-                        <div className="text-center">
-                          <ScoreCircle score={getNum(psAfter, "accessibilityScore")!} size="sm" />
-                          <p className="text-[10px] text-muted-foreground mt-1">A11y</p>
-                        </div>
-                      )}
-                      {getNum(psAfter, "bestPracticesScore") != null && (
-                        <div className="text-center">
-                          <ScoreCircle score={getNum(psAfter, "bestPracticesScore")!} size="sm" />
-                          <p className="text-[10px] text-muted-foreground mt-1">Best Prac</p>
-                        </div>
-                      )}
-                      {getNum(psAfter, "seoScore") != null && (
-                        <div className="text-center">
-                          <ScoreCircle score={getNum(psAfter, "seoScore")!} size="sm" />
-                          <p className="text-[10px] text-muted-foreground mt-1">SEO</p>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex items-center justify-center py-2">
+                    <ScoreCircle score={psAfter.performanceScore} label="Performance" />
                   </div>
+                  {gtAfter && (
+                    <div className="mt-3 pt-3 border-t flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">GTmetrix Grade</span>
+                      <span className="font-bold text-green-600 text-lg">{gtAfter.grade as string}</span>
+                    </div>
+                  )}
                   {audit.status === "complete" && (
                     <div className="flex gap-2 mt-4 pt-3 border-t">
                       <Button variant="outline" size="sm" className="gap-1.5 flex-1">
                         <FileDown className="h-3.5 w-3.5" />
-                        PageSpeed PDF
+                        Download PDF
                       </Button>
-                      {gtAfter && (
-                        <Button variant="outline" size="sm" className="gap-1.5 flex-1">
-                          <FileDown className="h-3.5 w-3.5" />
-                          GTmetrix PDF
-                        </Button>
-                      )}
                     </div>
                   )}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground py-4">Pending...</p>
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-2">
+                    <span className="text-lg">...</span>
+                  </div>
+                  <p className="text-sm">Audit in progress</p>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Google PageSpeed Detailed Metrics */}
+      {/* Improvement Summary */}
+      {psAfter && perfImprovement > 0 && (
+        <Card className="bg-green-50/50 border-green-200">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-green-100 p-2.5">
+                <Check className="h-5 w-5 text-green-700" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-green-800">
+                  Performance improved by {perfImprovement} points ({perfBefore} → {perfAfter})
+                </p>
+                <p className="text-xs text-green-700 mt-0.5">
+                  The new website is significantly faster and better optimised than the old one.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Detailed Metrics Comparison */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Info className="h-4 w-4" />
-            Google PageSpeed Insights — Detailed Breakdown
+          <CardTitle className="text-base">
+            PageSpeed Insights — Side-by-Side Comparison
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Each metric below shows the before (red) and after (green) values, with an explanation of why it matters for your site.
+            Each metric shows the old site (red) vs new build (green), with improvement percentages.
           </p>
         </CardHeader>
         <CardContent>
           {pagespeedMetrics.map((metric) => (
-            <MetricRowDisplay key={metric.label} metric={metric} />
+            <ComparisonRow key={metric.label} metric={metric} />
           ))}
         </CardContent>
       </Card>
@@ -286,53 +324,46 @@ export default async function AuditDetailPage({
       {gtBefore && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Info className="h-4 w-4" />
-              GTmetrix Report — Detailed Breakdown
+            <CardTitle className="text-base">
+              GTmetrix — Side-by-Side Comparison
             </CardTitle>
             <p className="text-xs text-muted-foreground">
-              GTmetrix provides a holistic view of page performance including total page weight, number of requests, and overall grade.
+              Page weight, request count, and load times — proving the new build is leaner and faster.
             </p>
           </CardHeader>
           <CardContent>
-            <MetricRowDisplay metric={{
+            <ComparisonRow metric={{
               label: "GTmetrix Grade",
               valueBefore: gtBefore.grade as string,
               valueAfter: gtAfter?.grade as string | undefined,
               description: "Overall grade from A (best) to F (worst). Combines performance and structure scores.",
             }} />
-            <MetricRowDisplay metric={{
+            <ComparisonRow metric={{
               label: "Performance Score",
               valueBefore: gtBefore.performanceScore as number,
               valueAfter: gtAfter?.performanceScore as number | undefined,
               unit: "%",
-              description: "How well the page performs based on key performance indicators like load time and interactivity.",
+              description: "How well the page performs based on key performance indicators.",
+              lowerIsBetter: false,
             }} />
-            <MetricRowDisplay metric={{
-              label: "Structure Score",
-              valueBefore: gtBefore.structureScore as number,
-              valueAfter: gtAfter?.structureScore as number | undefined,
-              unit: "%",
-              description: "How well-built the page is — covers code optimisation, caching, compression, and resource efficiency.",
-            }} />
-            <MetricRowDisplay metric={{
+            <ComparisonRow metric={{
               label: "Fully Loaded Time",
               valueBefore: `${((gtBefore.fullyLoadedTime as number) / 1000).toFixed(1)}`,
               valueAfter: gtAfter ? `${((gtAfter.fullyLoadedTime as number) / 1000).toFixed(1)}` : undefined,
               unit: "s",
-              description: "Total time to fully load all resources on the page. Includes images, scripts, fonts, and third-party assets.",
+              description: "Total time to fully load all resources. Includes images, scripts, fonts, and third-party assets.",
             }} />
-            <MetricRowDisplay metric={{
+            <ComparisonRow metric={{
               label: "Total Page Size",
               valueBefore: formatBytes(gtBefore.totalPageSize),
               valueAfter: gtAfter ? formatBytes(gtAfter.totalPageSize) : undefined,
-              description: "Total download size of the page. Smaller pages load faster and use less mobile data. Under 1MB is ideal.",
+              description: "Total download size. Smaller pages load faster and use less mobile data. Under 1MB is ideal.",
             }} />
-            <MetricRowDisplay metric={{
+            <ComparisonRow metric={{
               label: "Total Requests",
               valueBefore: gtBefore.totalRequests as number,
               valueAfter: gtAfter?.totalRequests as number | undefined,
-              description: "Number of HTTP requests the page makes. Each request adds latency. Under 30 is good, under 20 is excellent.",
+              description: "Number of HTTP requests. Each request adds latency. Under 30 is good, under 20 is excellent.",
             }} />
           </CardContent>
         </Card>

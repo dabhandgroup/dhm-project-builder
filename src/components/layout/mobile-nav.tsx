@@ -8,6 +8,14 @@ import { navItems } from "@/constants/nav-items";
 import { useUser } from "@/hooks/use-user";
 import { signOut } from "@/actions/auth";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { LogOut } from "lucide-react";
@@ -17,6 +25,7 @@ export function MobileNav() {
   const pathname = usePathname();
   const { isAdmin } = useUser();
   const [open, setOpen] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
 
   const filteredItems = navItems.filter(
     (item) => !item.adminOnly || isAdmin
@@ -72,14 +81,39 @@ export function MobileNav() {
         </nav>
         <Separator />
         <div className="p-4">
-          <form action={signOut}>
-            <Button variant="ghost" className="w-full justify-start gap-2 text-muted-foreground" type="submit">
-              <LogOut className="h-4 w-4" />
-              Sign out
-            </Button>
-          </form>
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-2 text-muted-foreground"
+            type="button"
+            onClick={() => setShowLogout(true)}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </Button>
         </div>
       </SheetContent>
+
+      {/* Logout confirmation dialog */}
+      <Dialog open={showLogout} onOpenChange={setShowLogout}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign out</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to sign out?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLogout(false)}>
+              Cancel
+            </Button>
+            <form action={signOut}>
+              <Button type="submit" variant="destructive">
+                Sign out
+              </Button>
+            </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }

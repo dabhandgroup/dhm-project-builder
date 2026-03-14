@@ -41,9 +41,13 @@ export default function VoiceMemosPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0 space-y-2">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {project && (
+                        {project ? (
                           <Badge variant="secondary" className="text-xs">
                             {project.title}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            General Note
                           </Badge>
                         )}
                         {memo.source_field && (
@@ -69,7 +73,13 @@ export default function VoiceMemosPage() {
                         </div>
                       )}
                     </div>
-                    <CopyButton text={memo.transcription} />
+                    <CopyButton
+                      text={
+                        memo.summary
+                          ? `Transcript\n${memo.transcription}\n\nSummary\n${memo.summary}`
+                          : `Transcript\n${memo.transcription}`
+                      }
+                    />
                   </div>
                 </CardContent>
               </Card>

@@ -100,7 +100,7 @@ export function VoiceRecorder() {
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-          <p>Voice memos are transcribed using Groq Whisper AI. Recordings are automatically saved and linked to the selected project.</p>
+          <p>Voice memos are transcribed using Groq Whisper AI. Recordings are saved automatically — they can be linked to a project or kept as standalone notes.</p>
         </div>
       </CardContent>
     </Card>

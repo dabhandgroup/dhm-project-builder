@@ -9,7 +9,6 @@ import type { ProjectStatus } from "@/types/database";
 
 export default function ProjectsPage() {
   const formattedProjects = mockProjects
-    .filter((p) => p.status !== "draft")
     .map((p) => ({
       id: p.id,
       title: p.title,

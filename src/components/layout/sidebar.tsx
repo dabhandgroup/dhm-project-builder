@@ -11,11 +11,21 @@ import { signOut } from "@/actions/auth";
 import { Tooltip } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { profile, isAdmin } = useUser();
   const [collapsed, setCollapsed] = useState(false);
+  const [showLogout, setShowLogout] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem("sidebar-collapsed");
@@ -137,17 +147,38 @@ export function Sidebar() {
               <PanelLeftClose className="h-4 w-4" />
             )}
           </button>
-          <form action={signOut}>
-            <button
-              type="submit"
-              className="flex items-center justify-center rounded-lg p-2 text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors"
-              aria-label="Sign out"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => setShowLogout(true)}
+            className="flex items-center justify-center rounded-lg p-2 text-sidebar-foreground/50 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
+
+      {/* Logout confirmation dialog */}
+      <Dialog open={showLogout} onOpenChange={setShowLogout}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Sign out</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to sign out?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLogout(false)}>
+              Cancel
+            </Button>
+            <form action={signOut}>
+              <Button type="submit" variant="destructive">
+                Sign out
+              </Button>
+            </form>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </aside>
   );
 }

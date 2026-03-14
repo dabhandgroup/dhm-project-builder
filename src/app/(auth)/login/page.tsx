@@ -30,7 +30,7 @@ export default function LoginPage() {
             id="email"
             type="email"
             placeholder="you@dabhandmarketing.com"
-            defaultValue="danny@dabhandmarketing.com"
+            defaultValue="harry@dabhandmarketing.com"
             className="h-11 bg-white"
           />
         </div>

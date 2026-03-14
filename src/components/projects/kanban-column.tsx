@@ -48,23 +48,22 @@ export function KanbanColumn({ status, projects }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
-    <div className="min-w-[340px] w-[340px] shrink-0 snap-center">
+    <div className="min-w-[300px] w-[300px] shrink-0 snap-center">
       <div
         className={cn(
-          "flex items-center gap-2 rounded-t-lg px-4 py-3",
+          "flex items-center gap-2.5 rounded-t-lg px-4 py-3 border border-b-0",
           config.bgColor
         )}
       >
         <div
-          className={cn("h-2.5 w-2.5 rounded-full", config.color.replace("text-", "bg-"))}
+          className={cn("h-2.5 w-2.5 rounded-full ring-2 ring-white/50", config.color.replace("text-", "bg-"))}
         />
         <h3 className={cn("text-sm font-semibold", config.textColor)}>
           {config.label}
         </h3>
         <span
           className={cn(
-            "ml-auto rounded-full px-2 py-0.5 text-xs font-medium",
-            config.bgColor,
+            "ml-auto rounded-full px-2.5 py-0.5 text-xs font-bold bg-white/60",
             config.textColor
           )}
         >
@@ -75,8 +74,8 @@ export function KanbanColumn({ status, projects }: KanbanColumnProps) {
       <div
         ref={setNodeRef}
         className={cn(
-          "min-h-[300px] space-y-3 rounded-b-lg border border-t-0 bg-muted/20 p-3 transition-colors",
-          isOver && "bg-accent/50"
+          "min-h-[400px] space-y-2.5 rounded-b-lg border border-t-0 bg-muted/30 p-2.5 transition-colors",
+          isOver && "bg-accent/40 border-primary/30"
         )}
       >
         <SortableContext

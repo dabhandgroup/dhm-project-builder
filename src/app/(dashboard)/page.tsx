@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const projects = mockProjects;
   const clientCount = mockClients.length;
 
-  const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "draft");
+  const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "lead");
   const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
   const recentProjects = projects.slice(0, 5);
 

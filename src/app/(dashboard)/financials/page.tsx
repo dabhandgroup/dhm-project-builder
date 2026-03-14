@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
+import { Select } from "@/components/ui/select";
 import { DollarSign, TrendingUp, BarChart3, Target, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { FinancialTable } from "./financial-table";
 import { RevenueCharts } from "@/components/financials/revenue-charts";
@@ -87,9 +88,10 @@ export default function FinancialsPage() {
   ];
 
   const statusData = [
-    { name: "Draft", value: filteredProjects.filter((p) => p.status === "draft").length, color: "#94a3b8" },
-    { name: "Initial Draft", value: filteredProjects.filter((p) => p.status === "initial_draft").length, color: "#f59e0b" },
-    { name: "Revisions", value: filteredProjects.filter((p) => p.status === "revisions").length, color: "#3b82f6" },
+    { name: "Lead", value: filteredProjects.filter((p) => p.status === "lead").length, color: "#94a3b8" },
+    { name: "Initial Draft", value: filteredProjects.filter((p) => p.status === "initial_draft").length, color: "#3b82f6" },
+    { name: "Awaiting Feedback", value: filteredProjects.filter((p) => p.status === "awaiting_feedback").length, color: "#f59e0b" },
+    { name: "Revisions", value: filteredProjects.filter((p) => p.status === "revisions").length, color: "#f97316" },
     { name: "Complete", value: filteredProjects.filter((p) => p.status === "complete").length, color: "#22c55e" },
   ];
 
@@ -140,27 +142,34 @@ export default function FinancialsPage() {
               key={c.code}
               type="button"
               onClick={() => setSelectedCurrency(c.code)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
                 selectedCurrency === c.code ? "bg-background shadow-sm" : "hover:bg-background/50"
               }`}
             >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://flagcdn.com/w20/${c.flag.toLowerCase()}.png`}
+                srcSet={`https://flagcdn.com/w40/${c.flag.toLowerCase()}.png 2x`}
+                alt={`${c.label} flag`}
+                className="h-3 w-4 object-cover rounded-[2px]"
+              />
               {c.code}
             </button>
           ))}
         </div>
 
         {/* Date range */}
-        <select
-          value={selectedRange}
-          onChange={(e) => setSelectedRange(Number(e.target.value))}
-          className="rounded-lg border bg-background px-3 py-1.5 text-xs font-medium w-fit"
-        >
-          {dateRanges.map((r) => (
-            <option key={r.days} value={r.days}>
-              {r.label}
-            </option>
-          ))}
-        </select>
+        <div className="w-36">
+          <Select
+            value={String(selectedRange)}
+            onChange={(e) => setSelectedRange(Number(e.target.value))}
+            options={dateRanges.map((r) => ({
+              value: String(r.days),
+              label: r.label,
+            }))}
+            className="text-xs h-8"
+          />
+        </div>
       </div>
 
       {/* KPI Cards */}

@@ -11,8 +11,8 @@ export const currencies: { code: CurrencyCode; label: string; symbol: string; fl
 export const mockProfiles = [
   {
     id: "user-1",
-    full_name: "Danny Hughes",
-    email: "danny@dabhandmarketing.com",
+    full_name: "Harry Lang",
+    email: "harry@dabhandmarketing.com",
     avatar_url: null,
     role: "admin" as const,
     must_change_password: false,
@@ -91,7 +91,7 @@ export const mockProjects = [
     id: "proj-1",
     title: "Richardson Legal — Full Rebuild",
     domain_name: "richardsonlegal.co.uk",
-    status: "revisions" as const,
+    status: "awaiting_feedback" as const,
     is_rebuild: true,
     client_id: "client-1",
     one_off_revenue: 1200,
@@ -183,7 +183,7 @@ export const mockProjects = [
     id: "proj-5",
     title: "Watson Roofing — New Website",
     domain_name: "watsonroofing.co.uk",
-    status: "draft" as const,
+    status: "lead" as const,
     is_rebuild: false,
     client_id: "client-5",
     one_off_revenue: 750,

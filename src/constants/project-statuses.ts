@@ -9,8 +9,8 @@ export interface StatusConfig {
 }
 
 export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
-  draft: {
-    label: "Draft",
+  lead: {
+    label: "Lead",
     color: "text-zinc-500",
     bgColor: "bg-zinc-100",
     textColor: "text-zinc-700",
@@ -18,10 +18,17 @@ export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
   },
   initial_draft: {
     label: "Initial Draft",
-    color: "text-red-500",
-    bgColor: "bg-red-100",
-    textColor: "text-red-700",
-    borderColor: "border-red-300",
+    color: "text-blue-500",
+    bgColor: "bg-blue-100",
+    textColor: "text-blue-700",
+    borderColor: "border-blue-300",
+  },
+  awaiting_feedback: {
+    label: "Awaiting Feedback",
+    color: "text-amber-500",
+    bgColor: "bg-amber-100",
+    textColor: "text-amber-700",
+    borderColor: "border-amber-300",
   },
   revisions: {
     label: "Revisions",
@@ -40,7 +47,9 @@ export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
 };
 
 export const kanbanStatuses: ProjectStatus[] = [
+  "lead",
   "initial_draft",
+  "awaiting_feedback",
   "revisions",
   "complete",
 ];

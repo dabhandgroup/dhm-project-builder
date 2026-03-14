@@ -7,7 +7,7 @@ export type Json =
   | Json[];
 
 export type UserRole = "admin" | "member";
-export type ProjectStatus = "draft" | "initial_draft" | "revisions" | "complete";
+export type ProjectStatus = "lead" | "initial_draft" | "awaiting_feedback" | "revisions" | "complete";
 export type ImageType = "square" | "landscape";
 export type AuditStatus = "pending" | "running_before" | "running_after" | "complete" | "failed";
 

@@ -589,21 +589,28 @@ export function ProjectForm({
             <Label>Currency / Region</Label>
             <div className="grid grid-cols-4 gap-2">
               {([
-                { code: "AUD", label: "AUD", desc: "Australia" },
-                { code: "GBP", label: "GBP", desc: "UK" },
-                { code: "USD", label: "USD", desc: "US" },
-                { code: "CAD", label: "CAD", desc: "Canada" },
+                { code: "AUD", label: "AUD", desc: "Australia", flag: "au" },
+                { code: "GBP", label: "GBP", desc: "UK", flag: "gb" },
+                { code: "USD", label: "USD", desc: "US", flag: "us" },
+                { code: "CAD", label: "CAD", desc: "Canada", flag: "ca" },
               ] as const).map((c) => (
                 <button
                   key={c.code}
                   type="button"
                   onClick={() => updateField("currency", c.code)}
-                  className={`rounded-lg border-2 p-2.5 text-center transition-all ${
+                  className={`rounded-lg border-2 p-3 text-center transition-all ${
                     form.currency === c.code
                       ? "border-primary bg-primary/5"
                       : "border-muted hover:border-muted-foreground/30"
                   }`}
                 >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`https://flagcdn.com/w40/${c.flag}.png`}
+                    srcSet={`https://flagcdn.com/w80/${c.flag}.png 2x`}
+                    alt={`${c.desc} flag`}
+                    className="h-5 w-7 object-cover rounded-sm mx-auto mb-1.5"
+                  />
                   <p className="text-sm font-semibold">{c.label}</p>
                   <p className="text-[10px] text-muted-foreground">{c.desc}</p>
                 </button>

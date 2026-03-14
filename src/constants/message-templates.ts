@@ -19,7 +19,7 @@ https://www.dabhandmarketing.com/book-a-call/
 No pressure at all — just thought it was worth a look.
 
 Cheers,
-Danny
+Harry
 Dab Hand Marketing`;
 }
 

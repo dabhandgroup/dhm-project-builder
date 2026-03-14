@@ -3,10 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ProjectStatusBadge } from "./project-status-badge";
+import { Select } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { updateProjectStatus } from "@/actions/projects";
 import { toast } from "@/components/ui/toast";
 import { ArrowUpDown, ExternalLink } from "lucide-react";
+import { kanbanStatuses } from "@/constants/project-statuses";
+import { projectStatuses } from "@/constants/project-statuses";
 import type { ProjectStatus } from "@/types/database";
 
 interface ListProject {
@@ -147,7 +150,7 @@ export function ProjectListView({
                 )}
               </td>
               <td className="px-3 py-2">
-                <select
+                <Select
                   value={project.status}
                   onChange={(e) =>
                     handleStatusChange(
@@ -155,13 +158,12 @@ export function ProjectListView({
                       e.target.value as ProjectStatus
                     )
                   }
-                  className="rounded border bg-transparent px-1 py-0.5 text-xs"
-                >
-                  <option value="draft">Draft</option>
-                  <option value="initial_draft">Initial Draft</option>
-                  <option value="revisions">Revisions</option>
-                  <option value="complete">Complete</option>
-                </select>
+                  options={kanbanStatuses.map((s) => ({
+                    value: s,
+                    label: projectStatuses[s].label,
+                  }))}
+                  className="text-xs h-7"
+                />
               </td>
               <td className="px-3 py-2 text-right hidden md:table-cell">
                 <span className="text-xs font-medium text-green-600">
