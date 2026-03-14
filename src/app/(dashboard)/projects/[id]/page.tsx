@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
+import { PipelineStatus } from "@/components/projects/pipeline-status";
 import type { ProjectStatus } from "@/types/database";
 
 export default async function ProjectDetailPage({
@@ -216,6 +217,9 @@ export default async function ProjectDetailPage({
           )}
         </div>
       </div>
+
+      {/* Pipeline */}
+      <PipelineStatus projectId={id} />
 
       {/* Brief — full width with copy */}
       {project.brief && (
