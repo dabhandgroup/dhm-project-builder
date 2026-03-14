@@ -16,8 +16,8 @@ export const aiModels: AIModel[] = [
     description: "Anthropic's AI for custom website generation",
   },
   {
-    value: "groq",
-    label: "Groq",
+    value: "grok",
+    label: "Grok",
     description: "Fast inference for website generation",
   },
 ];

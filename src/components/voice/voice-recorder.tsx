@@ -4,16 +4,30 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Square, Loader2 } from "lucide-react";
+import { Mic, Square, Loader2, Pause, Play } from "lucide-react";
 
 export function VoiceRecorder() {
-  const [state, setState] = useState<"idle" | "recording" | "processing">("idle");
+  const [state, setState] = useState<"idle" | "recording" | "paused" | "processing">("idle");
   const [seconds, setSeconds] = useState(0);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
 
   function startRecording() {
     setState("recording");
     setSeconds(0);
+    const id = setInterval(() => {
+      setSeconds((s) => s + 1);
+    }, 1000);
+    setIntervalId(id);
+  }
+
+  function pauseRecording() {
+    if (intervalId) clearInterval(intervalId);
+    setIntervalId(null);
+    setState("paused");
+  }
+
+  function resumeRecording() {
+    setState("recording");
     const id = setInterval(() => {
       setSeconds((s) => s + 1);
     }, 1000);
@@ -60,10 +74,12 @@ export function VoiceRecorder() {
             </>
           )}
 
-          {state === "recording" && (
+          {(state === "recording" || state === "paused") && (
             <>
               <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                {state === "recording" && (
+                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                )}
                 <button
                   type="button"
                   onClick={stopRecording}
@@ -73,17 +89,43 @@ export function VoiceRecorder() {
                 </button>
               </div>
               <div className="flex items-center gap-3">
-                <Badge variant="destructive" className="animate-pulse gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-white" />
-                  Recording
+                <Badge
+                  variant={state === "paused" ? "secondary" : "destructive"}
+                  className={`gap-1.5 ${state === "recording" ? "animate-pulse" : ""}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${state === "paused" ? "bg-muted-foreground" : "bg-white"}`} />
+                  {state === "paused" ? "Paused" : "Recording"}
                 </Badge>
                 <span className="text-lg font-mono font-semibold tabular-nums">
                   {timeDisplay}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
-                Tap to stop recording
-              </p>
+              <div className="flex items-center gap-3">
+                {state === "recording" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={pauseRecording}
+                    className="gap-1.5"
+                  >
+                    <Pause className="h-4 w-4" />
+                    Pause
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resumeRecording}
+                    className="gap-1.5"
+                  >
+                    <Play className="h-4 w-4" />
+                    Resume
+                  </Button>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Tap the stop button to finish
+                </p>
+              </div>
             </>
           )}
 
@@ -100,7 +142,7 @@ export function VoiceRecorder() {
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-          <p>Voice memos are transcribed using Groq Whisper AI. Recordings are saved automatically — they can be linked to a project or kept as standalone notes.</p>
+          <p>Voice memos are transcribed using Grok Whisper AI. Recordings are saved automatically — they can be linked to a project or kept as standalone notes.</p>
         </div>
       </CardContent>
     </Card>

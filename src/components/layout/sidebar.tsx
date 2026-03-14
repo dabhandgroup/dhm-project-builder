@@ -73,49 +73,56 @@ export function Sidebar() {
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
 
-            const link = (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
+            const linkEl = (
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "text-foreground"
+                    : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                  item.accent &&
+                    !isActive &&
+                    "text-primary hover:text-primary",
+                  collapsed && "justify-center px-0 w-10 mx-auto"
+                )}
+              >
+                <item.icon
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
-                      ? "text-foreground"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                    item.accent &&
-                      !isActive &&
-                      "text-primary hover:text-primary",
-                    collapsed && "justify-center px-0 w-10 mx-auto"
+                    "h-5 w-5 shrink-0 transition-colors",
+                    isActive ? "text-foreground" : ""
+                  )}
+                  strokeWidth={isActive ? 2.5 : 2}
+                />
+                <span
+                  className={cn(
+                    "whitespace-nowrap transition-opacity duration-200",
+                    collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
                   )}
                 >
-                  <item.icon
-                    className={cn(
-                      "h-5 w-5 shrink-0 transition-colors",
-                      isActive ? "text-foreground" : ""
-                    )}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
-                  <span
-                    className={cn(
-                      "whitespace-nowrap transition-opacity duration-200",
-                      collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
-              </li>
+                  {item.label}
+                </span>
+              </Link>
             );
 
-            if (collapsed) {
+            const wrappedLink = collapsed ? (
+              <Tooltip key={item.href} content={item.label} side="right">
+                <li>{linkEl}</li>
+              </Tooltip>
+            ) : (
+              <li key={item.href}>{linkEl}</li>
+            );
+
+            if (item.separatorBefore) {
               return (
-                <Tooltip key={item.href} content={item.label} side="right">
-                  {link}
-                </Tooltip>
+                <div key={item.href}>
+                  <Separator className="my-2" />
+                  {wrappedLink}
+                </div>
               );
             }
 
-            return link;
+            return wrappedLink;
           })}
         </ul>
       </nav>

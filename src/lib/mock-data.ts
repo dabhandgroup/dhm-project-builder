@@ -421,7 +421,7 @@ export const mockCosts = [
   { id: "cost-9", description: "Checkatrade badge verification fee", amount: 35, date: "2025-11-22", project: "Thompson Plumbing — New Website", currency: "GBP" as CurrencyCode, type: "one_off" as const },
   { id: "cost-10", description: "Domain renewals (5 domains)", amount: 85, date: "2026-02-01", currency: "AUD" as CurrencyCode, type: "one_off" as const },
   { id: "cost-11", description: "Supabase Pro plan", amount: 25, date: "2026-01-01", currency: "USD" as CurrencyCode, type: "monthly" as const },
-  { id: "cost-12", description: "Groq API credits", amount: 10, date: "2026-01-01", currency: "USD" as CurrencyCode, type: "monthly" as const },
+  { id: "cost-12", description: "Grok API credits", amount: 10, date: "2026-01-01", currency: "USD" as CurrencyCode, type: "monthly" as const },
 ];
 
 export const mockContentPlans = [

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, FolderKanban, Mic, DollarSign, Settings, Square, Loader2, X } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Mic, DollarSign, Settings, Square, Loader2, X, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -11,13 +11,29 @@ export function MobileFooter() {
   const pathname = usePathname();
   const router = useRouter();
   const [recording, setRecording] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
 
   function startRecording() {
     setRecording(true);
+    setPaused(false);
     setSeconds(0);
+    const id = setInterval(() => {
+      setSeconds((s) => s + 1);
+    }, 1000);
+    setIntervalId(id);
+  }
+
+  function pauseRecording() {
+    if (intervalId) clearInterval(intervalId);
+    setIntervalId(null);
+    setPaused(true);
+  }
+
+  function resumeRecording() {
+    setPaused(false);
     const id = setInterval(() => {
       setSeconds((s) => s + 1);
     }, 1000);
@@ -28,6 +44,7 @@ export function MobileFooter() {
     if (intervalId) clearInterval(intervalId);
     setIntervalId(null);
     setRecording(false);
+    setPaused(false);
     setProcessing(true);
     setTimeout(() => {
       setProcessing(false);
@@ -39,6 +56,7 @@ export function MobileFooter() {
     if (intervalId) clearInterval(intervalId);
     setIntervalId(null);
     setRecording(false);
+    setPaused(false);
     setSeconds(0);
   }
 
@@ -61,7 +79,9 @@ export function MobileFooter() {
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center lg:hidden">
           <div className="bg-background rounded-2xl p-8 mx-4 w-full max-w-sm text-center space-y-6">
             <div className="relative mx-auto w-fit">
-              <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+              {!paused && (
+                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+              )}
               <button
                 type="button"
                 onClick={stopRecording}
@@ -71,20 +91,44 @@ export function MobileFooter() {
               </button>
             </div>
             <div className="space-y-2">
-              <Badge variant="destructive" className="animate-pulse gap-1.5">
-                <span className="h-2 w-2 rounded-full bg-white" />
-                Recording
+              <Badge
+                variant={paused ? "secondary" : "destructive"}
+                className={`gap-1.5 ${!paused ? "animate-pulse" : ""}`}
+              >
+                <span className={`h-2 w-2 rounded-full ${paused ? "bg-muted-foreground" : "bg-white"}`} />
+                {paused ? "Paused" : "Recording"}
               </Badge>
               <p className="text-2xl font-mono font-semibold tabular-nums">{timeDisplay}</p>
             </div>
-            <button
-              type="button"
-              onClick={cancelRecording}
-              className="flex items-center gap-2 mx-auto text-sm text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              {paused ? (
+                <button
+                  type="button"
+                  onClick={resumeRecording}
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary"
+                >
+                  <Play className="h-4 w-4" />
+                  Resume
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={pauseRecording}
+                  className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary"
+                >
+                  <Pause className="h-4 w-4" />
+                  Pause
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={cancelRecording}
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}

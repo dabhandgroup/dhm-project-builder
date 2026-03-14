@@ -58,7 +58,7 @@ export function MobileNav() {
               const isActive =
                 pathname === item.href ||
                 (item.href !== "/" && pathname.startsWith(item.href));
-              return (
+              const link = (
                 <li key={item.href}>
                   <Link
                     href={item.href}
@@ -76,6 +76,15 @@ export function MobileNav() {
                   </Link>
                 </li>
               );
+              if (item.separatorBefore) {
+                return (
+                  <div key={item.href}>
+                    <Separator className="my-2" />
+                    {link}
+                  </div>
+                );
+              }
+              return link;
             })}
           </ul>
         </nav>

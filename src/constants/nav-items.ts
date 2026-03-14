@@ -19,6 +19,7 @@ export interface NavItem {
   icon: LucideIcon;
   adminOnly?: boolean;
   accent?: boolean;
+  separatorBefore?: boolean;
 }
 
 export const navItems: NavItem[] = [
@@ -62,6 +63,7 @@ export const navItems: NavItem[] = [
     label: "Notes",
     href: "/notes",
     icon: StickyNote,
+    separatorBefore: true,
   },
   {
     label: "Voice Memos",

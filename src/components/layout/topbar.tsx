@@ -26,7 +26,9 @@ export function Topbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mobileInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const initials = profile?.full_name
@@ -172,8 +174,8 @@ export function Topbar() {
         <button
           type="button"
           onClick={() => {
-            setSearchFocused(true);
-            setTimeout(() => inputRef.current?.focus(), 100);
+            setMobileSearchOpen(true);
+            setTimeout(() => mobileInputRef.current?.focus(), 100);
           }}
           className="lg:hidden rounded-lg p-2 text-muted-foreground hover:bg-accent transition-colors"
         >
@@ -220,6 +222,68 @@ export function Topbar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
+
+      {/* Mobile search overlay */}
+      {mobileSearchOpen && (
+        <div className="fixed inset-0 z-50 bg-background lg:hidden">
+          <div className="flex items-center gap-2 border-b px-4 h-14">
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+            <input
+              ref={mobileInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search projects, clients, domains..."
+              className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSearchOpen(false);
+                setSearchQuery("");
+              }}
+              className="p-1.5 rounded text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="overflow-auto max-h-[calc(100vh-3.5rem)]">
+            {searchQuery.trim() && filteredProjects.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No projects found for &ldquo;{searchQuery}&rdquo;
+              </p>
+            ) : searchQuery.trim() ? (
+              <div className="p-2">
+                {filteredProjects.map((project) => (
+                  <button
+                    key={project.id}
+                    type="button"
+                    onClick={() => {
+                      setMobileSearchOpen(false);
+                      setSearchQuery("");
+                      router.push(`/projects/${project.id}`);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-3 text-left hover:bg-accent transition-colors"
+                  >
+                    <FolderKanban className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{project.title}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {project.domain_name || "No domain"}
+                        {getClientName(project.client_id) && ` · ${getClientName(project.client_id)}`}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                Start typing to search...
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Sign out confirmation dialog */}
       <Dialog open={signOutOpen} onOpenChange={setSignOutOpen}>
