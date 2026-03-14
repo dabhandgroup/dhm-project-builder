@@ -54,11 +54,11 @@ export function Sidebar() {
           <img
             src="https://www.dabhandmarketing.com/assets/images/61a448de805ef0ab7c7c6309_5fd49badb4d94e90bf469db6_dhm-logo-4.svg"
             alt="DHM"
-            className="h-8 w-8 shrink-0 rounded-lg object-contain"
+            className="h-12 w-12 shrink-0 rounded-lg object-contain"
           />
           {!collapsed && (
             <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
-              DHM Builder
+              dab hand marketing
             </span>
           )}
         </Link>

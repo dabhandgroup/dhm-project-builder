@@ -1,15 +1,25 @@
+"use client";
+
+import { useState } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CopyButton } from "@/components/shared/copy-button";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic } from "lucide-react";
+import { Mic, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { mockVoiceMemos, getProjectById } from "@/lib/mock-data";
 import { VoiceRecorder } from "@/components/voice/voice-recorder";
 
 export default function VoiceMemosPage() {
-  const allMemos = mockVoiceMemos;
+  const [memos, setMemos] = useState(mockVoiceMemos);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const allMemos = memos;
+
+  function deleteMemo(id: string) {
+    setMemos((prev) => prev.filter((m) => m.id !== id));
+  }
 
   return (
     <div className="space-y-6">
@@ -73,13 +83,23 @@ export default function VoiceMemosPage() {
                         </div>
                       )}
                     </div>
-                    <CopyButton
-                      text={
-                        memo.summary
-                          ? `Transcript\n${memo.transcription}\n\nSummary\n${memo.summary}`
-                          : `Transcript\n${memo.transcription}`
-                      }
-                    />
+                    <div className="flex gap-1 shrink-0">
+                      <CopyButton
+                        text={
+                          memo.summary
+                            ? `Transcript\n${memo.transcription}\n\nSummary\n${memo.summary}`
+                            : `Transcript\n${memo.transcription}`
+                        }
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setDeleteId(memo.id)}
+                        className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
+                        title="Delete memo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -87,6 +107,15 @@ export default function VoiceMemosPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+        title="Delete memo"
+        description="Are you sure you want to delete this voice memo? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { if (deleteId) deleteMemo(deleteId); }}
+      />
     </div>
   );
 }

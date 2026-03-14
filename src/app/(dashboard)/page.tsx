@@ -67,7 +67,6 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="text-xl sm:text-2xl font-bold">{formatCurrency(totalMRR)}</div>
-              <p className="text-[10px] text-muted-foreground mt-0.5">All currencies combined</p>
             </CardContent>
           </Card>
         </Link>

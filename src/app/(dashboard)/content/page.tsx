@@ -42,7 +42,7 @@ export default function ContentPage() {
             const totalPosts = planData.reduce((sum, m) => sum + (m.blogTitles?.length ?? 0), 0);
 
             return (
-              <Link key={plan.id} href={`/content/${plan.project_id}`}>
+              <Link key={plan.id} href={`/content/${plan.project_id}`} className="block">
                 <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
                   <CardContent className="p-3 sm:p-4 flex items-center gap-3">
                     <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">

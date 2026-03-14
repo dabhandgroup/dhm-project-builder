@@ -73,7 +73,7 @@ function DialogContent({
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className={cn(
-            "relative w-full max-w-md rounded-2xl border bg-background p-6 shadow-2xl space-y-5",
+            "relative w-full max-w-md rounded-2xl border bg-background p-6 pb-5 shadow-2xl space-y-4",
             className
           )}
         >
@@ -141,7 +141,7 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "flex gap-3 pt-2 justify-center",
+        "flex gap-3 justify-center",
         className
       )}
       {...props}
