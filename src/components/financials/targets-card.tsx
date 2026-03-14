@@ -28,12 +28,9 @@ function ProgressBar({ current, target, currency, label }: {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">{label}</span>
-        <span className="text-muted-foreground">
-          {formatCurrency(current, currency)} / {formatCurrency(target, currency)}
-        </span>
+        <span className="font-medium text-xs sm:text-sm">{label}</span>
       </div>
-      <div className="h-3 rounded-full bg-muted overflow-hidden">
+      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
           className={`h-full rounded-full transition-all ${
             isComplete ? "bg-green-500" : pct >= 75 ? "bg-blue-500" : pct >= 50 ? "bg-orange-400" : "bg-red-400"
@@ -41,16 +38,15 @@ function ProgressBar({ current, target, currency, label }: {
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{pct.toFixed(0)}% achieved</span>
-        {!isComplete && (
-          <span className="font-medium text-foreground">
-            {formatCurrency(remaining, currency)} to go
-          </span>
-        )}
-        {isComplete && (
-          <span className="font-medium text-green-600">Target reached!</span>
-        )}
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="tabular-nums">{formatCurrency(current, currency)} / {formatCurrency(target, currency)}</span>
+        <span className="font-medium tabular-nums">
+          {isComplete ? (
+            <span className="text-green-600">Done!</span>
+          ) : (
+            <span className="text-foreground">{pct.toFixed(0)}%</span>
+          )}
+        </span>
       </div>
     </div>
   );
@@ -65,19 +61,21 @@ export function TargetsCard({ target, currentMrr, currentOneOff, currency }: Tar
           Targets — {target.label}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <ProgressBar
-          current={currentMrr}
-          target={target.monthlyMrrTarget}
-          currency={currency}
-          label="Monthly Recurring Revenue (MRR)"
-        />
-        <ProgressBar
-          current={currentOneOff}
-          target={target.monthlyOneOffTarget}
-          currency={currency}
-          label="One-Off Revenue"
-        />
+      <CardContent>
+        <div className="grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-1">
+          <ProgressBar
+            current={currentMrr}
+            target={target.monthlyMrrTarget}
+            currency={currency}
+            label="MRR"
+          />
+          <ProgressBar
+            current={currentOneOff}
+            target={target.monthlyOneOffTarget}
+            currency={currency}
+            label="One-Off"
+          />
+        </div>
       </CardContent>
     </Card>
   );

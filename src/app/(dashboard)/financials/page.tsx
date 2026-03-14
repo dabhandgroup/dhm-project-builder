@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
-import { DollarSign, TrendingUp, BarChart3, Target, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { DollarSign, TrendingUp, BarChart3, Target, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
 import { FinancialTable } from "./financial-table";
 import { RevenueCharts } from "@/components/financials/revenue-charts";
 import { CostsTable } from "@/components/financials/costs-table";
@@ -173,61 +173,80 @@ export default function FinancialsPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">One-Off Revenue</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">One-Off</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalOneOff, displayCurrency)}</div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowDownRight className="h-3 w-3 text-red-600" />
-              <span className="text-red-600 font-medium">-{formatCurrency(oneOffCosts, displayCurrency)}</span> costs
+            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalOneOff, displayCurrency)}</div>
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
+              <span className="text-red-600 font-medium">-{formatCurrency(oneOffCosts, displayCurrency)}</span> <span className="hidden sm:inline">costs</span>
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1">
+              <span className="sm:hidden">MRR</span>
+              <span className="hidden sm:inline">Monthly Revenue</span>
+              <button
+                type="button"
+                className="sm:hidden text-muted-foreground"
+                title="Monthly Recurring Revenue"
+                onClick={(e) => {
+                  const el = e.currentTarget;
+                  const tip = el.querySelector('[data-tip]') as HTMLElement | null;
+                  if (tip) tip.classList.toggle('hidden');
+                }}
+              >
+                <Info className="h-3 w-3" />
+              </button>
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-lg sm:text-2xl font-bold text-green-600">
               {formatCurrency(totalMRR, displayCurrency)}
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowDownRight className="h-3 w-3 text-red-600" />
-              <span className="text-red-600 font-medium">-{formatCurrency(monthlyCosts, displayCurrency)}</span> monthly costs
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
+              <span className="text-red-600 font-medium">-{formatCurrency(monthlyCosts, displayCurrency)}</span> <span className="hidden sm:inline">monthly costs</span>
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Monthly Profit</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">
+              <span className="sm:hidden">Net Profit</span>
+              <span className="hidden sm:inline">Net Monthly Profit</span>
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <div className={`text-lg sm:text-2xl font-bold ${netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
               {formatCurrency(netMonthlyProfit, displayCurrency)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {formatCurrency(netMonthlyProfit * 12, displayCurrency)}/yr projected
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+              {formatCurrency(netMonthlyProfit * 12, displayCurrency)}/yr
             </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Profit</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total Profit</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${netTotalProfit >= 0 ? "" : "text-red-600"}`}>
+            <div className={`text-lg sm:text-2xl font-bold ${netTotalProfit >= 0 ? "" : "text-red-600"}`}>
               {formatCurrency(netTotalProfit, displayCurrency)}
             </div>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowUpRight className="h-3 w-3 text-green-600" />
-              Revenue minus all costs
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+              <ArrowUpRight className="h-3 w-3 text-green-600 shrink-0" />
+              <span className="hidden sm:inline">Revenue minus all costs</span>
+              <span className="sm:hidden">All revenue - costs</span>
             </p>
           </CardContent>
         </Card>

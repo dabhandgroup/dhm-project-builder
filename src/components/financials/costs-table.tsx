@@ -64,47 +64,36 @@ export function CostsTable({ costs: initialCosts, currency }: CostsTableProps) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold">{title}</h3>
-          <span className={`text-sm font-semibold ${color}`}>
+          <span className={`text-sm font-semibold tabular-nums ${color}`}>
             {formatCurrency(total, currency)}/mo
           </span>
         </div>
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground py-2">No costs recorded</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <tbody>
-                {items.map((cost) => (
-                  <tr key={cost.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="py-2 pr-3">{cost.description}</td>
-                    <td className="py-2 px-2 hidden sm:table-cell">
-                      {cost.project ? (
-                        <Badge variant="secondary" className="text-xs truncate max-w-[200px]">
-                          {cost.project}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">General</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-xs text-muted-foreground hidden md:table-cell">
-                      {cost.date}
-                    </td>
-                    <td className="py-2 pl-2 text-right font-medium text-red-600 whitespace-nowrap">
-                      -{formatCurrency(cost.amount, currency)}
-                    </td>
-                    <td className="py-2 pl-2 w-8">
-                      <button
-                        type="button"
-                        onClick={() => removeCost(cost.id)}
-                        className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-0">
+            {items.map((cost) => (
+              <div key={cost.id} className="flex items-center gap-2 py-2 border-b last:border-0 group">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm truncate">{cost.description}</p>
+                  {cost.project && (
+                    <Badge variant="secondary" className="text-[10px] mt-0.5 hidden sm:inline-flex">
+                      {cost.project}
+                    </Badge>
+                  )}
+                </div>
+                <span className="text-sm font-medium text-red-600 tabular-nums shrink-0">
+                  -{formatCurrency(cost.amount, currency)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removeCost(cost.id)}
+                  className="p-1 rounded text-muted-foreground hover:text-red-600 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -114,13 +103,13 @@ export function CostsTable({ costs: initialCosts, currency }: CostsTableProps) {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="text-base flex items-center gap-2">
             <Receipt className="h-4 w-4" />
             Costs & Expenses
           </CardTitle>
           <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-red-600">
+            <span className="text-sm font-semibold text-red-600 tabular-nums">
               Total: {formatCurrency(totalMonthly + totalOneOff, currency)}
             </span>
             <Button
@@ -130,7 +119,7 @@ export function CostsTable({ costs: initialCosts, currency }: CostsTableProps) {
               className="gap-1"
             >
               <Plus className="h-3.5 w-3.5" />
-              Add Cost
+              Add
             </Button>
           </div>
         </div>
@@ -144,14 +133,14 @@ export function CostsTable({ costs: initialCosts, currency }: CostsTableProps) {
                 placeholder="Description..."
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
-                className="flex-1 rounded-md border px-3 py-2 text-sm bg-background"
+                className="flex-1 rounded-md border px-3 py-2 text-base sm:text-sm bg-background"
               />
               <input
                 type="number"
                 placeholder="Amount"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
-                className="w-full sm:w-28 rounded-md border px-3 py-2 text-sm bg-background"
+                className="w-full sm:w-28 rounded-md border px-3 py-2 text-base sm:text-sm bg-background"
               />
             </div>
             <div className="flex items-center gap-3">
