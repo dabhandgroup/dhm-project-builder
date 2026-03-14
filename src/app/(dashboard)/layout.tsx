@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileFooter } from "@/components/layout/mobile-footer";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 
 export default function DashboardLayout({
   children,
@@ -12,7 +13,10 @@ export default function DashboardLayout({
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Topbar />
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-28 lg:pb-6">{children}</main>
+        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-28 lg:pb-6">
+          <ScrollToTop />
+          {children}
+        </main>
       </div>
       <MobileFooter />
     </div>
