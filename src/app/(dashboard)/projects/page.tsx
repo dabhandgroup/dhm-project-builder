@@ -1,13 +1,15 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, FolderKanban } from "lucide-react";
 import { ProjectsViewToggle } from "./view-toggle";
 import { getProjects } from "@/lib/queries/projects";
 import type { ProjectStatus } from "@/types/database";
 
-export default async function ProjectsPage() {
+async function ProjectsList() {
   const projects = await getProjects();
 
   const formattedProjects = projects.map((p) => ({
@@ -25,6 +27,37 @@ export default async function ProjectsPage() {
       : "",
   }));
 
+  if (formattedProjects.length === 0) {
+    return (
+      <EmptyState
+        icon={FolderKanban}
+        title="No projects yet"
+        description="Create your first project to get started."
+      >
+        <Link href="/projects/new">
+          <Button size="sm">
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        </Link>
+      </EmptyState>
+    );
+  }
+
+  return <ProjectsViewToggle projects={formattedProjects} />;
+}
+
+function ProjectsListLoading() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-40 rounded-lg" />
+      ))}
+    </div>
+  );
+}
+
+export default function ProjectsPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Projects">
@@ -36,22 +69,9 @@ export default async function ProjectsPage() {
         </Link>
       </PageHeader>
 
-      {formattedProjects.length === 0 ? (
-        <EmptyState
-          icon={FolderKanban}
-          title="No projects yet"
-          description="Create your first project to get started."
-        >
-          <Link href="/projects/new">
-            <Button size="sm">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
-          </Link>
-        </EmptyState>
-      ) : (
-        <ProjectsViewToggle projects={formattedProjects} />
-      )}
+      <Suspense fallback={<ProjectsListLoading />}>
+        <ProjectsList />
+      </Suspense>
     </div>
   );
 }
