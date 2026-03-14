@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -54,12 +53,13 @@ export default function LoginPage() {
           />
         </div>
 
-        <Link
+        {/* Plain <a> tag — no Next.js routing, just a hard navigate */}
+        <a
           href="/"
           className="flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
           Sign in
-        </Link>
+        </a>
       </div>
 
       <p className="text-center text-xs text-muted-foreground">
