@@ -1,21 +1,8 @@
-"use client";
-
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 600));
-    window.location.href = "/";
-  }
-
   return (
     <div className="space-y-8">
       {/* Mobile logo — hidden on desktop where left panel shows */}
@@ -35,19 +22,16 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email address
           </Label>
           <Input
             id="email"
-            name="email"
             type="email"
             placeholder="you@dabhandmarketing.com"
             defaultValue="danny@dabhandmarketing.com"
-            required
-            autoComplete="email"
             className="h-11 bg-white"
           />
         </div>
@@ -57,49 +41,32 @@ export default function LoginPage() {
             <Label htmlFor="password" className="text-sm font-medium">
               Password
             </Label>
-            <button
-              type="button"
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            <span className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
               Forgot password?
-            </button>
+            </span>
           </div>
           <Input
             id="password"
-            name="password"
             type="password"
             placeholder="Enter your password"
             defaultValue="password123"
-            required
-            autoComplete="current-password"
             className="h-11 bg-white"
           />
         </div>
 
-        <Button
-          type="submit"
-          className="w-full h-11 text-sm font-medium"
-          disabled={loading}
+        <Link
+          href="/"
+          className="flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
         >
-          {loading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            "Sign in"
-          )}
-        </Button>
-      </form>
+          Sign in
+        </Link>
+      </div>
 
       <p className="text-center text-xs text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <button
-          type="button"
-          className="text-foreground font-medium hover:underline"
-        >
+        <span className="text-foreground font-medium cursor-pointer hover:underline">
           Contact your admin
-        </button>
+        </span>
       </p>
     </div>
   );
