@@ -5,6 +5,7 @@ import {
   DollarSign,
   PenTool,
   Gauge,
+  StickyNote,
   Mic,
   UserCog,
   Settings,
@@ -56,6 +57,11 @@ export const navItems: NavItem[] = [
     label: "Performance Audit",
     href: "/audit",
     icon: Gauge,
+  },
+  {
+    label: "Notes",
+    href: "/notes",
+    icon: StickyNote,
   },
   {
     label: "Voice Memos",

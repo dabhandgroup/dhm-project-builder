@@ -11,7 +11,7 @@ import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
-import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2 } from "lucide-react";
+import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check } from "lucide-react";
 import { mockClients } from "@/lib/mock-data";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
@@ -37,6 +37,9 @@ export function ProjectForm({
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationInput, setLocationInput] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [zipFile, setZipFile] = useState<File | null>(null);
+  const zipInputRef = useRef<HTMLInputElement>(null);
 
   // Client search state
   const [clientSearch, setClientSearch] = useState("");
@@ -351,7 +354,7 @@ export function ProjectForm({
         <CardHeader>
           <CardTitle className="text-lg">Branding</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <ImageUploadZone
               label="Favicon"
@@ -374,6 +377,97 @@ export function ProjectForm({
               single
               accept="image/*,.svg"
             />
+          </div>
+
+          {/* Choose Template */}
+          <div className="space-y-3">
+            <Label>Choose Template</Label>
+            <p className="text-xs text-muted-foreground">
+              Select a pre-made template as the starting point. AI will adapt content, colours, and fonts to match the client.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 16 }, (_, i) => {
+                const id = `template-${i + 1}`;
+                const isSelected = selectedTemplate === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setSelectedTemplate(isSelected ? null : id)}
+                    className={`relative group rounded-lg border-2 overflow-hidden transition-all ${
+                      isSelected
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-muted hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center">
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Template {i + 1}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </div>
+                    )}
+                    <div className="px-2 py-1.5 border-t bg-background">
+                      <p className="text-[11px] font-medium truncate">Template {i + 1}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Upload Project Zip */}
+          <div className="space-y-2">
+            <Label>Upload Project Files (ZIP)</Label>
+            <p className="text-xs text-muted-foreground">
+              Upload a zip file with existing project files for reference (designs, assets, content, etc.)
+            </p>
+            <div
+              onClick={() => zipInputRef.current?.click()}
+              className="flex items-center gap-3 rounded-lg border-2 border-dashed p-4 cursor-pointer hover:border-muted-foreground/30 transition-colors"
+            >
+              <Upload className="h-5 w-5 text-muted-foreground shrink-0" />
+              {zipFile ? (
+                <div className="flex-1 min-w-0 flex items-center justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{zipFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(zipFile.size / (1024 * 1024)).toFixed(1)} MB
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZipFile(null);
+                      if (zipInputRef.current) zipInputRef.current.value = "";
+                    }}
+                    className="p-1 rounded hover:bg-accent"
+                  >
+                    <X className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Click to upload a .zip file
+                  </p>
+                </div>
+              )}
+              <input
+                ref={zipInputRef}
+                type="file"
+                accept=".zip"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setZipFile(file);
+                }}
+                className="hidden"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>

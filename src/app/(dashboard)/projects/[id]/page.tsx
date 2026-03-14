@@ -1,3 +1,6 @@
+"use client";
+
+import { useState, use } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
@@ -19,18 +22,52 @@ import {
   Phone,
   Mail,
   DollarSign,
+  Copy,
+  Check,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById, getClientById } from "@/lib/mock-data";
 import type { ProjectStatus } from "@/types/database";
 
-export default async function ProjectDetailPage({
+function CopyButton({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy() {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+      title={`Copy ${label || "to clipboard"}`}
+    >
+      {copied ? (
+        <>
+          <Check className="h-3 w-3 text-green-500" />
+          <span className="text-green-500">Copied</span>
+        </>
+      ) : (
+        <>
+          <Copy className="h-3 w-3" />
+          {label && <span>{label}</span>}
+        </>
+      )}
+    </button>
+  );
+}
+
+export default function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const { id } = use(params);
   const project = getProjectById(id);
 
   if (!project) notFound();
@@ -43,7 +80,11 @@ export default async function ProjectDetailPage({
     projectTitle: project.title,
   });
 
-  const contactInfo = project.contact_info;
+  const contactInfo = project.contact_info as {
+    phone?: string;
+    email?: string;
+    address?: string;
+  } | null;
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -57,93 +98,77 @@ export default async function ProjectDetailPage({
         </Link>
       </PageHeader>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Info */}
-        <div className="space-y-6 lg:col-span-2">
-          {/* Project Details Card */}
-          <Card>
-            <CardHeader>
+      {/* Project Details + Financials in 2 columns */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Project Details Card */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
               <CardTitle className="text-base">Project Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              {project.domain_name && (
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {/* Logo */}
+            {(project as Record<string, unknown>).logo_url ? (
+              <div className="flex items-center gap-3 pb-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={(project as Record<string, unknown>).logo_url as string}
+                  alt="Client logo"
+                  className="h-10 max-w-[120px] object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-md border border-dashed p-3 text-muted-foreground">
+                <ImageIcon className="h-4 w-4" />
+                <span className="text-xs">No logo uploaded</span>
+              </div>
+            )}
+
+            {project.domain_name && (
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Globe className="h-4 w-4 text-muted-foreground" />
                   <span>{project.domain_name}</span>
                 </div>
-              )}
-              {project.preview_url && (
-                <div className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  <a
-                    href={project.preview_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {project.preview_url}
-                  </a>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <Badge variant="outline">
-                  {project.is_rebuild ? "Rebuild" : "New Build"}
-                </Badge>
-                {project.ai_model && (
-                  <Badge variant="secondary" className="uppercase text-[10px]">
-                    {project.ai_model}
-                  </Badge>
-                )}
+                <CopyButton text={project.domain_name} />
               </div>
-              {client && (
-                <p className="text-muted-foreground">
-                  Client: <span className="text-foreground font-medium">{client.name}</span>
-                </p>
+            )}
+            {project.preview_url && (
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <a
+                  href={project.preview_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {project.preview_url}
+                </a>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Badge variant="outline">
+                {project.is_rebuild ? "Rebuild" : "New Build"}
+              </Badge>
+              {project.ai_model && (
+                <Badge variant="secondary" className="uppercase text-[10px]">
+                  {project.ai_model}
+                </Badge>
               )}
-              <p className="text-xs text-muted-foreground">
-                Created {formatDate(project.created_at)}
+            </div>
+            {client && (
+              <p className="text-muted-foreground">
+                Client: <span className="text-foreground font-medium">{client.name}</span>
               </p>
-            </CardContent>
-          </Card>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Created {formatDate(project.created_at)}
+            </p>
+          </CardContent>
+        </Card>
 
-          {/* Brief */}
-          {project.brief && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Brief</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{project.brief}</p>
-                {project.brief_summary && (
-                  <div className="mt-4 rounded-md bg-muted/50 p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      AI Summary
-                    </p>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {project.brief_summary}
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Pages Required */}
-          {project.pages_required && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Pages Required</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">
-                  {project.pages_required}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar */}
+        {/* Right column: Financials + Contact */}
         <div className="space-y-6">
           {/* Financials */}
           <Card>
@@ -216,9 +241,65 @@ export default async function ProjectDetailPage({
               </CardContent>
             </Card>
           )}
-
         </div>
       </div>
+
+      {/* Brief — full width with copy */}
+      {project.brief && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Brief</CardTitle>
+              <CopyButton text={project.brief} label="Copy brief" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{project.brief}</p>
+            {project.brief_summary && (
+              <div className="mt-4 rounded-md bg-muted/50 p-3">
+                <p className="text-xs font-medium text-muted-foreground mb-1">
+                  AI Summary
+                </p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {project.brief_summary}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pages Required — full width with copy */}
+      {project.pages_required && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Pages Required</CardTitle>
+              <CopyButton text={project.pages_required} label="Copy pages" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">
+              {project.pages_required}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Additional Notes */}
+      {project.additional_notes && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Additional Notes</CardTitle>
+              <CopyButton text={project.additional_notes} label="Copy notes" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{project.additional_notes}</p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Outreach Message — full width, editable */}
       <OutreachMessageEditor initialMessage={outreachMessage} />

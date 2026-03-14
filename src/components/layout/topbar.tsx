@@ -84,6 +84,7 @@ export function Topbar() {
     financials: "Financials",
     content: "Content",
     audit: "Performance Audit",
+    notes: "Notes",
     "voice-memos": "Voice Memos",
     users: "Users",
     settings: "Settings",

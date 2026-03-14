@@ -75,22 +75,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2">
-        <Link href="/projects/new">
-          <Button variant="outline" size="sm">
-            <Plus className="h-4 w-4" />
-            New Project
-          </Button>
-        </Link>
-        <Link href="/audit">
-          <Button variant="outline" size="sm">
-            <Gauge className="h-4 w-4" />
-            Run Audit
-          </Button>
-        </Link>
-      </div>
-
       {/* Recent Projects */}
       <Card>
         <CardHeader>
