@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,13 +8,12 @@ import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
-    router.push("/");
+    window.location.href = "/";
   }
 
   return (
