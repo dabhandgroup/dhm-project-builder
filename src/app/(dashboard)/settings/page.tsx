@@ -9,11 +9,51 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/components/ui/toast";
-import { Loader2, Save, Camera, Github, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Save,
+  Camera,
+  Github,
+  CheckCircle2,
+  AlertCircle,
+  Zap,
+  Globe,
+  Bot,
+  Flame,
+} from "lucide-react";
 import { updateProfile } from "@/actions/users";
 import { updatePassword } from "@/actions/auth";
 import { saveSettings } from "@/actions/settings";
 import { uploadAvatar } from "@/lib/storage";
+import {
+  testGithubConnection,
+  testVercelConnection,
+  testNetlifyConnection,
+  testFirecrawlConnection,
+  testAnthropicConnection,
+} from "@/actions/integrations";
+
+function StatusBadge({ connected, label }: { connected: boolean; label?: string }) {
+  if (connected) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950 p-3">
+        <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">Connected</p>
+          {label && <p className="text-xs text-muted-foreground">{label}</p>}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950 p-3">
+      <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">Not configured</p>
+      </div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { user, profile } = useUser();
@@ -23,11 +63,29 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Integration state
   const [githubPat, setGithubPat] = useState("");
   const [githubOrg, setGithubOrg] = useState("dabhandgroup");
   const [defaultBranch, setDefaultBranch] = useState("main");
   const [savingGithub, setSavingGithub] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [testingGithub, setTestingGithub] = useState(false);
+
+  const [vercelToken, setVercelToken] = useState("");
+  const [vercelTeamId, setVercelTeamId] = useState("");
+  const [savingVercel, setSavingVercel] = useState(false);
+  const [testingVercel, setTestingVercel] = useState(false);
+
+  const [netlifyToken, setNetlifyToken] = useState("");
+  const [savingNetlify, setSavingNetlify] = useState(false);
+  const [testingNetlify, setTestingNetlify] = useState(false);
+
+  const [anthropicKey, setAnthropicKey] = useState("");
+  const [firecrawlKey, setFirecrawlKey] = useState("");
+  const [savingApiKeys, setSavingApiKeys] = useState(false);
+  const [testingAnthropic, setTestingAnthropic] = useState(false);
+  const [testingFirecrawl, setTestingFirecrawl] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -97,6 +155,7 @@ export default function SettingsPage() {
     setChangingPassword(false);
   }
 
+  // --- GitHub ---
   async function handleSaveGithub() {
     setSavingGithub(true);
     const result = await saveSettings({
@@ -112,11 +171,128 @@ export default function SettingsPage() {
     setSavingGithub(false);
   }
 
-  const githubConnected = githubPat.length > 0;
+  async function handleTestGithub() {
+    if (!githubPat) {
+      toast({ title: "Enter a PAT first", variant: "destructive" });
+      return;
+    }
+    setTestingGithub(true);
+    const result = await testGithubConnection(githubPat);
+    if (result.valid) {
+      toast({ title: `Connected as ${(result as { login?: string }).login}` });
+    } else {
+      toast({ title: result.error || "Connection failed", variant: "destructive" });
+    }
+    setTestingGithub(false);
+  }
+
+  // --- Vercel ---
+  async function handleSaveVercel() {
+    setSavingVercel(true);
+    const result = await saveSettings({
+      vercel_token: vercelToken,
+      vercel_team_id: vercelTeamId,
+    });
+    if (result.error) {
+      toast({ title: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "Vercel settings saved" });
+    }
+    setSavingVercel(false);
+  }
+
+  async function handleTestVercel() {
+    if (!vercelToken) {
+      toast({ title: "Enter a token first", variant: "destructive" });
+      return;
+    }
+    setTestingVercel(true);
+    const result = await testVercelConnection(vercelToken);
+    if (result.valid) {
+      toast({ title: `Connected as ${(result as { username?: string }).username}` });
+    } else {
+      toast({ title: result.error || "Connection failed", variant: "destructive" });
+    }
+    setTestingVercel(false);
+  }
+
+  // --- Netlify ---
+  async function handleSaveNetlify() {
+    setSavingNetlify(true);
+    const result = await saveSettings({
+      netlify_token: netlifyToken,
+    });
+    if (result.error) {
+      toast({ title: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "Netlify settings saved" });
+    }
+    setSavingNetlify(false);
+  }
+
+  async function handleTestNetlify() {
+    if (!netlifyToken) {
+      toast({ title: "Enter a token first", variant: "destructive" });
+      return;
+    }
+    setTestingNetlify(true);
+    const result = await testNetlifyConnection(netlifyToken);
+    if (result.valid) {
+      toast({ title: `Connected as ${(result as { name?: string }).name}` });
+    } else {
+      toast({ title: result.error || "Connection failed", variant: "destructive" });
+    }
+    setTestingNetlify(false);
+  }
+
+  // --- API Keys ---
+  async function handleSaveApiKeys() {
+    setSavingApiKeys(true);
+    const result = await saveSettings({
+      anthropic_api_key: anthropicKey,
+      firecrawl_api_key: firecrawlKey,
+    });
+    if (result.error) {
+      toast({ title: result.error, variant: "destructive" });
+    } else {
+      toast({ title: "API keys saved" });
+    }
+    setSavingApiKeys(false);
+  }
+
+  async function handleTestAnthropic() {
+    if (!anthropicKey) {
+      toast({ title: "Enter an API key first", variant: "destructive" });
+      return;
+    }
+    setTestingAnthropic(true);
+    const result = await testAnthropicConnection(anthropicKey);
+    if (result.valid) {
+      toast({ title: "Anthropic API key is valid" });
+    } else {
+      toast({ title: result.error || "Connection failed", variant: "destructive" });
+    }
+    setTestingAnthropic(false);
+  }
+
+  async function handleTestFirecrawl() {
+    if (!firecrawlKey) {
+      toast({ title: "Enter an API key first", variant: "destructive" });
+      return;
+    }
+    setTestingFirecrawl(true);
+    const result = await testFirecrawlConnection(firecrawlKey);
+    if (result.valid) {
+      toast({ title: "Firecrawl API key is valid" });
+    } else {
+      toast({ title: result.error || "Connection failed", variant: "destructive" });
+    }
+    setTestingFirecrawl(false);
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <PageHeader title="Settings" description="Manage your profile and preferences" />
+      <PageHeader title="Settings" description="Manage your profile and integrations" />
 
       {/* Profile */}
       <Card>
@@ -220,68 +396,149 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Add your GitHub Personal Access Token to enable repository creation and code management for client projects.
           </p>
-
-          {githubConnected ? (
-            <div className="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950 p-3">
-              <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Token configured</p>
-                <p className="text-xs text-muted-foreground">
-                  Organisation: <span className="font-medium">@{githubOrg}</span>
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950 p-3">
-              <AlertCircle className="h-5 w-5 text-amber-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">Not configured</p>
-                <p className="text-xs text-muted-foreground">
-                  Add a GitHub PAT to enable repository creation
-                </p>
-              </div>
-            </div>
-          )}
-
+          <StatusBadge connected={githubPat.length > 0} label={githubPat ? `Organisation: @${githubOrg}` : undefined} />
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">GitHub Personal Access Token</Label>
-              <Input
-                type="password"
-                value={githubPat}
-                onChange={(e) => setGithubPat(e.target.value)}
-                placeholder="ghp_..."
-                className="text-sm font-mono"
-              />
+              <Input type="password" value={githubPat} onChange={(e) => setGithubPat(e.target.value)} placeholder="ghp_..." className="text-sm font-mono" />
             </div>
-
             <div className="space-y-2">
               <Label className="text-xs">GitHub Organisation / Account</Label>
-              <Input
-                value={githubOrg}
-                onChange={(e) => setGithubOrg(e.target.value)}
-                placeholder="e.g. dabhandgroup"
-                className="text-sm"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Repositories will be created under this organisation
-              </p>
+              <Input value={githubOrg} onChange={(e) => setGithubOrg(e.target.value)} placeholder="e.g. dabhandgroup" className="text-sm" />
+              <p className="text-[10px] text-muted-foreground">Repositories will be created under this organisation</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Default Branch</Label>
+              <Input value={defaultBranch} onChange={(e) => setDefaultBranch(e.target.value)} placeholder="main" className="text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveGithub} disabled={savingGithub}>
+              {savingGithub ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleTestGithub} disabled={testingGithub}>
+              {testingGithub ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Test Connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Vercel Integration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Vercel
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Connect to Vercel for automatic deployments and preview URLs.
+          </p>
+          <StatusBadge connected={vercelToken.length > 0} />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Vercel Token</Label>
+              <Input type="password" value={vercelToken} onChange={(e) => setVercelToken(e.target.value)} placeholder="Enter your Vercel token" className="text-sm font-mono" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Team ID (optional)</Label>
+              <Input value={vercelTeamId} onChange={(e) => setVercelTeamId(e.target.value)} placeholder="team_..." className="text-sm font-mono" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveVercel} disabled={savingVercel}>
+              {savingVercel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleTestVercel} disabled={testingVercel}>
+              {testingVercel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Test Connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Netlify Integration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Netlify
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Alternative deployment provider. Connect for Netlify-based deployments.
+          </p>
+          <StatusBadge connected={netlifyToken.length > 0} />
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs">Netlify Personal Access Token</Label>
+              <Input type="password" value={netlifyToken} onChange={(e) => setNetlifyToken(e.target.value)} placeholder="Enter your Netlify token" className="text-sm font-mono" />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSaveNetlify} disabled={savingNetlify}>
+              {savingNetlify ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleTestNetlify} disabled={testingNetlify}>
+              {testingNetlify ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Test Connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* API Keys */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            API Keys
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            API keys for AI content generation and site scraping.
+          </p>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label className="text-xs flex items-center gap-1.5">
+                <Bot className="h-3 w-3" />
+                Anthropic API Key
+              </Label>
+              <Input type="password" value={anthropicKey} onChange={(e) => setAnthropicKey(e.target.value)} placeholder="sk-ant-..." className="text-sm font-mono" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleTestAnthropic} disabled={testingAnthropic} className="h-7 text-xs">
+                  {testingAnthropic ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  Test
+                </Button>
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs">Default Branch</Label>
-              <Input
-                value={defaultBranch}
-                onChange={(e) => setDefaultBranch(e.target.value)}
-                placeholder="main"
-                className="text-sm"
-              />
+              <Label className="text-xs flex items-center gap-1.5">
+                <Flame className="h-3 w-3" />
+                Firecrawl API Key
+              </Label>
+              <Input type="password" value={firecrawlKey} onChange={(e) => setFirecrawlKey(e.target.value)} placeholder="fc-..." className="text-sm font-mono" />
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={handleTestFirecrawl} disabled={testingFirecrawl} className="h-7 text-xs">
+                  {testingFirecrawl ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+                  Test
+                </Button>
+              </div>
             </div>
           </div>
 
-          <Button size="sm" onClick={handleSaveGithub} disabled={savingGithub}>
-            {savingGithub ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save GitHub Settings
+          <Button size="sm" onClick={handleSaveApiKeys} disabled={savingApiKeys}>
+            {savingApiKeys ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save API Keys
           </Button>
         </CardContent>
       </Card>

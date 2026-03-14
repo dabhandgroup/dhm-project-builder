@@ -49,6 +49,43 @@ export async function addCustomDomain(
   return res.json();
 }
 
+export async function validateVercelToken(token: string) {
+  const res = await fetch(`${VERCEL_API}/v2/user`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) return { valid: false, error: "Invalid token" };
+
+  const data = await res.json();
+  return { valid: true, username: data.user?.username };
+}
+
+export async function linkRepoToProject(
+  projectId: string,
+  repoFullName: string,
+) {
+  const teamId = process.env.VERCEL_TEAM_ID;
+  const url = `${VERCEL_API}/v10/projects/${projectId}/link${teamId ? `?teamId=${teamId}` : ""}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify({
+      type: "github",
+      repo: repoFullName,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || "Failed to link repo to project");
+  }
+
+  return res.json();
+}
+
 export async function getDeploymentStatus(deploymentId: string) {
   const teamId = process.env.VERCEL_TEAM_ID;
   const url = `${VERCEL_API}/v13/deployments/${deploymentId}${teamId ? `?teamId=${teamId}` : ""}`;
