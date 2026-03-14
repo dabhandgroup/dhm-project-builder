@@ -86,7 +86,7 @@ export default function UsersPage() {
             : "??";
           return (
             <Card key={p.id}>
-              <CardContent className="p-4">
+              <CardContent className="p-4 sm:p-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarFallback>{initials}</AvatarFallback>

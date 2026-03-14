@@ -70,20 +70,20 @@ function DialogContent({
         className="fixed inset-0 bg-black/80 animate-in fade-in-0"
         onClick={() => setOpen(false)}
       />
-      <div className="fixed inset-x-4 sm:inset-x-0 top-1/2 sm:left-1/2 z-50 -translate-y-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md mx-auto">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
           className={cn(
-            "w-full rounded-2xl border bg-background p-6 shadow-2xl space-y-5",
+            "relative w-full max-w-md rounded-2xl border bg-background p-6 shadow-2xl space-y-5",
             className
           )}
         >
           {children}
           <button
             type="button"
-            className="absolute right-4 top-4 rounded-full p-1 opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent"
+            className="absolute right-3 top-3 rounded-full p-1.5 opacity-70 ring-offset-background transition-opacity hover:opacity-100 hover:bg-accent"
             onClick={() => setOpen(false)}
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
             <span className="sr-only">Close</span>
           </button>
         </div>

@@ -38,7 +38,7 @@ export default function ClientsPage() {
           {formattedClients.map((client) => (
             <Link key={client.id} href={`/clients/${client.id}`}>
               <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                <CardContent className="p-4 space-y-2">
+                <CardContent className="p-4 sm:p-4 space-y-2">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-sm">{client.name}</h3>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">

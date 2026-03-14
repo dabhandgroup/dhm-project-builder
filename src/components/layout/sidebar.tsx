@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils";
 import { navItems } from "@/constants/nav-items";
 import { useUser } from "@/hooks/use-user";
 import { signOut } from "@/actions/auth";
-import { Tooltip } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +48,7 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center border-b px-4">
+      <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
         <Link href="/" className="flex items-center gap-2 font-bold">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
             DH
@@ -64,59 +63,53 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-auto py-4">
-        <ul className="space-y-1 px-2">
+        <ul className={cn("space-y-1", collapsed ? "px-0 flex flex-col items-center" : "px-2")}>
           {filteredItems.map((item) => {
             const isActive =
               pathname === item.href ||
               (item.href !== "/" && pathname.startsWith(item.href));
 
             const linkEl = (
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center rounded-lg text-sm font-medium transition-colors",
-                  isActive
-                    ? "text-foreground"
-                    : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-                  item.accent &&
-                    !isActive &&
-                    "text-primary hover:text-primary",
-                  collapsed
-                    ? "justify-center h-10 w-10 mx-auto"
-                    : "gap-3 px-3 py-2"
-                )}
-              >
-                <item.icon
+              <li key={item.href}>
+                <Link
+                  href={item.href}
                   className={cn(
-                    "h-5 w-5 shrink-0",
-                    isActive ? "text-foreground" : ""
+                    "flex items-center rounded-lg text-sm font-medium transition-colors",
+                    isActive
+                      ? "text-foreground"
+                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+                    item.accent &&
+                      !isActive &&
+                      "text-primary hover:text-primary",
+                    collapsed
+                      ? "justify-center h-10 w-10"
+                      : "gap-3 px-3 py-2"
                   )}
-                  strokeWidth={isActive ? 2.5 : 2}
-                />
-                {!collapsed && (
-                  <span className="whitespace-nowrap">{item.label}</span>
-                )}
-              </Link>
-            );
-
-            const wrappedLink = collapsed ? (
-              <Tooltip key={item.href} content={item.label} side="right">
-                <li>{linkEl}</li>
-              </Tooltip>
-            ) : (
-              <li key={item.href}>{linkEl}</li>
+                >
+                  <item.icon
+                    className={cn(
+                      "h-5 w-5 shrink-0",
+                      isActive ? "text-foreground" : ""
+                    )}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  {!collapsed && (
+                    <span className="whitespace-nowrap">{item.label}</span>
+                  )}
+                </Link>
+              </li>
             );
 
             if (item.separatorBefore) {
               return (
-                <div key={item.href}>
+                <div key={item.href} className={collapsed ? "w-10" : "w-full"}>
                   <Separator className="my-2" />
-                  {wrappedLink}
+                  {linkEl}
                 </div>
               );
             }
 
-            return wrappedLink;
+            return linkEl;
           })}
         </ul>
       </nav>
@@ -124,58 +117,44 @@ export function Sidebar() {
       <Separator />
 
       {/* Collapse toggle + Sign out */}
-      <div className="p-2 space-y-1">
-        {(() => {
-          const collapseBtn = (
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              className={cn(
-                "flex items-center rounded-lg w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
-                collapsed
-                  ? "justify-center h-10 w-10 mx-auto"
-                  : "gap-3 px-3 py-2"
-              )}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? (
-                <PanelLeft className="h-5 w-5 shrink-0" />
-              ) : (
-                <PanelLeftClose className="h-5 w-5 shrink-0" />
-              )}
-              {!collapsed && (
-                <span className="whitespace-nowrap">Collapse</span>
-              )}
-            </button>
-          );
-          return collapsed ? (
-            <Tooltip content="Expand sidebar" side="right">{collapseBtn}</Tooltip>
-          ) : collapseBtn;
-        })()}
+      <div className={cn("p-2 space-y-1", collapsed && "flex flex-col items-center")}>
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          className={cn(
+            "flex items-center rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
+            collapsed
+              ? "justify-center h-10 w-10"
+              : "gap-3 px-3 py-2 w-full"
+          )}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? (
+            <PanelLeft className="h-5 w-5 shrink-0" />
+          ) : (
+            <PanelLeftClose className="h-5 w-5 shrink-0" />
+          )}
+          {!collapsed && (
+            <span className="whitespace-nowrap">Collapse</span>
+          )}
+        </button>
 
-        {(() => {
-          const signOutBtn = (
-            <button
-              type="button"
-              onClick={() => setShowLogout(true)}
-              className={cn(
-                "flex items-center rounded-lg w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors",
-                collapsed
-                  ? "justify-center h-10 w-10 mx-auto"
-                  : "gap-3 px-3 py-2"
-              )}
-              aria-label="Sign out"
-            >
-              <LogOut className="h-5 w-5 shrink-0" />
-              {!collapsed && (
-                <span className="whitespace-nowrap">Sign out</span>
-              )}
-            </button>
-          );
-          return collapsed ? (
-            <Tooltip content="Sign out" side="right">{signOutBtn}</Tooltip>
-          ) : signOutBtn;
-        })()}
+        <button
+          type="button"
+          onClick={() => setShowLogout(true)}
+          className={cn(
+            "flex items-center rounded-lg text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors",
+            collapsed
+              ? "justify-center h-10 w-10"
+              : "gap-3 px-3 py-2 w-full"
+          )}
+          aria-label="Sign out"
+        >
+          <LogOut className="h-5 w-5 shrink-0" />
+          {!collapsed && (
+            <span className="whitespace-nowrap">Sign out</span>
+          )}
+        </button>
       </div>
 
       {/* Logout confirmation dialog */}
