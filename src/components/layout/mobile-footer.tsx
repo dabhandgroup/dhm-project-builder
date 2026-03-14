@@ -1,73 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState, useCallback } from "react";
 import { LayoutDashboard, FolderKanban, Mic, DollarSign, Settings, Square, Loader2, X, Pause, Play, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { toast } from "@/components/ui/toast";
 
 export function MobileFooter() {
   const pathname = usePathname();
-  const [recording, setRecording] = useState(false);
-  const [paused, setPaused] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [seconds, setSeconds] = useState(0);
-  const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+  const router = useRouter();
+  const {
+    isRecording,
+    isPaused,
+    duration,
+    startRecording: startRec,
+    pauseRecording,
+    resumeRecording,
+    stopRecording: stopRec,
+    error,
+  } = useVoiceRecorder();
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  function startRecording() {
-    setRecording(true);
-    setPaused(false);
-    setSeconds(0);
-    const id = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
-    setIntervalId(id);
-  }
+  const handleStartRecording = useCallback(async () => {
+    setShowCancelConfirm(false);
+    await startRec();
+  }, [startRec]);
 
-  function pauseRecording() {
-    if (intervalId) clearInterval(intervalId);
-    setIntervalId(null);
-    setPaused(true);
-  }
+  const handleStopRecording = useCallback(async () => {
+    const blob = await stopRec();
+    if (!blob) return;
 
-  function resumeRecording() {
-    setPaused(false);
-    const id = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
-    setIntervalId(id);
-  }
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
 
-  function stopRecording() {
-    if (intervalId) clearInterval(intervalId);
-    setIntervalId(null);
-    setRecording(false);
-    setPaused(false);
-    setProcessing(true);
-    setTimeout(() => {
-      setProcessing(false);
-      setSeconds(0);
-    }, 2000);
-  }
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Transcription failed (${response.status})`);
+      }
+
+      const data = await response.json();
+      if (data.transcription) {
+        toast({ title: "Memo saved", description: "Transcription complete" });
+        // Navigate to voice memos page so user can see/copy the result
+        router.push("/voice-memos");
+        router.refresh();
+      } else {
+        throw new Error("No transcription returned");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Please try again";
+      toast({
+        title: "Transcription failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [stopRec, router]);
 
   function confirmCancel() {
     setShowCancelConfirm(true);
   }
 
-  function cancelRecording() {
-    if (intervalId) clearInterval(intervalId);
-    setIntervalId(null);
-    setRecording(false);
-    setPaused(false);
-    setSeconds(0);
+  const cancelRecording = useCallback(async () => {
+    await stopRec(); // stop and discard
     setShowCancelConfirm(false);
-  }
+  }, [stopRec]);
 
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+  const mins = Math.floor(duration / 60);
+  const secs = duration % 60;
   const timeDisplay = `${mins}:${secs.toString().padStart(2, "0")}`;
 
   const items = [
@@ -81,16 +95,16 @@ export function MobileFooter() {
   return (
     <>
       {/* Recording overlay */}
-      {recording && (
+      {isRecording && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center lg:hidden">
           <div className="bg-background rounded-2xl p-8 mx-4 w-full max-w-sm text-center space-y-6">
             <div className="relative mx-auto w-fit">
-              {!paused && (
+              {!isPaused && (
                 <div className="absolute inset-0 rounded-full animate-pulse" style={{ animationDuration: "2s", background: "rgba(54, 167, 245, 0.2)" }} />
               )}
               <button
                 type="button"
-                onClick={stopRecording}
+                onClick={handleStopRecording}
                 className="relative flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg"
                 style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}
               >
@@ -100,16 +114,16 @@ export function MobileFooter() {
             <div className="space-y-2">
               <Badge
                 variant="secondary"
-                className={`gap-1.5 ${!paused ? "text-[#36A7F5]" : ""}`}
-                style={!paused ? { animation: "pulse 2s ease-in-out infinite" } : undefined}
+                className={`gap-1.5 ${!isPaused ? "text-[#36A7F5]" : ""}`}
+                style={!isPaused ? { animation: "pulse 2s ease-in-out infinite" } : undefined}
               >
-                <span className={`h-2 w-2 rounded-full ${paused ? "bg-muted-foreground" : "bg-white"}`} />
-                {paused ? "Paused" : "Recording"}
+                <span className={`h-2 w-2 rounded-full ${isPaused ? "bg-muted-foreground" : "bg-white"}`} />
+                {isPaused ? "Paused" : "Recording"}
               </Badge>
               <p className="text-2xl font-mono font-semibold tabular-nums">{timeDisplay}</p>
             </div>
             <div className="flex items-center justify-center gap-4">
-              {paused ? (
+              {isPaused ? (
                 <button
                   type="button"
                   onClick={resumeRecording}
@@ -137,6 +151,10 @@ export function MobileFooter() {
                 Cancel
               </button>
             </div>
+
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
 
             {/* Cancel confirmation */}
             {showCancelConfirm && (
@@ -171,7 +189,7 @@ export function MobileFooter() {
       )}
 
       {/* Processing toast */}
-      {processing && (
+      {isTranscribing && (
         <div className="fixed bottom-20 left-4 right-4 z-50 lg:hidden">
           <div className="flex items-center gap-3 rounded-lg bg-background border shadow-lg px-4 py-3">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -189,11 +207,19 @@ export function MobileFooter() {
                 <button
                   key="mic"
                   type="button"
-                  onClick={startRecording}
+                  onClick={handleStartRecording}
+                  disabled={isRecording || isTranscribing}
                   className="flex flex-col items-center justify-center -mt-5"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors" style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}>
-                    <Mic className="h-6 w-6" />
+                  <div className={cn(
+                    "flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors",
+                    (isRecording || isTranscribing) && "opacity-50"
+                  )} style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}>
+                    {isTranscribing ? (
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    ) : (
+                      <Mic className="h-6 w-6" />
+                    )}
                   </div>
                   <span className="text-[10px] mt-1 text-muted-foreground">Record</span>
                 </button>

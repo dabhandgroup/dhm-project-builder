@@ -1,8 +1,10 @@
+import { Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getClients } from "@/lib/queries/clients";
 import { getTemplates } from "@/lib/queries/templates";
 import { ProjectFormWrapper } from "./form-wrapper";
 
-export default async function NewProjectPage() {
+async function ProjectFormData() {
   const [clients, templates] = await Promise.all([getClients(), getTemplates()]);
 
   const clientOptions = clients.map((c) => ({
@@ -22,9 +24,28 @@ export default async function NewProjectPage() {
     framework: t.framework,
   }));
 
+  return <ProjectFormWrapper clients={clientOptions} templates={templateOptions} />;
+}
+
+function FormLoading() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-12 rounded-lg" />
+      <Skeleton className="h-12 rounded-lg" />
+      <Skeleton className="h-12 rounded-lg" />
+      <Skeleton className="h-24 rounded-lg" />
+      <Skeleton className="h-12 rounded-lg" />
+    </div>
+  );
+}
+
+export default function NewProjectPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <ProjectFormWrapper clients={clientOptions} templates={templateOptions} />
+      {/* Form title is rendered inside ProjectForm component */}
+      <Suspense fallback={<FormLoading />}>
+        <ProjectFormData />
+      </Suspense>
     </div>
   );
 }

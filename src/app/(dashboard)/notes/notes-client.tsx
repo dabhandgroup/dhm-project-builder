@@ -152,7 +152,7 @@ export function NotesClient({ projects }: { projects: ProjectOption[] }) {
       {/* Notes list */}
       {filteredNotes.length === 0 ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="p-8 text-center">
             <StickyNote className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               {filterProject ? "No notes for this project." : "No notes yet. Click 'Add Note' to create one."}

@@ -284,7 +284,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
 
       {templates.length === 0 && !showForm ? (
         <Card>
-          <CardContent className="p-8 py-12 text-center">
+          <CardContent className="p-8 pt-8 pb-12 text-center">
             <LayoutTemplate className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               No templates yet. Click &quot;Add Template&quot; to upload one.
