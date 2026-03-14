@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export default function FirstLoginPage() {
@@ -36,63 +29,82 @@ export default function FirstLoginPage() {
 
     setLoading(true);
     setError(null);
-    // Mock: simulate password update
     await new Promise((r) => setTimeout(r, 600));
     router.push("/");
   }
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader className="space-y-1 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg">
+    <div className="space-y-8">
+      <div className="flex items-center gap-3 lg:hidden">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-zinc-950 text-white text-sm font-bold">
           DH
         </div>
-        <CardTitle className="text-2xl">Set your password</CardTitle>
-        <CardDescription>
-          Please choose a new password for your account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">New Password</Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              placeholder="At least 8 characters"
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="Confirm your password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </div>
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+        <span className="text-[15px] font-semibold tracking-tight">
+          Dab Hand Marketing
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-2xl font-semibold tracking-tight">
+          Set your password
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Choose a secure password for your account
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="space-y-2">
+          <Label htmlFor="password" className="text-sm font-medium">
+            New Password
+          </Label>
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="At least 8 characters"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            className="h-11 bg-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword" className="text-sm font-medium">
+            Confirm Password
+          </Label>
+          <Input
+            id="confirmPassword"
+            name="confirmPassword"
+            type="password"
+            placeholder="Re-enter your password"
+            required
+            minLength={8}
+            autoComplete="new-password"
+            className="h-11 bg-white"
+          />
+        </div>
+
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full h-11 text-sm font-medium"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            "Set Password & Continue"
           )}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
-              <>
-                <Loader2 className="animate-spin" />
-                Updating...
-              </>
-            ) : (
-              "Set Password & Continue"
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+        </Button>
+      </form>
+    </div>
   );
 }
