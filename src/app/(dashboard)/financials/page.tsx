@@ -127,14 +127,14 @@ export default function FinancialsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Currency tabs */}
-        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto">
+        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto touch-manipulation">
           {currencies.map((c) => (
             <button
               key={c.code}
               type="button"
               onClick={() => setSelectedCurrency(c.code)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
-                selectedCurrency === c.code ? "bg-background shadow-sm" : "hover:bg-background/50"
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 touch-manipulation ${
+                selectedCurrency === c.code ? "bg-background shadow-sm" : "active:bg-background/50"
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -142,7 +142,7 @@ export default function FinancialsPage() {
                 src={`https://flagcdn.com/w20/${c.flag.toLowerCase()}.png`}
                 srcSet={`https://flagcdn.com/w40/${c.flag.toLowerCase()}.png 2x`}
                 alt={`${c.label} flag`}
-                className="h-3 w-4 object-cover rounded-[2px]"
+                className="h-3 w-4 object-cover rounded-[2px] pointer-events-none"
               />
               {c.code}
             </button>
@@ -150,8 +150,8 @@ export default function FinancialsPage() {
           <button
             type="button"
             onClick={() => setSelectedCurrency("ALL")}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors shrink-0 ${
-              selectedCurrency === "ALL" ? "bg-background shadow-sm" : "hover:bg-background/50"
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors shrink-0 touch-manipulation ${
+              selectedCurrency === "ALL" ? "bg-background shadow-sm" : "active:bg-background/50"
             }`}
           >
             All
