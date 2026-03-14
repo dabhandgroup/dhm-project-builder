@@ -51,7 +51,11 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         ? "audio/webm;codecs=opus"
         : "audio/webm";
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      // Use low bitrate for speech — keeps 5min recordings under ~1.5MB
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 32000,
+      });
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {

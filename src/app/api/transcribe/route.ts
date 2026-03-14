@@ -3,6 +3,9 @@ import { revalidatePath } from "next/cache";
 import { getGroqClient } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
+// Allow up to 25MB uploads (long voice memos) and 60s execution
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   // Verify auth
   const supabase = await createClient();
