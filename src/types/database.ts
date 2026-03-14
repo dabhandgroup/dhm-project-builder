@@ -10,6 +10,8 @@ export type UserRole = "admin" | "member";
 export type ProjectStatus = "lead" | "initial_draft" | "awaiting_feedback" | "revisions" | "awaiting_payment" | "complete";
 export type ImageType = "square" | "landscape";
 export type AuditStatus = "pending" | "running_before" | "running_after" | "complete" | "failed";
+export type PipelineStatus = "pending" | "scraping" | "generating" | "pushing" | "deploying" | "complete" | "failed";
+export type CostType = "one_off" | "monthly";
 
 export interface Database {
   public: {
@@ -105,6 +107,13 @@ export interface Database {
           deploy_subdomain: string | null;
           vercel_project_id: string | null;
           kanban_order: number;
+          currency: string;
+          deploy_provider: string | null;
+          netlify_project_id: string | null;
+          github_repo_url: string | null;
+          template_id: string | null;
+          pipeline_status: string | null;
+          pipeline_error: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -134,6 +143,13 @@ export interface Database {
           deploy_subdomain?: string | null;
           vercel_project_id?: string | null;
           kanban_order?: number;
+          currency?: string;
+          deploy_provider?: string | null;
+          netlify_project_id?: string | null;
+          github_repo_url?: string | null;
+          template_id?: string | null;
+          pipeline_status?: string | null;
+          pipeline_error?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -162,6 +178,13 @@ export interface Database {
           deploy_subdomain?: string | null;
           vercel_project_id?: string | null;
           kanban_order?: number;
+          currency?: string;
+          deploy_provider?: string | null;
+          netlify_project_id?: string | null;
+          github_repo_url?: string | null;
+          template_id?: string | null;
+          pipeline_status?: string | null;
+          pipeline_error?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -170,6 +193,13 @@ export interface Database {
             columns: ["client_id"];
             isOneToOne: false;
             referencedRelation: "clients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "projects_template_id_fkey";
+            columns: ["template_id"];
+            isOneToOne: false;
+            referencedRelation: "templates";
             referencedColumns: ["id"];
           },
         ];
@@ -322,6 +352,138 @@ export interface Database {
             referencedColumns: ["id"];
           },
         ];
+      };
+      templates: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          thumbnail_url: string | null;
+          storage_path: string;
+          category: string | null;
+          framework: string;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          thumbnail_url?: string | null;
+          storage_path: string;
+          category?: string | null;
+          framework?: string;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          description?: string | null;
+          thumbnail_url?: string | null;
+          storage_path?: string;
+          category?: string | null;
+          framework?: string;
+          is_active?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      settings: {
+        Row: {
+          id: string;
+          key: string;
+          value: string | null;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          key: string;
+          value?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      costs: {
+        Row: {
+          id: string;
+          description: string;
+          amount: number;
+          currency: string;
+          type: string;
+          date: string;
+          project_id: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          description: string;
+          amount: number;
+          currency?: string;
+          type?: string;
+          date?: string;
+          project_id?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          description?: string;
+          amount?: number;
+          currency?: string;
+          type?: string;
+          date?: string;
+          project_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "costs_project_id_fkey";
+            columns: ["project_id"];
+            isOneToOne: false;
+            referencedRelation: "projects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      financial_targets: {
+        Row: {
+          id: string;
+          currency: string;
+          monthly_mrr_target: number;
+          monthly_one_off_target: number;
+          label: string | null;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          currency: string;
+          monthly_mrr_target?: number;
+          monthly_one_off_target?: number;
+          label?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          currency?: string;
+          monthly_mrr_target?: number;
+          monthly_one_off_target?: number;
+          label?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
     };
     Views: Record<string, never>;

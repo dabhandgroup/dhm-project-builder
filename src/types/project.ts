@@ -46,6 +46,8 @@ export interface ProjectFormData {
   currency: CurrencyCode;
   one_off_revenue: number;
   recurring_revenue: number;
+  template_id: string | null;
+  deploy_provider: string | null;
 }
 
 export const defaultProjectFormData: ProjectFormData = {
@@ -75,4 +77,6 @@ export const defaultProjectFormData: ProjectFormData = {
   currency: "AUD",
   one_off_revenue: 0,
   recurring_revenue: 199,
+  template_id: null,
+  deploy_provider: null,
 };
