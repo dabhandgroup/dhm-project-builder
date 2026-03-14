@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Mic, Trash2, Search } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { VoiceRecorder } from "@/components/voice/voice-recorder";
 import { deleteVoiceMemo } from "@/actions/voice-memos";
 import { toast } from "@/components/ui/toast";
@@ -140,7 +140,7 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          {formatDate(memo.created_at)}
+                          {formatDateTime(memo.created_at)}
                         </span>
                       </div>
                       <p className="text-sm whitespace-pre-wrap">

@@ -114,17 +114,36 @@ export async function addProjectImage(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveDraft(data: Record<string, any>, projectId?: string) {
+  // Strip non-DB fields (File objects, client_name, etc.)
+  const {
+    client_name: _cn,
+    favicon: _f,
+    logo: _l,
+    alt_logo: _al,
+    square_images: _si,
+    landscape_images: _li,
+    ...dbFields
+  } = data;
+
+  // Clean contact_info
+  if (dbFields.contact_info) {
+    dbFields.contact_info = JSON.parse(JSON.stringify(dbFields.contact_info));
+  }
+
+  // Remove empty strings for optional fields
+  if (!dbFields.title) dbFields.title = "Untitled Draft";
+
   const supabase = await createClient();
 
   if (projectId) {
-    return updateProject(projectId, data);
+    return updateProject(projectId, dbFields);
   }
 
   const { data: { user } } = await supabase.auth.getUser();
   const { data: project, error } = await supabase
     .from("projects")
     .insert({
-      ...data,
+      ...dbFields,
       status: "lead" as ProjectStatus,
       created_by: user?.id,
     })

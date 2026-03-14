@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { DollarSign, TrendingUp, BarChart3, Target, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
@@ -68,22 +69,40 @@ const dateRanges = [
   { label: "All Time", days: 9999 },
 ];
 
-export function FinancialsClient({ initialData }: { initialData: FinancialData }) {
+function NumberSkeleton({ className }: { className?: string }) {
+  return <Skeleton className={`h-7 w-20 ${className ?? ""}`} />;
+}
+
+function SmallSkeleton() {
+  return <Skeleton className="h-3.5 w-24 mt-1" />;
+}
+
+export function FinancialsClient({ initialData }: { initialData?: FinancialData }) {
+  const [data, setData] = useState<FinancialData | null>(initialData ?? null);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode | "ALL">("AUD");
   const [selectedRange, setSelectedRange] = useState(9999);
+
+  // Fetch data client-side if not provided via props
+  useEffect(() => {
+    if (initialData) return;
+    fetch("/api/financials")
+      .then((res) => res.json())
+      .then((d) => setData(d))
+      .catch(() => {});
+  }, [initialData]);
 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - selectedRange);
 
   // Filter projects by currency and date
-  const filteredProjects = initialData.projects.filter((p) => {
+  const filteredProjects = (data?.projects ?? []).filter((p) => {
     if (selectedCurrency !== "ALL" && p.currency !== selectedCurrency) return false;
     if (new Date(p.created_at) < cutoffDate) return false;
     return true;
   });
 
   // Filter costs
-  const filteredCosts = initialData.costs.filter((c) => {
+  const filteredCosts = (data?.costs ?? []).filter((c) => {
     if (selectedCurrency !== "ALL" && c.currency !== selectedCurrency) return false;
     if (new Date(c.date) < cutoffDate) return false;
     return true;
@@ -99,8 +118,8 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
 
   const displayCurrency = selectedCurrency === "ALL" ? "AUD" : selectedCurrency;
 
-  const target = selectedCurrency !== "ALL"
-    ? initialData.targets.find((t) => t.currency === selectedCurrency)
+  const target = data && selectedCurrency !== "ALL"
+    ? data.targets.find((t) => t.currency === selectedCurrency)
     : null;
 
   const tableProjects = filteredProjects.map((p) => ({
@@ -134,7 +153,6 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
     .map(([name, rev]) => ({ name, ...rev }))
     .sort((a, b) => (b.oneOff + b.mrr) - (a.oneOff + a.mrr));
 
-  // Use real data for charts - compute from projects
   const mrrData = [{ month: "Current", mrr: totalMRR, target: target?.monthly_mrr_target ?? 0 }];
   const profitData = [{ month: "Current", revenue: totalMRR + totalOneOff, costs: monthlyCosts + oneOffCosts, profit: netTotalProfit }];
 
@@ -145,6 +163,8 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
     monthlyMrrTarget: target.monthly_mrr_target,
     monthlyOneOffTarget: target.monthly_one_off_target,
   } : null;
+
+  const loading = !data;
 
   return (
     <div className="space-y-6">
@@ -196,7 +216,7 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards — shells render instantly, only numbers load */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -204,11 +224,15 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalOneOff, displayCurrency)}</div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
-              <span className="text-red-600 font-medium">-{formatCurrency(oneOffCosts, displayCurrency)}</span> <span className="hidden sm:inline">costs</span>
-            </p>
+            {loading ? <NumberSkeleton /> : (
+              <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalOneOff, displayCurrency)}</div>
+            )}
+            {loading ? <SmallSkeleton /> : (
+              <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
+                <span className="text-red-600 font-medium">-{formatCurrency(oneOffCosts, displayCurrency)}</span> <span className="hidden sm:inline">costs</span>
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -223,13 +247,17 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-lg sm:text-2xl font-bold text-green-600">
-              {formatCurrency(totalMRR, displayCurrency)}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
-              <span className="text-red-600 font-medium">-{formatCurrency(monthlyCosts, displayCurrency)}</span> <span className="hidden sm:inline">monthly costs</span>
-            </p>
+            {loading ? <NumberSkeleton /> : (
+              <div className="text-lg sm:text-2xl font-bold text-green-600">
+                {formatCurrency(totalMRR, displayCurrency)}
+              </div>
+            )}
+            {loading ? <SmallSkeleton /> : (
+              <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
+                <span className="text-red-600 font-medium">-{formatCurrency(monthlyCosts, displayCurrency)}</span> <span className="hidden sm:inline">monthly costs</span>
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -241,12 +269,16 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-lg sm:text-2xl font-bold ${netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-              {formatCurrency(netMonthlyProfit, displayCurrency)}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-              {formatCurrency(netMonthlyProfit * 12, displayCurrency)}/yr
-            </p>
+            {loading ? <NumberSkeleton /> : (
+              <div className={`text-lg sm:text-2xl font-bold ${netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                {formatCurrency(netMonthlyProfit, displayCurrency)}
+              </div>
+            )}
+            {loading ? <SmallSkeleton /> : (
+              <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
+                {formatCurrency(netMonthlyProfit * 12, displayCurrency)}/yr
+              </p>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -255,59 +287,73 @@ export function FinancialsClient({ initialData }: { initialData: FinancialData }
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className={`text-lg sm:text-2xl font-bold ${netTotalProfit >= 0 ? "" : "text-red-600"}`}>
-              {formatCurrency(netTotalProfit, displayCurrency)}
-            </div>
-            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
-              <ArrowUpRight className="h-3 w-3 text-green-600 shrink-0" />
-              <span className="hidden sm:inline">Revenue minus all costs</span>
-              <span className="sm:hidden">All revenue - costs</span>
-            </p>
+            {loading ? <NumberSkeleton /> : (
+              <div className={`text-lg sm:text-2xl font-bold ${netTotalProfit >= 0 ? "" : "text-red-600"}`}>
+                {formatCurrency(netTotalProfit, displayCurrency)}
+              </div>
+            )}
+            {loading ? <SmallSkeleton /> : (
+              <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <ArrowUpRight className="h-3 w-3 text-green-600 shrink-0" />
+                <span className="hidden sm:inline">Revenue minus all costs</span>
+                <span className="sm:hidden">All revenue - costs</span>
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Targets */}
-      {formattedTarget && (
-        <TargetsCard
-          target={formattedTarget}
-          currentMrr={totalMRR}
-          currentOneOff={totalOneOff}
-          currency={displayCurrency}
-        />
+      {/* Everything below here loads after data arrives */}
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-40 rounded-lg" />
+          <Skeleton className="h-64 rounded-lg" />
+        </div>
+      ) : (
+        <>
+          {/* Targets */}
+          {formattedTarget && (
+            <TargetsCard
+              target={formattedTarget}
+              currentMrr={totalMRR}
+              currentOneOff={totalOneOff}
+              currency={displayCurrency}
+            />
+          )}
+
+          {/* Charts */}
+          <RevenueCharts
+            mrrData={mrrData}
+            statusData={statusData}
+            revenueByClient={revenueByClient}
+            profitData={profitData}
+          />
+
+          {/* Costs */}
+          <CostsTable
+            costs={filteredCosts.map((c) => ({
+              id: c.id,
+              description: c.description,
+              amount: c.amount,
+              currency: c.currency,
+              type: c.type,
+              date: c.date,
+              project: c.projects?.title,
+            }))}
+            currency={displayCurrency}
+          />
+
+          {/* Revenue Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Revenue by Project</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FinancialTable projects={tableProjects} />
+            </CardContent>
+          </Card>
+        </>
       )}
-
-      {/* Charts */}
-      <RevenueCharts
-        mrrData={mrrData}
-        statusData={statusData}
-        revenueByClient={revenueByClient}
-        profitData={profitData}
-      />
-
-      {/* Costs */}
-      <CostsTable
-        costs={filteredCosts.map((c) => ({
-          id: c.id,
-          description: c.description,
-          amount: c.amount,
-          currency: c.currency,
-          type: c.type,
-          date: c.date,
-          project: c.projects?.title,
-        }))}
-        currency={displayCurrency}
-      />
-
-      {/* Revenue Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue by Project</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FinancialTable projects={tableProjects} />
-        </CardContent>
-      </Card>
     </div>
   );
 }
