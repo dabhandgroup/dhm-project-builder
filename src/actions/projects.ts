@@ -130,8 +130,22 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
     dbFields.contact_info = JSON.parse(JSON.stringify(dbFields.contact_info));
   }
 
-  // Remove empty strings for optional fields
+  // Default title for drafts
   if (!dbFields.title) dbFields.title = "Untitled Draft";
+
+  // Convert empty strings to null for foreign key fields
+  if (!dbFields.client_id) dbFields.client_id = null;
+  if (!dbFields.template_id) dbFields.template_id = null;
+
+  // Clean up empty optional string fields so they don't clutter the DB
+  const optionalFields = [
+    "domain_name", "pages_required", "brief", "brief_summary",
+    "google_maps_embed", "additional_notes", "sitemap_url",
+    "ai_model", "deploy_provider",
+  ];
+  for (const field of optionalFields) {
+    if (dbFields[field] === "") dbFields[field] = null;
+  }
 
   const supabase = await createClient();
 

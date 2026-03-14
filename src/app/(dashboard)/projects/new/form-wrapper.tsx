@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { ProjectForm } from "@/components/projects/project-form";
 import type { ClientOption, TemplateOption } from "@/components/projects/project-form";
 import { createProject, saveDraft, updateProject } from "@/actions/projects";
@@ -16,7 +15,6 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
   const [clients, setClients] = useState<ClientOption[]>(initialClients ?? []);
   const [templates, setTemplates] = useState<TemplateOption[]>(initialTemplates ?? []);
   const draftIdRef = useRef<string | null>(null);
-  const router = useRouter();
 
   // Fetch client/template options client-side if not provided via props
   useEffect(() => {
@@ -42,12 +40,13 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
 
   const handleSaveDraft = useCallback(async (data: ProjectFormData) => {
     const result = await saveDraft(data, draftIdRef.current ?? undefined);
+    if (result && "error" in result) {
+      throw new Error(result.error);
+    }
     if (result && "id" in result && result.id) {
       draftIdRef.current = result.id;
-      // Update URL so user can see draft exists, without a full reload
-      router.replace(`/projects/new?draft=${result.id}`, { scroll: false });
     }
-  }, [router]);
+  }, []);
 
   return (
     <ProjectForm

@@ -35,8 +35,9 @@ export function useAutoSave<T>({
       await onSaveRef.current(saveData);
       setLastSaved(new Date());
       setIsDirty(false);
-    } catch {
-      // Silent fail for auto-save
+    } catch (err) {
+      console.error("Auto-save failed:", err);
+      // Keep isDirty true so the UI shows unsaved state
     } finally {
       setIsSaving(false);
     }

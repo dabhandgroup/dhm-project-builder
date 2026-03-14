@@ -10,7 +10,7 @@ export interface StatusConfig {
 
 export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
   lead: {
-    label: "Lead",
+    label: "Draft",
     color: "text-zinc-500",
     bgColor: "bg-zinc-100",
     textColor: "text-zinc-700",
