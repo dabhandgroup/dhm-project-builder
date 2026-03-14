@@ -3,11 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { AuditFormWrapper } from "./audit-form-wrapper";
-import { mockAudits } from "@/lib/mock-data";
+import { getAudits } from "@/lib/queries/audits";
 import Link from "next/link";
 
-export default function AuditPage() {
-  const audits = mockAudits;
+export default async function AuditPage() {
+  const audits = await getAudits();
 
   return (
     <div className="space-y-6">

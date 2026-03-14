@@ -13,16 +13,22 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Plus, FolderKanban, DollarSign, Users, Gauge } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { projectStatuses } from "@/constants/project-statuses";
-import { mockProjects, mockClients } from "@/lib/mock-data";
+import { getProjects } from "@/lib/queries/projects";
+import { getClients } from "@/lib/queries/clients";
 import type { ProjectStatus } from "@/types/database";
 
-export default function DashboardPage() {
-  const projects = mockProjects;
-  const clientCount = mockClients.length;
+export default async function DashboardPage() {
+  const [projects, clients] = await Promise.all([
+    getProjects(),
+    getClients(),
+  ]);
 
+  const clientCount = clients.length;
   const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "lead");
-  const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
-  const recentProjects = projects.slice(0, 5);
+  const totalMRR = projects.reduce((sum, p) => sum + Number(p.recurring_revenue ?? 0), 0);
+  const recentProjects = projects
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5);
 
   return (
     <div className="space-y-4 sm:space-y-6">

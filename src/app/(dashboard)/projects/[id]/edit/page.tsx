@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { EditProjectFormWrapper } from "./form-wrapper";
-import { getProjectById, getClientById } from "@/lib/mock-data";
+import { getProjectById } from "@/lib/queries/projects";
 
 export default async function EditProjectPage({
   params,
@@ -8,12 +8,24 @@ export default async function EditProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const project = getProjectById(id);
+  let project;
+  try {
+    project = await getProjectById(id);
+  } catch {
+    notFound();
+  }
 
   if (!project) notFound();
 
-  const client = project.client_id ? getClientById(project.client_id) : null;
-  const contactInfo = project.contact_info;
+  const client = (project as Record<string, unknown>).clients as {
+    name: string;
+  } | null;
+
+  const contactInfo = project.contact_info as {
+    phone?: string;
+    email?: string;
+    address?: string;
+  } | null;
 
   const initialData = {
     title: project.title,
@@ -33,8 +45,8 @@ export default async function EditProjectPage({
     sitemap_url: project.sitemap_url ?? "",
     target_locations: project.target_locations ?? [],
     ai_model: project.ai_model ?? "orchids",
-    one_off_revenue: project.one_off_revenue,
-    recurring_revenue: project.recurring_revenue,
+    one_off_revenue: Number(project.one_off_revenue),
+    recurring_revenue: Number(project.recurring_revenue),
   };
 
   return (

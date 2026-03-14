@@ -1,11 +1,9 @@
-"use client";
-
-import { useState, use } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
 import { OutreachMessageEditor } from "@/components/projects/outreach-message-editor";
+import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,57 +20,33 @@ import {
   Phone,
   Mail,
   DollarSign,
-  Copy,
-  Check,
   Image as ImageIcon,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
-import { getProjectById, getClientById } from "@/lib/mock-data";
+import { getProjectById } from "@/lib/queries/projects";
 import type { ProjectStatus } from "@/types/database";
 
-function CopyButton({ text, label }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-
-  function handleCopy() {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <button
-      type="button"
-      onClick={handleCopy}
-      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-      title={`Copy ${label || "to clipboard"}`}
-    >
-      {copied ? (
-        <>
-          <Check className="h-3 w-3 text-green-500" />
-          <span className="text-green-500">Copied</span>
-        </>
-      ) : (
-        <>
-          <Copy className="h-3 w-3" />
-          {label && <span>{label}</span>}
-        </>
-      )}
-    </button>
-  );
-}
-
-export default function ProjectDetailPage({
+export default async function ProjectDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = use(params);
-  const project = getProjectById(id);
+  const { id } = await params;
+  let project;
+  try {
+    project = await getProjectById(id);
+  } catch {
+    notFound();
+  }
 
   if (!project) notFound();
 
-  const client = project.client_id ? getClientById(project.client_id) : null;
+  const client = (project as Record<string, unknown>).clients as {
+    id: string;
+    name: string;
+    company: string | null;
+  } | null;
 
   const outreachMessage = generateOutreachMessage({
     clientName: client?.name || "there",
@@ -108,12 +82,11 @@ export default function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm overflow-hidden">
-            {/* Logo */}
-            {(project as Record<string, unknown>).logo_url ? (
+            {project.logo_url ? (
               <div className="flex items-center gap-3 pb-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={(project as Record<string, unknown>).logo_url as string}
+                  src={project.logo_url}
                   alt="Client logo"
                   className="h-10 max-w-[120px] object-contain"
                 />
@@ -182,13 +155,13 @@ export default function ProjectDetailPage({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">One-off</span>
                 <span className="font-medium">
-                  {formatCurrency(project.one_off_revenue)}
+                  {formatCurrency(Number(project.one_off_revenue))}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Monthly</span>
                 <span className="font-medium text-green-600">
-                  {formatCurrency(project.recurring_revenue)}/mo
+                  {formatCurrency(Number(project.recurring_revenue))}/mo
                 </span>
               </div>
             </CardContent>
@@ -250,7 +223,7 @@ export default function ProjectDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Brief</CardTitle>
-              <CopyButton text={project.brief} label="Copy brief" />
+              <CopyButton text={project.brief} />
             </div>
           </CardHeader>
           <CardContent>
@@ -275,7 +248,7 @@ export default function ProjectDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Pages Required</CardTitle>
-              <CopyButton text={project.pages_required} label="Copy pages" />
+              <CopyButton text={project.pages_required} />
             </div>
           </CardHeader>
           <CardContent>
@@ -292,7 +265,7 @@ export default function ProjectDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Additional Notes</CardTitle>
-              <CopyButton text={project.additional_notes} label="Copy notes" />
+              <CopyButton text={project.additional_notes} />
             </div>
           </CardHeader>
           <CardContent>

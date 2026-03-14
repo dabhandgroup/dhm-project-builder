@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { updatePassword } from "@/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,8 +28,14 @@ export default function FirstLoginPage() {
 
     setLoading(true);
     setError(null);
-    await new Promise((r) => setTimeout(r, 600));
-    window.location.href = "/";
+
+    const result = await updatePassword(formData);
+
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    }
+    // On success, updatePassword redirects — no need to handle here
   }
 
   return (

@@ -4,17 +4,10 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Users, Mail, Phone, FolderKanban } from "lucide-react";
-import { mockClients, getClientProjects } from "@/lib/mock-data";
+import { getClientsWithStats } from "@/lib/queries/clients";
 
-export default function ClientsPage() {
-  const formattedClients = mockClients.map((c) => {
-    const projects = getClientProjects(c.id);
-    return {
-      ...c,
-      projectCount: projects.length,
-      totalMRR: projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0),
-    };
-  });
+export default async function ClientsPage() {
+  const formattedClients = await getClientsWithStats();
 
   return (
     <div className="space-y-6">
@@ -43,7 +36,7 @@ export default function ClientsPage() {
                     <h3 className="font-semibold text-sm">{client.name}</h3>
                     <span className="flex items-center gap-1 text-xs text-muted-foreground">
                       <FolderKanban className="h-3 w-3" />
-                      {client.projectCount}
+                      {client.project_count}
                     </span>
                   </div>
                   {client.company && (
@@ -61,9 +54,9 @@ export default function ClientsPage() {
                       </span>
                     )}
                   </div>
-                  {client.totalMRR > 0 && (
+                  {client.total_mrr > 0 && (
                     <p className="text-xs font-medium text-green-600">
-                      ${client.totalMRR}/mo
+                      ${client.total_mrr}/mo
                     </p>
                   )}
                 </CardContent>

@@ -2,63 +2,55 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { Json } from "@/types/database";
 
-export async function createClientAction(data: {
-  name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  address?: string;
-  notes?: string;
+export async function createContentPlan(data: {
+  project_id: string;
+  plan_data?: Json;
+  google_sheet_url?: string;
+  google_doc_url?: string;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: client, error } = await supabase
-    .from("clients")
+  const { data: plan, error } = await supabase
+    .from("content_plans")
     .insert({ ...data, created_by: user?.id })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  return { id: client.id };
+  revalidatePath("/content");
+  return { id: plan.id };
 }
 
-export async function updateClient(
-  id: string,
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    company?: string;
-    address?: string;
-    notes?: string;
-  },
-) {
+export async function updateContentPlan(id: string, data: {
+  plan_data?: Json;
+  google_sheet_url?: string;
+  google_doc_url?: string;
+}) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("content_plans")
     .update(data)
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${id}`);
+  revalidatePath("/content");
   return { success: true };
 }
 
-export async function deleteClient(id: string) {
+export async function deleteContentPlan(id: string) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("content_plans")
     .delete()
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
+  revalidatePath("/content");
   return { success: true };
 }

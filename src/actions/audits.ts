@@ -2,63 +2,58 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { Json } from "@/types/database";
 
-export async function createClientAction(data: {
-  name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  address?: string;
-  notes?: string;
+export async function createAudit(data: {
+  current_url: string;
+  new_url: string;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: client, error } = await supabase
-    .from("clients")
+  const { data: audit, error } = await supabase
+    .from("audits")
     .insert({ ...data, created_by: user?.id })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  return { id: client.id };
+  revalidatePath("/audit");
+  return { id: audit.id };
 }
 
-export async function updateClient(
-  id: string,
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    company?: string;
-    address?: string;
-    notes?: string;
-  },
-) {
+export async function updateAudit(id: string, data: {
+  status?: string;
+  gtmetrix_before?: Json;
+  gtmetrix_after?: Json;
+  pagespeed_before?: Json;
+  pagespeed_after?: Json;
+  report_pdf_url?: string;
+  completed_at?: string;
+}) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("audits")
     .update(data)
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${id}`);
+  revalidatePath("/audit");
+  revalidatePath(`/audit/${id}`);
   return { success: true };
 }
 
-export async function deleteClient(id: string) {
+export async function deleteAudit(id: string) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("audits")
     .delete()
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
+  revalidatePath("/audit");
   return { success: true };
 }

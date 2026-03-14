@@ -3,62 +3,59 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-export async function createClientAction(data: {
+export async function createTemplate(data: {
   name: string;
-  email?: string;
-  phone?: string;
-  company?: string;
-  address?: string;
-  notes?: string;
+  description?: string;
+  thumbnail_url?: string;
+  storage_path: string;
+  category?: string;
+  framework?: string;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  const { data: client, error } = await supabase
-    .from("clients")
+  const { data: template, error } = await supabase
+    .from("templates")
     .insert({ ...data, created_by: user?.id })
     .select()
     .single();
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  return { id: client.id };
+  revalidatePath("/templates");
+  return { id: template.id };
 }
 
-export async function updateClient(
-  id: string,
-  data: {
-    name?: string;
-    email?: string;
-    phone?: string;
-    company?: string;
-    address?: string;
-    notes?: string;
-  },
-) {
+export async function updateTemplate(id: string, data: {
+  name?: string;
+  description?: string;
+  thumbnail_url?: string;
+  storage_path?: string;
+  category?: string;
+  framework?: string;
+  is_active?: boolean;
+}) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("templates")
     .update(data)
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
-  revalidatePath(`/clients/${id}`);
+  revalidatePath("/templates");
   return { success: true };
 }
 
-export async function deleteClient(id: string) {
+export async function deleteTemplate(id: string) {
   const supabase = await createClient();
   const { error } = await supabase
-    .from("clients")
+    .from("templates")
     .delete()
     .eq("id", id);
 
   if (error) return { error: error.message };
 
-  revalidatePath("/clients");
+  revalidatePath("/templates");
   return { success: true };
 }

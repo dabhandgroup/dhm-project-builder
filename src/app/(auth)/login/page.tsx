@@ -1,7 +1,31 @@
+"use client";
+
+import { useState } from "react";
+import { signIn } from "@/actions/auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    const formData = new FormData(e.target as HTMLFormElement);
+    const result = await signIn(formData);
+
+    if (result?.error) {
+      setError(result.error);
+      setLoading(false);
+    }
+    // On success, signIn redirects — no need to handle here
+  }
+
   return (
     <div className="space-y-8">
       {/* Mobile logo — hidden on desktop where left panel shows */}
@@ -21,16 +45,18 @@ export default function LoginPage() {
         </p>
       </div>
 
-      <div className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">
           <Label htmlFor="email" className="text-sm font-medium">
             Email address
           </Label>
           <Input
             id="email"
+            name="email"
             type="email"
             placeholder="you@dabhandmarketing.com"
-            defaultValue="harry@dabhandmarketing.com"
+            required
+            autoComplete="email"
             className="h-11 bg-white"
           />
         </div>
@@ -46,21 +72,34 @@ export default function LoginPage() {
           </div>
           <Input
             id="password"
+            name="password"
             type="password"
             placeholder="Enter your password"
-            defaultValue="password123"
+            required
+            autoComplete="current-password"
             className="h-11 bg-white"
           />
         </div>
 
-        {/* Plain <a> tag — no Next.js routing, just a hard navigate */}
-        <a
-          href="/"
-          className="flex h-11 w-full items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
+
+        <Button
+          type="submit"
+          className="w-full h-11 text-sm font-medium"
+          disabled={loading}
         >
-          Sign in
-        </a>
-      </div>
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            "Sign in"
+          )}
+        </Button>
+      </form>
 
       <p className="text-center text-xs text-muted-foreground">
         Don&apos;t have an account?{" "}

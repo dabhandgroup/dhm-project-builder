@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, Mail, Phone, MapPin } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { projectStatuses } from "@/constants/project-statuses";
-import { getClientById, getClientProjects } from "@/lib/mock-data";
+import { getClientById } from "@/lib/queries/clients";
+import { getProjectsByClientId } from "@/lib/queries/projects";
 import type { ProjectStatus } from "@/types/database";
 
 export default async function ClientDetailPage({
@@ -16,13 +17,18 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const client = getClientById(id);
+  let client;
+  try {
+    client = await getClientById(id);
+  } catch {
+    notFound();
+  }
 
   if (!client) notFound();
 
-  const projects = getClientProjects(id);
-  const totalMRR = projects.reduce((sum, p) => sum + (p.recurring_revenue ?? 0), 0);
-  const totalOneOff = projects.reduce((sum, p) => sum + (p.one_off_revenue ?? 0), 0);
+  const projects = await getProjectsByClientId(id);
+  const totalMRR = projects.reduce((sum, p) => sum + Number(p.recurring_revenue ?? 0), 0);
+  const totalOneOff = projects.reduce((sum, p) => sum + Number(p.one_off_revenue ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

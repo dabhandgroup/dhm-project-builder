@@ -5,10 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PenTool, Plus, FileText, ChevronRight } from "lucide-react";
 import { formatDate } from "@/lib/utils";
-import { mockContentPlans, getProjectById } from "@/lib/mock-data";
+import { getContentPlans } from "@/lib/queries/content-plans";
 
-export default function ContentPage() {
-  const plans = mockContentPlans;
+export default async function ContentPage() {
+  const plans = await getContentPlans();
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -37,9 +37,13 @@ export default function ContentPage() {
       ) : (
         <div className="space-y-4">
           {plans.map((plan) => {
-            const project = getProjectById(plan.project_id);
+            const projectTitle = (plan as Record<string, unknown>).projects
+              ? ((plan as Record<string, unknown>).projects as { title: string })?.title
+              : "Unknown Project";
             const planData = plan.plan_data as { month: string; topic: string; blogTitles?: string[] }[];
-            const totalPosts = planData.reduce((sum, m) => sum + (m.blogTitles?.length ?? 0), 0);
+            const totalPosts = Array.isArray(planData)
+              ? planData.reduce((sum, m) => sum + (m.blogTitles?.length ?? 0), 0)
+              : 0;
 
             return (
               <Link key={plan.id} href={`/content/${plan.project_id}`} className="block">
@@ -50,7 +54,7 @@ export default function ContentPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">
-                        {project?.title ?? "Unknown Project"}
+                        {projectTitle}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {totalPosts} posts across 12 months &middot; {formatDate(plan.created_at)}
