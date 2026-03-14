@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CopyButton } from "@/components/shared/copy-button";
@@ -26,6 +27,12 @@ interface Memo {
 export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
   const [memos, setMemos] = useState(initialMemos);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const router = useRouter();
+
+  function handleMemoCreated() {
+    // Refresh server data to pick up the newly saved memo
+    router.refresh();
+  }
 
   async function handleDelete(id: string) {
     const result = await deleteVoiceMemo(id);
@@ -44,7 +51,7 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
       />
 
       {/* Record New Memo */}
-      <VoiceRecorder />
+      <VoiceRecorder onMemoCreated={handleMemoCreated} />
 
       {/* Memos List */}
       {memos.length === 0 ? (
@@ -88,7 +95,7 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
                     {memo.summary && (
                       <div className="rounded-md bg-muted/50 p-3 mt-2">
                         <p className="text-xs font-medium text-muted-foreground mb-1">
-                          Summary
+                          Actionable Points
                         </p>
                         <p className="text-sm whitespace-pre-wrap">
                           {memo.summary}
@@ -100,7 +107,7 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
                     <CopyButton
                       text={
                         memo.summary
-                          ? `Transcript\n${memo.transcription}\n\nSummary\n${memo.summary}`
+                          ? `Transcript\n${memo.transcription}\n\nActionable Points\n${memo.summary}`
                           : `Transcript\n${memo.transcription}`
                       }
                     />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getGroqClient } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
@@ -40,18 +41,18 @@ export async function POST(request: NextRequest) {
         ? transcription
         : (transcription as { text?: string }).text ?? String(transcription);
 
-    // Generate summary for longer transcriptions
+    // Generate actionable summary for AI consumption
     let summary: string | null = null;
     const wordCount = transcriptionText.split(/\s+/).length;
 
-    if (wordCount > 50) {
+    if (wordCount > 5) {
       const summaryResponse = await groq.chat.completions.create({
         model: "llama-3.3-70b-versatile",
         messages: [
           {
             role: "system",
             content:
-              "You are a helpful assistant. Summarize the following transcription into clear, actionable bullet points. Remove filler words and repetition. Keep it concise and professional.",
+              "You extract actionable points from voice memo transcriptions. Output a concise list of clear, specific action items and key decisions that an AI assistant can act on. Format as bullet points. Remove filler words, repetition, and small talk. Focus on: tasks to do, decisions made, requirements stated, and ideas to explore. If the memo is very short, summarise the core intent in one bullet.",
           },
           {
             role: "user",
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save voice memo
-    await supabase.from("voice_memos").insert({
+    const { error: insertError } = await supabase.from("voice_memos").insert({
       transcription: transcriptionText,
       summary,
       source_field: fieldName,
@@ -73,6 +74,16 @@ export async function POST(request: NextRequest) {
       created_by: user.id,
       duration_seconds: null,
     });
+
+    if (insertError) {
+      console.error("Failed to save voice memo:", insertError);
+      return NextResponse.json(
+        { error: "Failed to save memo" },
+        { status: 500 }
+      );
+    }
+
+    revalidatePath("/voice-memos");
 
     return NextResponse.json({
       transcription: transcriptionText,

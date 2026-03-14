@@ -1,53 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Mic, Square, Loader2, Pause, Play } from "lucide-react";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { toast } from "@/components/ui/toast";
 
-export function VoiceRecorder() {
-  const [state, setState] = useState<"idle" | "recording" | "paused" | "processing">("idle");
-  const [seconds, setSeconds] = useState(0);
-  const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+interface VoiceRecorderProps {
+  onMemoCreated?: () => void;
+}
 
-  function startRecording() {
-    setState("recording");
-    setSeconds(0);
-    const id = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
-    setIntervalId(id);
-  }
+export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
+  const {
+    isRecording,
+    isPaused,
+    duration,
+    startRecording,
+    pauseRecording,
+    resumeRecording,
+    stopRecording,
+    error,
+  } = useVoiceRecorder();
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
-  function pauseRecording() {
-    if (intervalId) clearInterval(intervalId);
-    setIntervalId(null);
-    setState("paused");
-  }
+  const handleStop = useCallback(async () => {
+    const blob = await stopRecording();
+    if (!blob) return;
 
-  function resumeRecording() {
-    setState("recording");
-    const id = setInterval(() => {
-      setSeconds((s) => s + 1);
-    }, 1000);
-    setIntervalId(id);
-  }
+    setIsTranscribing(true);
+    try {
+      const formData = new FormData();
+      formData.append("audio", blob, "recording.webm");
 
-  function stopRecording() {
-    if (intervalId) clearInterval(intervalId);
-    setIntervalId(null);
-    setState("processing");
-    // Simulate processing delay
-    setTimeout(() => {
-      setState("idle");
-      setSeconds(0);
-    }, 2000);
-  }
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        body: formData,
+      });
 
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Transcription failed");
+      }
+
+      const data = await response.json();
+      if (data.transcription) {
+        toast({ title: "Memo saved", description: "Transcription complete" });
+        onMemoCreated?.();
+      }
+    } catch (err) {
+      toast({
+        title: "Transcription failed",
+        description: err instanceof Error ? err.message : "Please try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTranscribing(false);
+    }
+  }, [stopRecording, onMemoCreated]);
+
+  const mins = Math.floor(duration / 60);
+  const secs = duration % 60;
   const timeDisplay = `${mins}:${secs.toString().padStart(2, "0")}`;
+
+  const isIdle = !isRecording && !isTranscribing;
 
   return (
     <Card className="border-dashed">
@@ -59,7 +76,11 @@ export function VoiceRecorder() {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center gap-4 py-4">
-          {state === "idle" && (
+          {error && (
+            <p className="text-sm text-destructive">{error}</p>
+          )}
+
+          {isIdle && (
             <>
               <button
                 type="button"
@@ -75,15 +96,15 @@ export function VoiceRecorder() {
             </>
           )}
 
-          {(state === "recording" || state === "paused") && (
+          {isRecording && (
             <>
               <div className="relative">
-                {state === "recording" && (
+                {!isPaused && (
                   <div className="absolute inset-0 rounded-full animate-ping" style={{ background: "rgba(54, 167, 245, 0.2)" }} />
                 )}
                 <button
                   type="button"
-                  onClick={stopRecording}
+                  onClick={handleStop}
                   className="relative flex h-20 w-20 items-center justify-center rounded-full text-white shadow-lg transition-all"
                   style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}
                 >
@@ -93,17 +114,17 @@ export function VoiceRecorder() {
               <div className="flex items-center gap-3">
                 <Badge
                   variant="secondary"
-                  className={`gap-1.5 ${state === "recording" ? "animate-pulse text-[#36A7F5]" : ""}`}
+                  className={`gap-1.5 ${!isPaused ? "animate-pulse text-[#36A7F5]" : ""}`}
                 >
-                  <span className={`h-2 w-2 rounded-full ${state === "paused" ? "bg-muted-foreground" : "bg-white"}`} />
-                  {state === "paused" ? "Paused" : "Recording"}
+                  <span className={`h-2 w-2 rounded-full ${isPaused ? "bg-muted-foreground" : "bg-white"}`} />
+                  {isPaused ? "Paused" : "Recording"}
                 </Badge>
                 <span className="text-lg font-mono font-semibold tabular-nums">
                   {timeDisplay}
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                {state === "recording" ? (
+                {!isPaused ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -131,7 +152,7 @@ export function VoiceRecorder() {
             </>
           )}
 
-          {state === "processing" && (
+          {isTranscribing && (
             <>
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -144,7 +165,7 @@ export function VoiceRecorder() {
         </div>
 
         <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-          <p>Voice memos are transcribed using Grok Whisper AI. Recordings are saved automatically — they can be linked to a project or kept as standalone notes.</p>
+          <p>Voice memos are transcribed using Groq Whisper AI. Your recording will be saved as a word-for-word transcript with an AI-ready summary of actionable points.</p>
         </div>
       </CardContent>
     </Card>
