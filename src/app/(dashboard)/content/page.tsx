@@ -31,7 +31,7 @@ export default function ContentPage() {
           description="Generate a 12-month content plan from a project's details to upsell SEO services."
         />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {plans.map((plan) => {
             const project = getProjectById(plan.project_id);
             return (

@@ -5,10 +5,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-AU", {
+export function formatCurrency(amount: number, currency: string = "AUD"): string {
+  const localeMap: Record<string, string> = {
+    AUD: "en-AU",
+    GBP: "en-GB",
+    USD: "en-US",
+    CAD: "en-CA",
+  };
+  return new Intl.NumberFormat(localeMap[currency] || "en-AU", {
     style: "currency",
-    currency: "AUD",
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);

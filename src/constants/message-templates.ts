@@ -3,19 +3,23 @@ export function generateOutreachMessage(params: {
   previewUrl: string;
   projectTitle: string;
 }): string {
-  return `Hey ${params.clientName},
+  // Use first name only
+  const firstName = params.clientName.split(" ")[0];
+  return `Hey ${firstName},
 
-I came across your business and noticed your current website could use a refresh. I've gone ahead and put together a new design for you — no strings attached.
+Hope you're well! I came across your business and thought your website could do with a bit of a refresh — so I've gone ahead and put together a new design for you, completely free.
 
-Here's your preview link: ${params.previewUrl}
+Here's your preview: ${params.previewUrl}
 
-The new site is faster, mobile-friendly, and built to convert visitors into customers. I'd love to hear what you think.
+It's faster, looks great on mobile, and built to actually turn visitors into enquiries. Would love to know what you think!
 
-If you're interested in taking it live, I can handle the full setup including domain, hosting, and ongoing support for $199/month.
+If you're keen to chat about getting it live, grab a time that works for you here:
+https://www.dabhandmarketing.com/book-a-call/
 
-Let me know your thoughts!
+No pressure at all — just thought it was worth a look.
 
 Cheers,
+Danny
 Dab Hand Marketing`;
 }
 

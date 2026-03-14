@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
-import { X, Save, Loader2, Cloud, CloudOff } from "lucide-react";
+import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2 } from "lucide-react";
+import { mockClients } from "@/lib/mock-data";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
 
@@ -38,6 +38,12 @@ export function ProjectForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationInput, setLocationInput] = useState("");
 
+  // Client search state
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [isNewClient, setIsNewClient] = useState(false);
+  const clientRef = useRef<HTMLDivElement>(null);
+
   const { isSaving, lastSaved, isDirty } = useAutoSave({
     data: form,
     onSave: async (data) => {
@@ -45,6 +51,26 @@ export function ProjectForm({
     },
     enabled: !!onSaveDraft,
   });
+
+  // Close client dropdown when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (clientRef.current && !clientRef.current.contains(e.target as Node)) {
+        setClientDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const filteredClients = clientSearch.trim()
+    ? mockClients.filter(
+        (c) =>
+          c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+          c.company?.toLowerCase().includes(clientSearch.toLowerCase()) ||
+          c.email?.toLowerCase().includes(clientSearch.toLowerCase())
+      )
+    : mockClients;
 
   const updateField = useCallback(
     <K extends keyof ProjectFormData>(field: K, value: ProjectFormData[K]) => {
@@ -80,6 +106,24 @@ export function ProjectForm({
     },
     [form.target_locations, updateField]
   );
+
+  function selectClient(client: typeof mockClients[0]) {
+    updateField("client_id", client.id);
+    updateField("client_name", client.name);
+    updateContactField("phone", client.phone || "");
+    updateContactField("email", client.email || "");
+    updateContactField("address", client.address || "");
+    setClientSearch(client.name);
+    setClientDropdownOpen(false);
+    setIsNewClient(false);
+  }
+
+  function startNewClient() {
+    setIsNewClient(true);
+    updateField("client_id", "");
+    updateField("client_name", clientSearch);
+    setClientDropdownOpen(false);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -152,27 +196,121 @@ export function ProjectForm({
             />
           </div>
 
-          {/* Client Name */}
-          <div className="space-y-2">
-            <Label htmlFor="client_name">Client Name</Label>
-            <Input
-              id="client_name"
-              value={form.client_name}
-              onChange={(e) => updateField("client_name", e.target.value)}
-              placeholder="e.g. John Smith"
-            />
+          {/* Client Search / Create */}
+          <div className="space-y-2" ref={clientRef}>
+            <Label>Client</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={isNewClient ? form.client_name : clientSearch}
+                onChange={(e) => {
+                  if (isNewClient) {
+                    updateField("client_name", e.target.value);
+                  } else {
+                    setClientSearch(e.target.value);
+                    setClientDropdownOpen(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (!isNewClient) setClientDropdownOpen(true);
+                }}
+                placeholder="Search existing clients or create new..."
+                className="pl-9"
+              />
+              {isNewClient && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewClient(false);
+                    setClientSearch("");
+                    updateField("client_id", "");
+                    updateField("client_name", "");
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {clientDropdownOpen && !isNewClient && (
+              <div className="absolute z-20 mt-1 w-[calc(100%-2rem)] max-w-[calc(100%-3rem)] rounded-lg border bg-background shadow-lg max-h-[240px] overflow-auto">
+                {/* Create new client option */}
+                <button
+                  type="button"
+                  onClick={startNewClient}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors border-b text-sm"
+                >
+                  <UserPlus className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-primary font-medium">
+                    Create new client{clientSearch.trim() ? `: "${clientSearch}"` : ""}
+                  </span>
+                </button>
+
+                {filteredClients.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-muted-foreground">
+                    No clients found
+                  </p>
+                ) : (
+                  filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      type="button"
+                      onClick={() => selectClient(client)}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
+                    >
+                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{client.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {client.company} · {client.email}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {isNewClient && (
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <UserPlus className="h-3 w-3" />
+                Creating new client — fill in contact details below
+              </p>
+            )}
           </div>
 
-          {/* New Build / Rebuild toggle */}
-          <div className="flex items-center gap-3">
-            <Switch
-              id="is_rebuild"
-              checked={form.is_rebuild}
-              onCheckedChange={(checked) => updateField("is_rebuild", checked)}
-            />
-            <Label htmlFor="is_rebuild">
-              {form.is_rebuild ? "Rebuild (existing site)" : "New Build"}
-            </Label>
+          {/* Build Type */}
+          <div className="space-y-2">
+            <Label>Build Type</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => updateField("is_rebuild", false)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                  !form.is_rebuild
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <span className="text-2xl">🆕</span>
+                <span className="text-sm font-medium">New Build</span>
+                <span className="text-xs text-muted-foreground">Brand new website</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField("is_rebuild", true)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                  form.is_rebuild
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <span className="text-2xl">🔄</span>
+                <span className="text-sm font-medium">Rebuild</span>
+                <span className="text-xs text-muted-foreground">Replacing existing site</span>
+              </button>
+            </div>
           </div>
 
           {/* Sitemap URL (shown for rebuilds) */}
@@ -246,7 +384,6 @@ export function ProjectForm({
           <CardTitle className="text-lg">Brief & Content</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Pages Required */}
           <div className="space-y-2">
             <Label htmlFor="pages_required">Pages Required</Label>
             <div className="relative">
@@ -261,12 +398,7 @@ export function ProjectForm({
               <div className="absolute right-1 top-1">
                 <MicButton
                   onTranscription={(text) =>
-                    updateField(
-                      "pages_required",
-                      form.pages_required
-                        ? `${form.pages_required}\n${text}`
-                        : text
-                    )
+                    updateField("pages_required", form.pages_required ? `${form.pages_required}\n${text}` : text)
                   }
                   fieldName="pages_required"
                   projectId={projectId}
@@ -275,7 +407,6 @@ export function ProjectForm({
             </div>
           </div>
 
-          {/* Brief */}
           <div className="space-y-2">
             <Label htmlFor="brief">Brief</Label>
             <div className="relative">
@@ -290,10 +421,7 @@ export function ProjectForm({
               <div className="absolute right-1 top-1">
                 <MicButton
                   onTranscription={(text) =>
-                    updateField(
-                      "brief",
-                      form.brief ? `${form.brief}\n${text}` : text
-                    )
+                    updateField("brief", form.brief ? `${form.brief}\n${text}` : text)
                   }
                   onSummary={(summary) => updateField("brief_summary", summary)}
                   fieldName="brief"
@@ -303,7 +431,6 @@ export function ProjectForm({
             </div>
           </div>
 
-          {/* Brief Summary (auto-generated) */}
           {form.brief_summary && (
             <div className="space-y-2">
               <Label>AI Summary</Label>
@@ -313,16 +440,13 @@ export function ProjectForm({
             </div>
           )}
 
-          {/* Additional Notes */}
           <div className="space-y-2">
             <Label htmlFor="additional_notes">Additional Notes</Label>
             <div className="relative">
               <Textarea
                 id="additional_notes"
                 value={form.additional_notes}
-                onChange={(e) =>
-                  updateField("additional_notes", e.target.value)
-                }
+                onChange={(e) => updateField("additional_notes", e.target.value)}
                 placeholder="Any other information..."
                 rows={3}
                 className="pr-10"
@@ -330,12 +454,7 @@ export function ProjectForm({
               <div className="absolute right-1 top-1">
                 <MicButton
                   onTranscription={(text) =>
-                    updateField(
-                      "additional_notes",
-                      form.additional_notes
-                        ? `${form.additional_notes}\n${text}`
-                        : text
-                    )
+                    updateField("additional_notes", form.additional_notes ? `${form.additional_notes}\n${text}` : text)
                   }
                   fieldName="additional_notes"
                   projectId={projectId}
@@ -410,9 +529,7 @@ export function ProjectForm({
             <Textarea
               id="google_maps_embed"
               value={form.google_maps_embed}
-              onChange={(e) =>
-                updateField("google_maps_embed", e.target.value)
-              }
+              onChange={(e) => updateField("google_maps_embed", e.target.value)}
               placeholder="Paste the Google Maps embed iframe code here"
               rows={2}
             />
@@ -434,12 +551,7 @@ export function ProjectForm({
                   }
                 }}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addLocation}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addLocation}>
                 Add
               </Button>
             </div>
@@ -471,34 +583,55 @@ export function ProjectForm({
         <CardHeader>
           <CardTitle className="text-lg">Financials</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Currency Selector */}
+          <div className="space-y-2">
+            <Label>Currency / Region</Label>
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                { code: "AUD", label: "AUD", desc: "Australia" },
+                { code: "GBP", label: "GBP", desc: "UK" },
+                { code: "USD", label: "USD", desc: "US" },
+                { code: "CAD", label: "CAD", desc: "Canada" },
+              ] as const).map((c) => (
+                <button
+                  key={c.code}
+                  type="button"
+                  onClick={() => updateField("currency", c.code)}
+                  className={`rounded-lg border-2 p-2.5 text-center transition-all ${
+                    form.currency === c.code
+                      ? "border-primary bg-primary/5"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <p className="text-sm font-semibold">{c.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{c.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="one_off_revenue">One-Off Revenue ($)</Label>
+              <Label htmlFor="one_off_revenue">One-Off Revenue ({form.currency})</Label>
               <Input
                 id="one_off_revenue"
                 type="number"
                 min={0}
                 step={1}
                 value={form.one_off_revenue}
-                onChange={(e) =>
-                  updateField("one_off_revenue", Number(e.target.value))
-                }
+                onChange={(e) => updateField("one_off_revenue", Number(e.target.value))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="recurring_revenue">
-                Monthly Recurring Revenue ($)
-              </Label>
+              <Label htmlFor="recurring_revenue">Monthly Recurring Revenue ({form.currency})</Label>
               <Input
                 id="recurring_revenue"
                 type="number"
                 min={0}
                 step={1}
                 value={form.recurring_revenue}
-                onChange={(e) =>
-                  updateField("recurring_revenue", Number(e.target.value))
-                }
+                onChange={(e) => updateField("recurring_revenue", Number(e.target.value))}
               />
             </div>
           </div>

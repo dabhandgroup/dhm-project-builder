@@ -17,10 +17,13 @@ export interface ProjectWithImages extends Project {
   project_images: ProjectImage[];
 }
 
+export type CurrencyCode = "AUD" | "GBP" | "USD" | "CAD";
+
 export interface ProjectFormData {
   title: string;
   domain_name: string;
   is_rebuild: boolean;
+  client_id: string;
   client_name: string;
   favicon: File | null;
   logo: File | null;
@@ -40,6 +43,7 @@ export interface ProjectFormData {
   sitemap_url: string;
   target_locations: string[];
   ai_model: string;
+  currency: CurrencyCode;
   one_off_revenue: number;
   recurring_revenue: number;
 }
@@ -48,6 +52,7 @@ export const defaultProjectFormData: ProjectFormData = {
   title: "",
   domain_name: "",
   is_rebuild: false,
+  client_id: "",
   client_name: "",
   favicon: null,
   logo: null,
@@ -67,6 +72,7 @@ export const defaultProjectFormData: ProjectFormData = {
   sitemap_url: "",
   target_locations: [],
   ai_model: "orchids",
+  currency: "AUD",
   one_off_revenue: 0,
   recurring_revenue: 199,
 };
