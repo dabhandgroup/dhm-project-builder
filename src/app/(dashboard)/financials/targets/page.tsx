@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Loader2, Plus, Trash2 } from "lucide-react";
+import { DatePicker } from "@/components/ui/date-picker";
 import { mockTargets, currencies } from "@/lib/mock-data";
 import type { CurrencyCode } from "@/types/project";
 
@@ -76,16 +77,7 @@ export default function TargetsEditPage() {
         </Link>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-bold tracking-tight">Edit Targets</h1>
-          <p className="text-xs text-muted-foreground">Set revenue goals and deadlines per currency</p>
         </div>
-        <Button onClick={handleSave} disabled={saving} size="sm">
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4" />
-          )}
-          {saving ? "Saving..." : "Save"}
-        </Button>
       </div>
 
       {targets.map((target) => {
@@ -156,10 +148,10 @@ export default function TargetsEditPage() {
 
               <div className="space-y-1.5">
                 <Label className="text-xs">Deadline</Label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={target.deadline}
-                  onChange={(e) => updateTarget(target.id, "deadline", e.target.value)}
+                  onChange={(val) => updateTarget(target.id, "deadline", val)}
+                  placeholder="Set a deadline..."
                 />
                 <p className="text-[10px] text-muted-foreground">
                   When do you want to hit these targets by?
@@ -176,6 +168,20 @@ export default function TargetsEditPage() {
           Add Target for Another Currency
         </Button>
       )}
+
+      <Button onClick={handleSave} disabled={saving} className="w-full">
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Save className="h-4 w-4" />
+            Save Targets
+          </>
+        )}
+      </Button>
     </div>
   );
 }

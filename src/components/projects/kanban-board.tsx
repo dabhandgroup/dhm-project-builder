@@ -1,18 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import {
-  DndContext,
-  DragOverlay,
-  closestCorners,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
 import { KanbanColumn } from "./kanban-column";
-import { ProjectCard } from "./project-card";
 import { kanbanStatuses } from "@/constants/project-statuses";
 import { projectStatuses } from "@/constants/project-statuses";
 import { updateProjectStatus } from "@/actions/projects";
@@ -36,32 +25,9 @@ interface KanbanBoardProps {
 
 export function KanbanBoard({ projects: initialProjects }: KanbanBoardProps) {
   const [projects, setProjects] = useState(initialProjects);
-  const [activeId, setActiveId] = useState<string | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    })
-  );
-
-  const activeProject = activeId
-    ? projects.find((p) => p.id === activeId)
-    : null;
-
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    setActiveId(event.active.id as string);
-  }, []);
-
-  const handleDragEnd = useCallback(
-    async (event: DragEndEvent) => {
-      const { active, over } = event;
-      setActiveId(null);
-
-      if (!over) return;
-
-      const projectId = active.id as string;
-      const newStatus = over.id as ProjectStatus;
-
+  const handleStatusChange = useCallback(
+    async (projectId: string, newStatus: ProjectStatus) => {
       const project = projects.find((p) => p.id === projectId);
       if (!project || project.status === newStatus) return;
 
@@ -94,34 +60,20 @@ export function KanbanBoard({ projects: initialProjects }: KanbanBoardProps) {
   );
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCorners}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
-        {kanbanStatuses.map((status) => {
-          const columnProjects = projects.filter(
-            (p) => p.status === status
-          );
-          return (
-            <KanbanColumn
-              key={status}
-              status={status}
-              projects={columnProjects}
-            />
-          );
-        })}
-      </div>
-
-      <DragOverlay>
-        {activeProject && (
-          <div className="rotate-3 opacity-90">
-            <ProjectCard {...activeProject} />
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+    <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory">
+      {kanbanStatuses.map((status) => {
+        const columnProjects = projects.filter(
+          (p) => p.status === status
+        );
+        return (
+          <KanbanColumn
+            key={status}
+            status={status}
+            projects={columnProjects}
+            onStatusChange={handleStatusChange}
+          />
+        );
+      })}
+    </div>
   );
 }

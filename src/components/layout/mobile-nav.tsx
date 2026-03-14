@@ -89,16 +89,15 @@ export function MobileNav() {
           </ul>
         </nav>
         <Separator />
-        <div className="p-4">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2 text-muted-foreground"
+        <div className="px-2 py-2">
+          <button
             type="button"
             onClick={() => setShowLogout(true)}
+            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent/50 hover:text-destructive transition-colors w-full"
           >
-            <LogOut className="h-4 w-4" />
-            Sign out
-          </Button>
+            <LogOut className="h-5 w-5 shrink-0" />
+            <span>Sign out</span>
+          </button>
         </div>
       </SheetContent>
 

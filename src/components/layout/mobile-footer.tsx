@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, FolderKanban, Mic, DollarSign, Settings, Square, Loader2, X, Pause, Play } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Mic, DollarSign, Settings, Square, Loader2, X, Pause, Play, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export function MobileFooter() {
   const pathname = usePathname();
@@ -14,6 +15,7 @@ export function MobileFooter() {
   const [processing, setProcessing] = useState(false);
   const [seconds, setSeconds] = useState(0);
   const [intervalId, setIntervalId] = useState<ReturnType<typeof setInterval> | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   function startRecording() {
     setRecording(true);
@@ -51,12 +53,17 @@ export function MobileFooter() {
     }, 2000);
   }
 
+  function confirmCancel() {
+    setShowCancelConfirm(true);
+  }
+
   function cancelRecording() {
     if (intervalId) clearInterval(intervalId);
     setIntervalId(null);
     setRecording(false);
     setPaused(false);
     setSeconds(0);
+    setShowCancelConfirm(false);
   }
 
   const mins = Math.floor(seconds / 60);
@@ -79,7 +86,7 @@ export function MobileFooter() {
           <div className="bg-background rounded-2xl p-8 mx-4 w-full max-w-sm text-center space-y-6">
             <div className="relative mx-auto w-fit">
               {!paused && (
-                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" style={{ animationDuration: "2s" }} />
               )}
               <button
                 type="button"
@@ -92,7 +99,8 @@ export function MobileFooter() {
             <div className="space-y-2">
               <Badge
                 variant={paused ? "secondary" : "destructive"}
-                className={`gap-1.5 ${!paused ? "animate-pulse" : ""}`}
+                className="gap-1.5"
+                style={!paused ? { animation: "pulse 2s ease-in-out infinite" } : undefined}
               >
                 <span className={`h-2 w-2 rounded-full ${paused ? "bg-muted-foreground" : "bg-white"}`} />
                 {paused ? "Paused" : "Recording"}
@@ -121,13 +129,42 @@ export function MobileFooter() {
               )}
               <button
                 type="button"
-                onClick={cancelRecording}
+                onClick={confirmCancel}
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
                 Cancel
               </button>
             </div>
+
+            {/* Cancel confirmation */}
+            {showCancelConfirm && (
+              <div className="mt-4 rounded-lg border bg-muted/50 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  Discard recording?
+                </div>
+                <p className="text-xs text-muted-foreground">Your recording will be lost and cannot be recovered.</p>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={cancelRecording}
+                  >
+                    Discard
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowCancelConfirm(false)}
+                  >
+                    Keep Recording
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

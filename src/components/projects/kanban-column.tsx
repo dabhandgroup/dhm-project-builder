@@ -1,14 +1,7 @@
 "use client";
 
-import { useDroppable } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { ProjectCard } from "./project-card";
-import { projectStatuses } from "@/constants/project-statuses";
+import { projectStatuses, kanbanStatuses } from "@/constants/project-statuses";
 import { cn } from "@/lib/utils";
 import type { ProjectStatus } from "@/types/database";
 
@@ -24,28 +17,11 @@ interface KanbanColumnProps {
     preview_url: string | null;
     clientName?: string | null;
   }[];
+  onStatusChange: (projectId: string, newStatus: ProjectStatus) => void;
 }
 
-function SortableProjectCard(props: KanbanColumnProps["projects"][number]) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: props.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <ProjectCard {...props} />
-    </div>
-  );
-}
-
-export function KanbanColumn({ status, projects }: KanbanColumnProps) {
+export function KanbanColumn({ status, projects, onStatusChange }: KanbanColumnProps) {
   const config = projectStatuses[status];
-  const { setNodeRef, isOver } = useDroppable({ id: status });
 
   return (
     <div className="min-w-[300px] w-[300px] shrink-0 snap-center">
@@ -72,24 +48,20 @@ export function KanbanColumn({ status, projects }: KanbanColumnProps) {
       </div>
 
       <div
-        ref={setNodeRef}
-        className={cn(
-          "min-h-[400px] space-y-2.5 rounded-b-lg border border-t-0 bg-muted/30 p-2.5 transition-colors",
-          isOver && "bg-accent/40 border-primary/30"
-        )}
+        className="min-h-[400px] space-y-2.5 rounded-b-lg border border-t-0 bg-muted/30 p-2.5"
       >
-        <SortableContext
-          items={projects.map((p) => p.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {projects.map((project) => (
-            <SortableProjectCard key={project.id} {...project} />
-          ))}
-        </SortableContext>
+        {projects.map((project) => (
+          <ProjectCard
+            key={project.id}
+            {...project}
+            availableStatuses={kanbanStatuses}
+            onStatusChange={(newStatus) => onStatusChange(project.id, newStatus)}
+          />
+        ))}
 
         {projects.length === 0 && (
           <div className="flex h-[150px] items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground">
-            Drag projects here
+            No projects
           </div>
         )}
       </div>

@@ -119,14 +119,22 @@ export default function FinancialsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Financials"
-        description="Business performance overview"
-      />
+      <PageHeader title="Financials">
+        <div className="w-36">
+          <Select
+            value={String(selectedRange)}
+            onChange={(e) => setSelectedRange(Number(e.target.value))}
+            options={dateRanges.map((r) => ({
+              value: String(r.days),
+              label: r.label,
+            }))}
+            className="text-xs h-8"
+          />
+        </div>
+      </PageHeader>
 
-      {/* Filters */}
+      {/* Currency tabs */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Currency tabs */}
         <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto">
           {currencies.map((c) => (
             <button
@@ -156,19 +164,6 @@ export default function FinancialsPage() {
           >
             <span className="pointer-events-none">All</span>
           </button>
-        </div>
-
-        {/* Date range */}
-        <div className="w-36">
-          <Select
-            value={String(selectedRange)}
-            onChange={(e) => setSelectedRange(Number(e.target.value))}
-            options={dateRanges.map((r) => ({
-              value: String(r.days),
-              label: r.label,
-            }))}
-            className="text-xs h-8"
-          />
         </div>
       </div>
 

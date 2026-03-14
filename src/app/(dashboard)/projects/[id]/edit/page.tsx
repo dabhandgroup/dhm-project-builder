@@ -39,11 +39,8 @@ export default async function EditProjectPage({
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader
-        title="Edit Project"
-        description={project.title}
-      />
+    <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
+      <PageHeader title="Edit Project" description={project.title} />
       <EditProjectFormWrapper projectId={id} initialData={initialData} />
     </div>
   );

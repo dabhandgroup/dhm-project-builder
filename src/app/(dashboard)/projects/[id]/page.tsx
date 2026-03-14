@@ -89,7 +89,6 @@ export default function ProjectDetailPage({
   return (
     <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
       <PageHeader title={project.title}>
-        <ProjectStatusBadge status={project.status as ProjectStatus} />
         <Link href={`/projects/${id}/edit`}>
           <Button variant="outline" size="sm">
             <Pencil className="h-4 w-4" />
@@ -103,8 +102,9 @@ export default function ProjectDetailPage({
         {/* Project Details Card */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base">Project Details</CardTitle>
+              <ProjectStatusBadge status={project.status as ProjectStatus} />
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm overflow-hidden">

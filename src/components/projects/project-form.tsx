@@ -375,7 +375,7 @@ export function ProjectForm({
             <p className="text-xs text-muted-foreground">
               Select a pre-made template as the starting point. AI will adapt content, colours, and fonts to match the client.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
               {Array.from({ length: 16 }, (_, i) => {
                 const id = `template-${i + 1}`;
                 const isSelected = selectedTemplate === id;
@@ -635,7 +635,7 @@ export function ProjectForm({
                   }
                 }}
               />
-              <Button type="button" variant="outline" size="sm" onClick={addLocation}>
+              <Button type="button" variant="outline" onClick={addLocation} className="h-11 sm:h-9 px-4 shrink-0">
                 Add
               </Button>
             </div>
