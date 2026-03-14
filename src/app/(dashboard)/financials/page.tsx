@@ -28,7 +28,7 @@ const dateRanges = [
 ];
 
 export default function FinancialsPage() {
-  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode | "ALL">("ALL");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode | "ALL">("AUD");
   const [selectedRange, setSelectedRange] = useState(9999);
 
   const cutoffDate = new Date();
@@ -127,22 +127,13 @@ export default function FinancialsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Currency tabs */}
-        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5">
-          <button
-            type="button"
-            onClick={() => setSelectedCurrency("ALL")}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-              selectedCurrency === "ALL" ? "bg-background shadow-sm" : "hover:bg-background/50"
-            }`}
-          >
-            All
-          </button>
+        <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5 overflow-x-auto">
           {currencies.map((c) => (
             <button
               key={c.code}
               type="button"
               onClick={() => setSelectedCurrency(c.code)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 shrink-0 ${
                 selectedCurrency === c.code ? "bg-background shadow-sm" : "hover:bg-background/50"
               }`}
             >
@@ -156,6 +147,15 @@ export default function FinancialsPage() {
               {c.code}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setSelectedCurrency("ALL")}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors shrink-0 ${
+              selectedCurrency === "ALL" ? "bg-background shadow-sm" : "hover:bg-background/50"
+            }`}
+          >
+            All
+          </button>
         </div>
 
         {/* Date range */}

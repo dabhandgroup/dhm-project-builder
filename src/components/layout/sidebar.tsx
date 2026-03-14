@@ -44,7 +44,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden lg:flex flex-col border-r bg-sidebar text-sidebar-foreground transition-all duration-200 ease-in-out overflow-hidden",
+        "hidden lg:flex flex-col border-r bg-sidebar text-sidebar-foreground transition-[width] duration-200 ease-in-out overflow-hidden",
         collapsed ? "w-[4.5rem]" : "w-60"
       )}
     >
@@ -54,14 +54,11 @@ export function Sidebar() {
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
             DH
           </div>
-          <span
-            className={cn(
-              "text-sm font-semibold tracking-tight whitespace-nowrap transition-opacity duration-200",
-              collapsed ? "opacity-0 w-0" : "opacity-100"
-            )}
-          >
-            DHM Builder
-          </span>
+          {!collapsed && (
+            <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
+              DHM Builder
+            </span>
+          )}
         </Link>
       </div>
 
@@ -77,31 +74,28 @@ export function Sidebar() {
               <Link
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center rounded-lg text-sm font-medium transition-colors",
                   isActive
                     ? "text-foreground"
                     : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
                   item.accent &&
                     !isActive &&
                     "text-primary hover:text-primary",
-                  collapsed && "justify-center px-0 w-10 mx-auto"
+                  collapsed
+                    ? "justify-center h-10 w-10 mx-auto"
+                    : "gap-3 px-3 py-2"
                 )}
               >
                 <item.icon
                   className={cn(
-                    "h-5 w-5 shrink-0 transition-colors",
+                    "h-5 w-5 shrink-0",
                     isActive ? "text-foreground" : ""
                   )}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
-                <span
-                  className={cn(
-                    "whitespace-nowrap transition-opacity duration-200",
-                    collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                  )}
-                >
-                  {item.label}
-                </span>
+                {!collapsed && (
+                  <span className="whitespace-nowrap">{item.label}</span>
+                )}
               </Link>
             );
 
@@ -137,8 +131,10 @@ export function Sidebar() {
               type="button"
               onClick={toggleCollapsed}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
-                collapsed && "justify-center px-0 w-10 mx-auto"
+                "flex items-center rounded-lg w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors",
+                collapsed
+                  ? "justify-center h-10 w-10 mx-auto"
+                  : "gap-3 px-3 py-2"
               )}
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -147,14 +143,9 @@ export function Sidebar() {
               ) : (
                 <PanelLeftClose className="h-5 w-5 shrink-0" />
               )}
-              <span
-                className={cn(
-                  "whitespace-nowrap transition-opacity duration-200",
-                  collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                )}
-              >
-                Collapse
-              </span>
+              {!collapsed && (
+                <span className="whitespace-nowrap">Collapse</span>
+              )}
             </button>
           );
           return collapsed ? (
@@ -168,20 +159,17 @@ export function Sidebar() {
               type="button"
               onClick={() => setShowLogout(true)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors",
-                collapsed && "justify-center px-0 w-10 mx-auto"
+                "flex items-center rounded-lg w-full text-sm text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-destructive transition-colors",
+                collapsed
+                  ? "justify-center h-10 w-10 mx-auto"
+                  : "gap-3 px-3 py-2"
               )}
               aria-label="Sign out"
             >
               <LogOut className="h-5 w-5 shrink-0" />
-              <span
-                className={cn(
-                  "whitespace-nowrap transition-opacity duration-200",
-                  collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-                )}
-              >
-                Sign out
-              </span>
+              {!collapsed && (
+                <span className="whitespace-nowrap">Sign out</span>
+              )}
             </button>
           );
           return collapsed ? (
