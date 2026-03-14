@@ -139,7 +139,7 @@ export function ProjectForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
       {/* Auto-save indicator */}
       <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
         {isSaving ? (

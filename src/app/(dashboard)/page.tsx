@@ -25,7 +25,7 @@ export default function DashboardPage() {
   const recentProjects = projects.slice(0, 5);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Dashboard" description="Welcome to DHM Project Builder">
         <Link href="/projects/new">
           <Button>
@@ -36,7 +36,7 @@ export default function DashboardPage() {
       </PageHeader>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
         <Link href="/projects" className="group">
           <Card className="transition-colors group-hover:bg-accent/50">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

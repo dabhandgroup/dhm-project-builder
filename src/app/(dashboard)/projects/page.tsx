@@ -23,7 +23,7 @@ export default function ProjectsPage() {
     }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Projects" description="Manage your website projects">
         <Link href="/projects/new">
           <Button>
