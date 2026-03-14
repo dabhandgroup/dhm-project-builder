@@ -197,7 +197,7 @@ export function ProjectForm({
           </div>
 
           {/* Client Search / Create */}
-          <div className="space-y-2" ref={clientRef}>
+          <div className="space-y-2 relative" ref={clientRef}>
             <Label>Client</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -234,7 +234,7 @@ export function ProjectForm({
             </div>
 
             {clientDropdownOpen && !isNewClient && (
-              <div className="absolute z-20 mt-1 w-[calc(100%-2rem)] max-w-[calc(100%-3rem)] rounded-lg border bg-background shadow-lg max-h-[240px] overflow-auto">
+              <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border bg-background shadow-lg max-h-[240px] overflow-auto">
                 {/* Create new client option */}
                 <button
                   type="button"
