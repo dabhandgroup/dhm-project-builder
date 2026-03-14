@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Search, Settings, LogOut, User, FolderKanban, X } from "lucide-react";
-import { mockProjects, getClientName } from "@/lib/mock-data";
 
 export function Topbar() {
   const pathname = usePathname();
@@ -68,14 +67,25 @@ export function Topbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const filteredProjects = searchQuery.trim()
-    ? mockProjects.filter(
-        (p) =>
-          p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.domain_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          getClientName(p.client_id)?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : [];
+  const [filteredProjects, setFilteredProjects] = useState<
+    { id: string; title: string; domain_name: string | null; client_name: string | null }[]
+  >([]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredProjects([]);
+      return;
+    }
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery.trim())}`);
+        if (res.ok) setFilteredProjects(await res.json());
+      } catch {
+        // Ignore search errors
+      }
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
 
   const showDropdown = searchFocused && searchQuery.trim().length > 0;
 
@@ -158,7 +168,7 @@ export function Topbar() {
                           <p className="text-sm font-medium truncate">{project.title}</p>
                           <p className="text-xs text-muted-foreground truncate">
                             {project.domain_name || "No domain"}
-                            {getClientName(project.client_id) && ` · ${getClientName(project.client_id)}`}
+                            {project.client_name && ` · ${project.client_name}`}
                           </p>
                         </div>
                       </button>
@@ -270,7 +280,7 @@ export function Topbar() {
                       <p className="text-sm font-medium truncate">{project.title}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {project.domain_name || "No domain"}
-                        {getClientName(project.client_id) && ` · ${getClientName(project.client_id)}`}
+                        {project.client_name && ` · ${project.client_name}`}
                       </p>
                     </div>
                   </button>
