@@ -285,7 +285,7 @@ export default function AuditDetailPage({
       {/* Improvement Summary */}
       {psAfter && perfImprovement > 0 && (
         <Card className="bg-green-50/50 border-green-200">
-          <CardContent className="py-4">
+          <CardContent className="py-4 sm:py-4">
             <div className="flex items-center gap-4">
               <div className="rounded-full bg-green-100 p-2.5">
                 <Check className="h-5 w-5 text-green-700" />

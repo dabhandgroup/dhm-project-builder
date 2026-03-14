@@ -93,7 +93,7 @@ export function AuditFormWrapper() {
       {/* Data sources info */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="p-4 flex items-start gap-3">
+          <CardContent className="p-4 sm:p-4 flex items-start gap-3">
             <div className="rounded-lg bg-blue-100 p-2 shrink-0">
               <ExternalLink className="h-4 w-4 text-blue-600" />
             </div>
@@ -106,7 +106,7 @@ export function AuditFormWrapper() {
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50/50">
-          <CardContent className="p-4 flex items-start gap-3">
+          <CardContent className="p-4 sm:p-4 flex items-start gap-3">
             <div className="rounded-lg bg-green-100 p-2 shrink-0">
               <FileDown className="h-4 w-4 text-green-600" />
             </div>
