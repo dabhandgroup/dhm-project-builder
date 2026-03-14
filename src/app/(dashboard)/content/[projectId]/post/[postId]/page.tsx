@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, use } from "react";
+import { useState, useRef, useCallback, use } from "react";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -17,6 +17,8 @@ import {
   FileDown,
   Image as ImageIcon,
   RefreshCw,
+  Upload,
+  X,
 } from "lucide-react";
 import { getContentPlanByProjectId, getProjectById } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -103,7 +105,47 @@ export default function ContentPostPage({
   const [prompt, setPrompt] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [featuredImage] = useState<string | null>(null);
+  const [featuredImage, setFeaturedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [metaTitle, setMetaTitle] = useState(postTitle);
+  const [metaDescription, setMetaDescription] = useState("");
+  const [pagePath, setPagePath] = useState(
+    "/" + postTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
+  );
+
+  const handleImageFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    setFeaturedImage(url);
+  }, []);
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleImageFile(file);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    setIsDragging(false);
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) handleImageFile(file);
+  }
+
+  function removeImage() {
+    setFeaturedImage(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   function handleRewrite() {
     if (!prompt.trim()) return;
@@ -204,14 +246,100 @@ export default function ContentPostPage({
       {/* Featured Image */}
       <Card>
         <CardContent className="p-3 sm:p-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           {featuredImage ? (
-            <img src={featuredImage} alt="Featured" className="w-full rounded-lg object-cover aspect-video" />
+            <div className="relative group">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={featuredImage} alt="Featured" className="w-full rounded-lg object-cover aspect-video" />
+              <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 px-2 text-xs shadow-md"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Replace
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 px-2 shadow-md"
+                  onClick={removeImage}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
           ) : (
-            <div className="w-full rounded-lg bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-2 border-dashed flex flex-col items-center justify-center aspect-video gap-2">
-              <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
-              <p className="text-xs text-muted-foreground">Featured image will appear here once generated</p>
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn(
+                "w-full rounded-lg border-2 border-dashed flex flex-col items-center justify-center aspect-video gap-2 cursor-pointer transition-colors",
+                isDragging
+                  ? "border-primary bg-primary/10"
+                  : "bg-gradient-to-br from-primary/10 via-primary/5 to-transparent hover:border-primary/50"
+              )}
+            >
+              {isDragging ? (
+                <>
+                  <Upload className="h-8 w-8 text-primary" />
+                  <p className="text-xs font-medium text-primary">Drop image here</p>
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                  <p className="text-xs text-muted-foreground">Drag & drop an image or click to upload</p>
+                </>
+              )}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* SEO / Meta Fields */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">SEO & Meta</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">Meta Title</Label>
+            <Input
+              value={metaTitle}
+              onChange={(e) => setMetaTitle(e.target.value)}
+              placeholder="Page title for search engines..."
+              className="text-sm"
+            />
+            <p className="text-[10px] text-muted-foreground tabular-nums">{metaTitle.length}/60 characters</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Meta Description</Label>
+            <Textarea
+              value={metaDescription}
+              onChange={(e) => setMetaDescription(e.target.value)}
+              placeholder="Brief description for search engine results..."
+              rows={2}
+            />
+            <p className="text-[10px] text-muted-foreground tabular-nums">{metaDescription.length}/160 characters</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Suggested Page Path</Label>
+            <Input
+              value={pagePath}
+              onChange={(e) => setPagePath(e.target.value)}
+              placeholder="/your-page-path"
+              className="text-sm font-mono"
+            />
+          </div>
         </CardContent>
       </Card>
 

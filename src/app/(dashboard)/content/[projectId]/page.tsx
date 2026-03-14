@@ -365,89 +365,90 @@ export default function ContentPlanDetailPage({
                       {titles.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic py-2">No content items yet. Add some below.</p>
                       ) : (
-                        <ul className="space-y-1">
+                        <ul className="space-y-0.5">
                           {titles.map((title, j) => {
                             const isEditing = editingTitle?.month === i && editingTitle?.index === j;
                             const type = getContentType(i, j);
+                            const isGenerated = status === "generated";
 
                             return (
-                              <li key={j} className="group flex items-start gap-1.5 rounded-md px-2 py-1.5 hover:bg-muted/50 -mx-2">
-                                {/* Reorder buttons */}
-                                <div className="flex flex-col shrink-0 mt-0.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => moveTitle(i, j, "up")}
-                                    className={cn("p-0.5 rounded hover:bg-accent", j === 0 && "opacity-20 pointer-events-none")}
-                                  >
-                                    <ArrowUp className="h-3 w-3 text-muted-foreground" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => moveTitle(i, j, "down")}
-                                    className={cn("p-0.5 rounded hover:bg-accent", j === titles.length - 1 && "opacity-20 pointer-events-none")}
-                                  >
-                                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                                  </button>
-                                </div>
-
-                                <div className="flex-1 min-w-0">
-                                  {isEditing ? (
-                                    <div className="flex gap-1.5">
-                                      <Input
-                                        value={editingValue}
-                                        onChange={(e) => setEditingValue(e.target.value)}
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") saveEditing();
-                                          if (e.key === "Escape") setEditingTitle(null);
-                                        }}
-                                        className="h-8 text-sm"
-                                        autoFocus
-                                      />
-                                      <Button size="sm" className="h-8 px-2" onClick={saveEditing}>
-                                        <Check className="h-3 w-3" />
-                                      </Button>
-                                      <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setEditingTitle(null)}>
-                                        <X className="h-3 w-3" />
-                                      </Button>
+                              <li key={j} className="group rounded-md hover:bg-muted/50">
+                                {isEditing ? (
+                                  <div className="flex gap-1.5 p-1.5">
+                                    <Input
+                                      value={editingValue}
+                                      onChange={(e) => setEditingValue(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") saveEditing();
+                                        if (e.key === "Escape") setEditingTitle(null);
+                                      }}
+                                      className="h-8 text-sm"
+                                      autoFocus
+                                    />
+                                    <Button size="sm" className="h-8 px-2 shrink-0" onClick={saveEditing}>
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-8 px-2 shrink-0" onClick={() => setEditingTitle(null)}>
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-1 px-2 py-2 -mx-2">
+                                    {/* Reorder */}
+                                    <div className="flex flex-col shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => moveTitle(i, j, "up")}
+                                        className={cn("p-1 rounded active:bg-accent", j === 0 && "opacity-20 pointer-events-none")}
+                                      >
+                                        <ArrowUp className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => moveTitle(i, j, "down")}
+                                        className={cn("p-1 rounded active:bg-accent", j === titles.length - 1 && "opacity-20 pointer-events-none")}
+                                      >
+                                        <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
                                     </div>
-                                  ) : (
-                                    <div className="flex items-start gap-2">
-                                      <div className="flex-1 min-w-0">
+
+                                    {/* Title - clickable when generated */}
+                                    <div className="flex-1 min-w-0">
+                                      {isGenerated ? (
+                                        <Link
+                                          href={`/content/${projectId}/post/${i}-${j}`}
+                                          className="text-sm text-primary hover:underline"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          {title}
+                                        </Link>
+                                      ) : (
                                         <span className="text-sm">{title}</span>
-                                        <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 align-middle">
+                                      )}
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                           {contentTypeLabels[type]}
                                         </Badge>
-                                        {status === "generated" && (
-                                          <Link
-                                            href={`/content/${projectId}/post/${i}-${j}`}
-                                            className="ml-2 text-xs text-primary hover:underline align-middle"
-                                            onClick={(e) => e.stopPropagation()}
-                                          >
-                                            View
-                                          </Link>
-                                        )}
                                       </div>
                                     </div>
-                                  )}
-                                </div>
 
-                                {/* Actions */}
-                                {!isEditing && (
-                                  <div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      type="button"
-                                      onClick={() => startEditing(i, j)}
-                                      className="p-1 rounded hover:bg-accent"
-                                    >
-                                      <Pencil className="h-3 w-3 text-muted-foreground" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => removeTitle(i, j)}
-                                      className="p-1 rounded hover:bg-destructive/10"
-                                    >
-                                      <Trash2 className="h-3 w-3 text-destructive" />
-                                    </button>
+                                    {/* Actions - always visible on mobile */}
+                                    <div className="flex items-center gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        type="button"
+                                        onClick={() => startEditing(i, j)}
+                                        className="p-1.5 rounded hover:bg-accent active:bg-accent"
+                                      >
+                                        <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeTitle(i, j)}
+                                        className="p-1.5 rounded hover:bg-destructive/10 active:bg-destructive/10"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </li>
@@ -457,8 +458,8 @@ export default function ContentPlanDetailPage({
                       )}
 
                       {/* Add new item */}
-                      <div className="flex gap-2 pt-2">
-                        <div className="w-28 shrink-0">
+                      <div className="grid grid-cols-[1fr_auto] gap-2 pt-2 sm:flex">
+                        <div className="col-span-2 sm:w-28 sm:shrink-0">
                           <Select
                             value={newTitleType[i] ?? "blog"}
                             onChange={(e) => setNewTitleType((prev) => ({ ...prev, [i]: e.target.value as ContentType }))}
@@ -477,7 +478,7 @@ export default function ContentPlanDetailPage({
                             }
                           }}
                           placeholder="Add title..."
-                          className="flex-1 rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring h-9 sm:h-8"
+                          className="min-w-0 rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring h-9 sm:h-8 sm:flex-1"
                         />
                         <Button
                           size="sm"
