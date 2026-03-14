@@ -23,11 +23,10 @@ import {
   Trash2,
   CheckCheck,
   Pencil,
-  ArrowUp,
-  ArrowDown,
 } from "lucide-react";
 import { getContentPlanByProjectId, getProjectById } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 interface MonthPlan {
   month: string;
@@ -38,20 +37,29 @@ interface MonthPlan {
   blogTitles?: string[];
 }
 
-type ContentType = "blog" | "service_page" | "website_page";
+type ContentType = "blog" | "service_page" | "website_page" | "locational_page";
 type ContentStatus = "not_started" | "generating" | "generated";
 
 const contentTypeLabels: Record<ContentType, string> = {
   blog: "Blog Post",
   service_page: "Service Page",
   website_page: "Website Page",
+  locational_page: "Locational Page",
 };
 
 const contentTypeOptions = [
   { value: "blog", label: "Blog Post" },
   { value: "service_page", label: "Service Page" },
   { value: "website_page", label: "Website Page" },
+  { value: "locational_page", label: "Locational Page" },
 ];
+
+const defaultWordCounts: Record<ContentType, number> = {
+  blog: 1500,
+  service_page: 2500,
+  website_page: 1500,
+  locational_page: 2500,
+};
 
 export default function ContentPlanDetailPage({
   params,
@@ -81,6 +89,8 @@ export default function ContentPlanDetailPage({
   const [newTitle, setNewTitle] = useState<Record<number, string>>({});
   const [newTitleType, setNewTitleType] = useState<Record<number, ContentType>>({});
   const [contentStatus, setContentStatus] = useState<Record<number, ContentStatus>>({});
+  const [wordCounts, setWordCounts] = useState<Record<string, number>>({});
+  const [deleteTarget, setDeleteTarget] = useState<{ month: number; index: number } | null>(null);
 
   const allApproved = approvedMonths.size === planData.length;
 
@@ -94,6 +104,20 @@ export default function ContentPlanDetailPage({
 
   function setContentType(monthIdx: number, titleIdx: number, type: ContentType) {
     setContentTypes((prev) => ({ ...prev, [getContentTypeKey(monthIdx, titleIdx)]: type }));
+    // Set default word count when type changes
+    const key = getContentTypeKey(monthIdx, titleIdx);
+    if (!wordCounts[key]) {
+      setWordCounts((prev) => ({ ...prev, [key]: defaultWordCounts[type] }));
+    }
+  }
+
+  function getWordCount(monthIdx: number, titleIdx: number): number {
+    const key = getContentTypeKey(monthIdx, titleIdx);
+    return wordCounts[key] ?? defaultWordCounts[getContentType(monthIdx, titleIdx)];
+  }
+
+  function setWordCount(monthIdx: number, titleIdx: number, count: number) {
+    setWordCounts((prev) => ({ ...prev, [getContentTypeKey(monthIdx, titleIdx)]: count }));
   }
 
   function toggleMonth(idx: number) {
@@ -133,7 +157,9 @@ export default function ContentPlanDetailPage({
       ...prev,
       [monthIndex]: [...(prev[monthIndex] || []), title],
     }));
-    setContentTypes((prev) => ({ ...prev, [getContentTypeKey(monthIndex, newIdx)]: type }));
+    const key = getContentTypeKey(monthIndex, newIdx);
+    setContentTypes((prev) => ({ ...prev, [key]: type }));
+    setWordCounts((prev) => ({ ...prev, [key]: defaultWordCounts[type] }));
     setNewTitle((prev) => ({ ...prev, [monthIndex]: "" }));
   }
 
@@ -157,24 +183,6 @@ export default function ContentPlanDetailPage({
       [month]: prev[month]?.map((t, i) => (i === index ? editingValue : t)) || [],
     }));
     setEditingTitle(null);
-  }
-
-  function moveTitle(monthIndex: number, titleIndex: number, direction: "up" | "down") {
-    setBlogTitles((prev) => {
-      const titles = [...(prev[monthIndex] || [])];
-      const targetIndex = direction === "up" ? titleIndex - 1 : titleIndex + 1;
-      if (targetIndex < 0 || targetIndex >= titles.length) return prev;
-      [titles[titleIndex], titles[targetIndex]] = [titles[targetIndex], titles[titleIndex]];
-      // Swap content types too
-      const keyA = getContentTypeKey(monthIndex, titleIndex);
-      const keyB = getContentTypeKey(monthIndex, targetIndex);
-      setContentTypes((prevTypes) => {
-        const typeA = prevTypes[keyA] ?? "blog";
-        const typeB = prevTypes[keyB] ?? "blog";
-        return { ...prevTypes, [keyA]: typeB, [keyB]: typeA };
-      });
-      return { ...prev, [monthIndex]: titles };
-    });
   }
 
   function handleGenerate(monthIndex: number) {
@@ -394,24 +402,6 @@ export default function ContentPlanDetailPage({
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-1 px-2 py-2 -mx-2">
-                                    {/* Reorder */}
-                                    <div className="flex flex-col shrink-0">
-                                      <button
-                                        type="button"
-                                        onClick={() => moveTitle(i, j, "up")}
-                                        className={cn("p-1 rounded active:bg-accent", j === 0 && "opacity-20 pointer-events-none")}
-                                      >
-                                        <ArrowUp className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => moveTitle(i, j, "down")}
-                                        className={cn("p-1 rounded active:bg-accent", j === titles.length - 1 && "opacity-20 pointer-events-none")}
-                                      >
-                                        <ArrowDown className="h-3.5 w-3.5 text-muted-foreground" />
-                                      </button>
-                                    </div>
-
                                     {/* Title - clickable when generated */}
                                     <div className="flex-1 min-w-0">
                                       {isGenerated ? (
@@ -429,6 +419,9 @@ export default function ContentPlanDetailPage({
                                         <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                                           {contentTypeLabels[type]}
                                         </Badge>
+                                        <span className="text-[10px] text-muted-foreground">
+                                          {getWordCount(i, j).toLocaleString()} words
+                                        </span>
                                       </div>
                                     </div>
 
@@ -443,7 +436,7 @@ export default function ContentPlanDetailPage({
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={() => removeTitle(i, j)}
+                                        onClick={() => setDeleteTarget({ month: i, index: j })}
                                         className="p-1.5 rounded hover:bg-destructive/10 active:bg-destructive/10"
                                       >
                                         <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -458,36 +451,44 @@ export default function ContentPlanDetailPage({
                       )}
 
                       {/* Add new item */}
-                      <div className="grid grid-cols-[1fr_auto] gap-2 pt-2 sm:flex">
-                        <div className="col-span-2 sm:w-28 sm:shrink-0">
-                          <Select
-                            value={newTitleType[i] ?? "blog"}
-                            onChange={(e) => setNewTitleType((prev) => ({ ...prev, [i]: e.target.value as ContentType }))}
-                            options={contentTypeOptions}
-                            className="h-9 sm:h-8 text-xs"
+                      <div className="space-y-2 pt-2">
+                        <div className="grid grid-cols-[1fr_auto] gap-2 sm:flex">
+                          <div className="col-span-2 sm:w-32 sm:shrink-0">
+                            <Select
+                              value={newTitleType[i] ?? "blog"}
+                              onChange={(e) => setNewTitleType((prev) => ({ ...prev, [i]: e.target.value as ContentType }))}
+                              options={contentTypeOptions}
+                              className="h-9 sm:h-8 text-xs"
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={newTitle[i] || ""}
+                            onChange={(e) => setNewTitle((prev) => ({ ...prev, [i]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addTitle(i);
+                              }
+                            }}
+                            placeholder="Add title..."
+                            className="min-w-0 rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring h-9 sm:h-8 sm:flex-1"
                           />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => addTitle(i)}
+                            className="h-9 sm:h-8 px-2 text-xs shrink-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <input
-                          type="text"
-                          value={newTitle[i] || ""}
-                          onChange={(e) => setNewTitle((prev) => ({ ...prev, [i]: e.target.value }))}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              addTitle(i);
-                            }
-                          }}
-                          placeholder="Add title..."
-                          className="min-w-0 rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring h-9 sm:h-8 sm:flex-1"
-                        />
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => addTitle(i)}
-                          className="h-9 sm:h-8 px-2 text-xs shrink-0"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                        <p className="text-[10px] text-muted-foreground">
+                          Default word count: {defaultWordCounts[newTitleType[i] ?? "blog"].toLocaleString()} words
+                          {(newTitleType[i] ?? "blog") === "locational_page" && (
+                            <span className="ml-1">&middot; Targets specific suburbs/locations for local SEO rankings</span>
+                          )}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -540,6 +541,17 @@ export default function ContentPlanDetailPage({
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete content item"
+        description="Are you sure you want to delete this content item? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleteTarget) removeTitle(deleteTarget.month, deleteTarget.index);
+        }}
+      />
     </div>
   );
 }

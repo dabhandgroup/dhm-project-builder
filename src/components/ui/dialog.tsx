@@ -99,7 +99,7 @@ function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left",
+        "flex flex-col space-y-1.5 text-center",
         className
       )}
       {...props}
@@ -141,7 +141,7 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "flex gap-3 pt-2",
+        "flex gap-3 pt-2 justify-center",
         className
       )}
       {...props}

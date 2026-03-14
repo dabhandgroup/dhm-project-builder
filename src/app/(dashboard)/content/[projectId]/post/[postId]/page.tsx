@@ -19,6 +19,10 @@ import {
   RefreshCw,
   Upload,
   X,
+  History,
+  ChevronDown,
+  ChevronRight,
+  Eye,
 } from "lucide-react";
 import { getContentPlanByProjectId, getProjectById } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
@@ -104,6 +108,10 @@ export default function ContentPostPage({
   const [body, setBody] = useState(mockPostBody);
   const [prompt, setPrompt] = useState("");
   const [isRewriting, setIsRewriting] = useState(false);
+  const [rewriteHistory, setRewriteHistory] = useState<
+    { prompt: string; body: string; timestamp: Date }[]
+  >([]);
+  const [viewingHistoryIdx, setViewingHistoryIdx] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [featuredImage, setFeaturedImage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -150,10 +158,16 @@ export default function ContentPostPage({
   function handleRewrite() {
     if (!prompt.trim()) return;
     setIsRewriting(true);
+    // Save current version to history before rewriting
+    setRewriteHistory((prev) => [
+      ...prev,
+      { prompt: prompt.trim(), body, timestamp: new Date() },
+    ]);
     setTimeout(() => {
       setBody((prev) => prev + `\n\n---\n\n*Updated based on feedback: "${prompt}"*\n\nThe content above has been revised to incorporate your suggestions. Key changes include updated tone, additional detail in the practical steps section, and stronger calls to action throughout.`);
       setPrompt("");
       setIsRewriting(false);
+      setViewingHistoryIdx(null);
     }, 2500);
   }
 
@@ -399,6 +413,70 @@ export default function ContentPostPage({
           </Button>
         </CardContent>
       </Card>
+
+      {/* Rewrite History */}
+      {rewriteHistory.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Rewrite History
+              <span className="text-xs font-normal text-muted-foreground">
+                ({rewriteHistory.length} {rewriteHistory.length === 1 ? "revision" : "revisions"})
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {rewriteHistory.map((entry, idx) => {
+              const isViewing = viewingHistoryIdx === idx;
+              return (
+                <div key={idx} className="rounded-lg border">
+                  <button
+                    type="button"
+                    onClick={() => setViewingHistoryIdx(isViewing ? null : idx)}
+                    className="flex w-full items-center gap-2 p-3 text-left hover:bg-accent/30 transition-colors"
+                  >
+                    {isViewing ? (
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">
+                        Draft {idx + 1}: &ldquo;{entry.prompt}&rdquo;
+                      </p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {entry.timestamp.toLocaleString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <Eye className={cn("h-3.5 w-3.5 shrink-0", isViewing ? "text-primary" : "text-muted-foreground")} />
+                  </button>
+                  {isViewing && (
+                    <div className="border-t p-3">
+                      <div className="prose prose-sm max-w-none dark:prose-invert max-h-64 overflow-auto rounded-md bg-muted/30 p-3">
+                        {entry.body.split("\n").map((line, lineIdx) => {
+                          if (line.startsWith("## ")) return <h2 key={lineIdx} className="text-base font-bold mt-4 mb-1.5 first:mt-0">{line.replace("## ", "")}</h2>;
+                          if (line.startsWith("### ")) return <h3 key={lineIdx} className="text-sm font-semibold mt-3 mb-1">{line.replace("### ", "")}</h3>;
+                          if (line.startsWith("- ")) return <li key={lineIdx} className="text-xs leading-relaxed ml-4 mb-0.5">{renderInline(line.replace("- ", ""))}</li>;
+                          if (/^\d+\. /.test(line)) return <li key={lineIdx} className="text-xs leading-relaxed ml-4 mb-0.5 list-decimal">{renderInline(line.replace(/^\d+\. /, ""))}</li>;
+                          if (line.startsWith("---")) return <hr key={lineIdx} className="my-3" />;
+                          if (line.trim() === "") return <br key={lineIdx} />;
+                          return <p key={lineIdx} className="text-xs leading-relaxed mb-1">{renderInline(line)}</p>;
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

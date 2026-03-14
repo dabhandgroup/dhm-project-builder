@@ -35,7 +35,7 @@ export default function ContentPage() {
           </Link>
         </EmptyState>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {plans.map((plan) => {
             const project = getProjectById(plan.project_id);
             const planData = plan.plan_data as { month: string; topic: string; blogTitles?: string[] }[];

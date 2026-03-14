@@ -18,6 +18,7 @@ import {
   FolderKanban,
 } from "lucide-react";
 import { mockProjects } from "@/lib/mock-data";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 interface Note {
   id: string;
@@ -59,6 +60,7 @@ export default function NotesPage() {
   const [newProjectId, setNewProjectId] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [filterProject, setFilterProject] = useState("");
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   function addNote() {
     if (!newContent.trim()) return;
@@ -225,7 +227,7 @@ export default function NotesPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteNote(note.id)}
+                        onClick={() => setDeleteId(note.id)}
                         className="p-1.5 rounded hover:bg-accent transition-colors text-muted-foreground hover:text-destructive"
                         title="Delete note"
                       >
@@ -239,6 +241,15 @@ export default function NotesPage() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteId(null); }}
+        title="Delete note"
+        description="Are you sure you want to delete this note? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { if (deleteId) deleteNote(deleteId); }}
+      />
     </div>
   );
 }

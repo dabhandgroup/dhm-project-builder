@@ -92,32 +92,36 @@ export function AuditFormWrapper() {
 
       {/* Data sources info */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="p-4 sm:p-4 flex items-start gap-3">
-            <div className="rounded-lg bg-blue-100 p-2 shrink-0">
-              <ExternalLink className="h-4 w-4 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">Google PageSpeed Insights</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Core Web Vitals, performance score, LCP, CLS, FID metrics. PDF report auto-generated.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-green-200 bg-green-50/50">
-          <CardContent className="p-4 sm:p-4 flex items-start gap-3">
-            <div className="rounded-lg bg-green-100 p-2 shrink-0">
-              <FileDown className="h-4 w-4 text-green-600" />
-            </div>
-            <div>
-              <p className="text-sm font-medium">GTmetrix Report</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Full performance report with waterfall chart. Downloadable PDF for client presentation.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <a href="https://pagespeed.web.dev/" target="_blank" rel="noopener noreferrer" className="block">
+          <Card className="border-blue-200 bg-blue-50/50 hover:bg-blue-50 transition-colors cursor-pointer">
+            <CardContent className="p-4 sm:p-4 flex items-start gap-3">
+              <div className="rounded-lg bg-blue-100 p-2 shrink-0">
+                <ExternalLink className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Google PageSpeed Insights</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Core Web Vitals, performance score, LCP, CLS, FID metrics. PDF report auto-generated.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </a>
+        <a href="https://gtmetrix.com/" target="_blank" rel="noopener noreferrer" className="block">
+          <Card className="border-green-200 bg-green-50/50 hover:bg-green-50 transition-colors cursor-pointer">
+            <CardContent className="p-4 sm:p-4 flex items-start gap-3">
+              <div className="rounded-lg bg-green-100 p-2 shrink-0">
+                <FileDown className="h-4 w-4 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium">GTmetrix Report</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Full performance report with waterfall chart. Downloadable PDF for client presentation.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </a>
       </div>
     </div>
   );

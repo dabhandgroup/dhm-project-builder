@@ -140,24 +140,34 @@ export function ProjectForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Auto-save indicator */}
-      <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
-        {isSaving ? (
-          <>
-            <Loader2 className="h-3 w-3 animate-spin" />
-            Saving...
-          </>
-        ) : isDirty ? (
-          <>
-            <CloudOff className="h-3 w-3" />
-            Unsaved changes
-          </>
-        ) : lastSaved ? (
-          <>
-            <Cloud className="h-3 w-3" />
-            Saved
-          </>
-        ) : null}
+      {/* Title + auto-save indicator */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight truncate">
+            {isEditing ? "Edit Project" : "New Project"}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1 truncate">
+            {isEditing ? "Update project details" : "Create a new website project"}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground shrink-0">
+          {isSaving ? (
+            <>
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Saving...
+            </>
+          ) : isDirty ? (
+            <>
+              <CloudOff className="h-3 w-3" />
+              Unsaved changes
+            </>
+          ) : lastSaved ? (
+            <>
+              <Cloud className="h-3 w-3" />
+              Saved
+            </>
+          ) : null}
+        </div>
       </div>
 
       {/* Project Details */}

@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Save, Loader2, Plus, Trash2 } from "lucide-react";
 import { DatePicker } from "@/components/ui/date-picker";
 import { mockTargets, currencies } from "@/lib/mock-data";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import type { CurrencyCode } from "@/types/project";
 
 interface TargetData {
@@ -29,6 +30,7 @@ export default function TargetsEditPage() {
     }))
   );
   const [saving, setSaving] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   function updateTarget(id: string, field: keyof TargetData, value: string | number) {
     setTargets((prev) =>
@@ -97,7 +99,7 @@ export default function TargetsEditPage() {
                 <span className="flex-1">{target.label} ({target.currency})</span>
                 <button
                   type="button"
-                  onClick={() => removeTarget(target.id)}
+                  onClick={() => setDeleteTargetId(target.id)}
                   className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -182,6 +184,15 @@ export default function TargetsEditPage() {
           </>
         )}
       </Button>
+
+      <ConfirmDialog
+        open={deleteTargetId !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTargetId(null); }}
+        title="Delete target"
+        description="Are you sure you want to delete this target? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => { if (deleteTargetId) removeTarget(deleteTargetId); }}
+      />
     </div>
   );
 }

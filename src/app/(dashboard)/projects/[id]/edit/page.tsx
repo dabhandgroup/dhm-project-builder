@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/shared/page-header";
 import { EditProjectFormWrapper } from "./form-wrapper";
 import { getProjectById, getClientById } from "@/lib/mock-data";
 
@@ -40,7 +39,6 @@ export default async function EditProjectPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
-      <PageHeader title="Edit Project" description={project.title} />
       <EditProjectFormWrapper projectId={id} initialData={initialData} />
     </div>
   );

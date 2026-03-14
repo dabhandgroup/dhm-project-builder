@@ -50,9 +50,12 @@ export function Sidebar() {
       {/* Logo */}
       <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
         <Link href="/" className="flex items-center gap-2 font-bold">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
-            DH
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://www.dabhandmarketing.com/assets/images/61a448de805ef0ab7c7c6309_5fd49badb4d94e90bf469db6_dhm-logo-4.svg"
+            alt="DHM"
+            className="h-8 w-8 shrink-0 rounded-lg object-contain"
+          />
           {!collapsed && (
             <span className="text-sm font-semibold tracking-tight whitespace-nowrap">
               DHM Builder
