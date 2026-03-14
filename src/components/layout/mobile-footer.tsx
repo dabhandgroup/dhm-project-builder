@@ -86,20 +86,21 @@ export function MobileFooter() {
           <div className="bg-background rounded-2xl p-8 mx-4 w-full max-w-sm text-center space-y-6">
             <div className="relative mx-auto w-fit">
               {!paused && (
-                <div className="absolute inset-0 rounded-full bg-red-500/20 animate-pulse" style={{ animationDuration: "2s" }} />
+                <div className="absolute inset-0 rounded-full animate-pulse" style={{ animationDuration: "2s", background: "rgba(54, 167, 245, 0.2)" }} />
               )}
               <button
                 type="button"
                 onClick={stopRecording}
-                className="relative flex h-24 w-24 items-center justify-center rounded-full bg-red-600 text-white shadow-lg"
+                className="relative flex h-24 w-24 items-center justify-center rounded-full text-white shadow-lg"
+                style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}
               >
                 <Square className="h-8 w-8" />
               </button>
             </div>
             <div className="space-y-2">
               <Badge
-                variant={paused ? "secondary" : "destructive"}
-                className="gap-1.5"
+                variant="secondary"
+                className={`gap-1.5 ${!paused ? "text-[#36A7F5]" : ""}`}
                 style={!paused ? { animation: "pulse 2s ease-in-out infinite" } : undefined}
               >
                 <span className={`h-2 w-2 rounded-full ${paused ? "bg-muted-foreground" : "bg-white"}`} />
@@ -191,7 +192,7 @@ export function MobileFooter() {
                   onClick={startRecording}
                   className="flex flex-col items-center justify-center -mt-5"
                 >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-500 text-white shadow-lg active:bg-red-600 transition-colors">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-colors" style={{ background: "linear-gradient(to right, #36A7F5, #37CEF5)" }}>
                     <Mic className="h-6 w-6" />
                   </div>
                   <span className="text-[10px] mt-1 text-muted-foreground">Record</span>

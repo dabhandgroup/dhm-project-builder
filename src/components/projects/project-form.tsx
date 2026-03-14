@@ -276,10 +276,53 @@ export function ProjectForm({
             )}
 
             {isNewClient && (
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <UserPlus className="h-3 w-3" />
-                Creating new client — fill in contact details below
-              </p>
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-medium flex items-center gap-1">
+                  <UserPlus className="h-3 w-3 text-primary" />
+                  New Client Details
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">First Name</Label>
+                    <Input
+                      value={form.client_name.split(" ")[0] || ""}
+                      onChange={(e) => {
+                        const last = form.client_name.split(" ").slice(1).join(" ");
+                        updateField("client_name", `${e.target.value}${last ? ` ${last}` : ""}`);
+                      }}
+                      placeholder="e.g. John"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Last Name</Label>
+                    <Input
+                      value={form.client_name.split(" ").slice(1).join(" ") || ""}
+                      onChange={(e) => {
+                        const first = form.client_name.split(" ")[0] || "";
+                        updateField("client_name", `${first}${e.target.value ? ` ${e.target.value}` : ""}`);
+                      }}
+                      placeholder="e.g. Smith"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Email</Label>
+                  <Input
+                    type="email"
+                    value={form.contact_info.email}
+                    onChange={(e) => updateContactField("email", e.target.value)}
+                    placeholder="e.g. john@business.com"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Domain / Website</Label>
+                  <Input
+                    value={form.domain_name}
+                    onChange={(e) => updateField("domain_name", e.target.value)}
+                    placeholder="e.g. johnsmith-plumbing.com.au"
+                  />
+                </div>
+              </div>
             )}
           </div>
 
@@ -396,7 +439,7 @@ export function ProjectForm({
                     onClick={() => setSelectedTemplate(isSelected ? null : id)}
                     className={`relative group rounded-lg border-2 overflow-hidden transition-all ${
                       isSelected
-                        ? "border-primary ring-2 ring-primary/20"
+                        ? "border-green-500 ring-2 ring-green-500/20"
                         : "border-muted hover:border-muted-foreground/30"
                     }`}
                   >
@@ -406,8 +449,8 @@ export function ProjectForm({
                       </span>
                     </div>
                     {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="h-3 w-3 text-primary-foreground" />
+                      <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                        <Check className="h-3 w-3 text-white" />
                       </div>
                     )}
                     <div className="px-2 py-1.5 border-t bg-background">

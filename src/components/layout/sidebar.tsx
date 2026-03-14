@@ -48,7 +48,7 @@ export function Sidebar() {
       )}
     >
       {/* Logo */}
-      <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "justify-center px-4")}>
+      <div className={cn("flex h-14 items-center border-b", collapsed ? "justify-center px-2" : "px-4")}>
         <Link href="/" className="flex items-center font-bold">
           <svg
             viewBox="0 0 288.1 450.3"
