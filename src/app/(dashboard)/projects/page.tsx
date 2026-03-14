@@ -24,7 +24,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title="Projects" description="Manage your website projects">
+      <PageHeader title="Projects">
         <Link href="/projects/new">
           <Button>
             <Plus className="h-4 w-4" />

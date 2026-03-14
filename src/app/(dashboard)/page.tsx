@@ -26,7 +26,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <PageHeader title="Dashboard" description="Welcome to DHM Project Builder">
+      <PageHeader title="Dashboard">
         <Link href="/projects/new">
           <Button>
             <Plus className="h-4 w-4" />

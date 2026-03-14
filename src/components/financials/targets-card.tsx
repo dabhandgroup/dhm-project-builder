@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Target, Pencil } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 
 interface TargetsCardProps {
@@ -9,6 +11,7 @@ interface TargetsCardProps {
     label: string;
     monthlyMrrTarget: number;
     monthlyOneOffTarget: number;
+    deadline?: string;
   };
   currentMrr: number;
   currentOneOff: number;
@@ -22,13 +25,12 @@ function ProgressBar({ current, target, currency, label }: {
   label: string;
 }) {
   const pct = Math.min((current / target) * 100, 100);
-  const remaining = Math.max(target - current, 0);
   const isComplete = current >= target;
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-xs sm:text-sm">{label}</span>
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-xs sm:text-sm">
+        <span className="font-medium">{label}</span>
       </div>
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         <div
@@ -58,7 +60,13 @@ export function TargetsCard({ target, currentMrr, currentOneOff, currency }: Tar
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Target className="h-4 w-4" />
-          Targets — {target.label}
+          <span className="flex-1">Targets — {target.label}</span>
+          <Link href="/financials/targets">
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground">
+              <Pencil className="h-3 w-3" />
+              Edit
+            </Button>
+          </Link>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -76,6 +84,11 @@ export function TargetsCard({ target, currentMrr, currentOneOff, currency }: Tar
             label="One-Off"
           />
         </div>
+        {target.deadline && (
+          <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+            Deadline: {new Date(target.deadline).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
