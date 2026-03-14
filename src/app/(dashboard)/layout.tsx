@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { MobileFooter } from "@/components/layout/mobile-footer";
+import { DesktopVoiceWidget } from "@/components/voice/desktop-voice-widget";
 import { ScrollToTop } from "@/components/layout/scroll-to-top";
 
 export default function DashboardLayout({
@@ -19,6 +20,7 @@ export default function DashboardLayout({
         </main>
       </div>
       <MobileFooter />
+      <DesktopVoiceWidget />
     </div>
   );
 }
