@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { FileDown } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { getAuditById } from "@/lib/mock-data";
 
@@ -95,6 +97,25 @@ export default async function AuditDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Download Reports */}
+      {audit.status === "complete" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Download Reports</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-3">
+            <Button variant="outline" className="gap-2">
+              <FileDown className="h-4 w-4" />
+              Google PageSpeed PDF
+            </Button>
+            <Button variant="outline" className="gap-2">
+              <FileDown className="h-4 w-4" />
+              GTmetrix Report PDF
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <p className="text-xs text-muted-foreground text-center">
         Audit created {formatDate(audit.created_at)}

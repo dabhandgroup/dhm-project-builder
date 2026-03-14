@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
-import { CopyButton } from "@/components/shared/copy-button";
+import { OutreachMessageEditor } from "@/components/projects/outreach-message-editor";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -217,22 +217,11 @@ export default async function ProjectDetailPage({
             </Card>
           )}
 
-          {/* Outreach Message */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center justify-between">
-                Outreach Message
-                <CopyButton text={outreachMessage} label="Copy" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xs text-muted-foreground whitespace-pre-wrap bg-muted/50 rounded-md p-3">
-                {outreachMessage}
-              </p>
-            </CardContent>
-          </Card>
         </div>
       </div>
+
+      {/* Outreach Message — full width, editable */}
+      <OutreachMessageEditor initialMessage={outreachMessage} />
     </div>
   );
 }

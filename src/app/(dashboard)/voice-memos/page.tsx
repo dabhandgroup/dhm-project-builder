@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Mic } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { mockVoiceMemos, getProjectById } from "@/lib/mock-data";
+import { VoiceRecorder } from "@/components/voice/voice-recorder";
 
 export default function VoiceMemosPage() {
   const allMemos = mockVoiceMemos;
@@ -14,17 +15,24 @@ export default function VoiceMemosPage() {
     <div className="space-y-6">
       <PageHeader
         title="Voice Memos"
-        description="All your recorded transcriptions"
+        description="Record and transcribe your thoughts"
       />
 
+      {/* Record New Memo */}
+      <VoiceRecorder />
+
+      {/* Memos List */}
       {allMemos.length === 0 ? (
         <EmptyState
           icon={Mic}
           title="No voice memos yet"
-          description="Use the microphone button on any text field to record and transcribe your thoughts."
+          description="Use the record button above to capture and transcribe your thoughts."
         />
       ) : (
         <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Recent Memos ({allMemos.length})
+          </h2>
           {allMemos.map((memo) => {
             const project = memo.project_id ? getProjectById(memo.project_id) : null;
             return (

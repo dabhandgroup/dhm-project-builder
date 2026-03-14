@@ -31,47 +31,47 @@ export function ProjectCard({
 }: ProjectCardProps) {
   return (
     <div
-      className="rounded-lg border bg-card p-3 shadow-sm hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing"
+      className="rounded-lg border bg-card p-4 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
       {...dragHandleProps}
     >
-      <Link href={`/projects/${id}`} className="block space-y-2">
+      <Link href={`/projects/${id}`} className="block space-y-3">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold leading-tight truncate">
+          <h3 className="text-sm font-semibold leading-snug">
             {title}
           </h3>
           <ProjectStatusBadge status={status} />
         </div>
 
-        {domain_name && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Globe className="h-3 w-3" />
-            <span className="truncate">{domain_name}</span>
-          </div>
-        )}
-
         {clientName && (
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-xs text-muted-foreground">
             {clientName}
           </p>
         )}
 
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-green-600">
+        {domain_name && (
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Globe className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{domain_name}</span>
+          </div>
+        )}
+
+        {preview_url && (
+          <div className="flex items-center gap-1.5 text-xs text-blue-600">
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{preview_url}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between pt-1 border-t">
+          <span className="text-sm font-semibold text-green-600">
             {formatCurrency(recurring_revenue)}/mo
           </span>
           {ai_model && (
-            <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase">
+            <span className="rounded-md bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
               {ai_model}
             </span>
           )}
         </div>
-
-        {preview_url && (
-          <div className="flex items-center gap-1 text-xs text-blue-600">
-            <ExternalLink className="h-3 w-3" />
-            <span>Preview</span>
-          </div>
-        )}
       </Link>
     </div>
   );
