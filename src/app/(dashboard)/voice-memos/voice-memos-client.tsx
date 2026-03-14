@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -28,6 +28,11 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
   const [memos, setMemos] = useState(initialMemos);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const router = useRouter();
+
+  // Sync memos when server data changes (e.g. after router.refresh())
+  useEffect(() => {
+    setMemos(initialMemos);
+  }, [initialMemos]);
 
   function handleMemoCreated() {
     // Refresh server data to pick up the newly saved memo

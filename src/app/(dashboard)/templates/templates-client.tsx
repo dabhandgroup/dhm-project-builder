@@ -282,16 +282,16 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
         </Card>
       )}
 
-      {templates.length === 0 ? (
+      {templates.length === 0 && !showForm ? (
         <Card>
-          <CardContent className="py-12 text-center">
+          <CardContent className="p-8 py-12 text-center">
             <LayoutTemplate className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               No templates yet. Click &quot;Add Template&quot; to upload one.
             </p>
           </CardContent>
         </Card>
-      ) : (
+      ) : templates.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
           {templates.map((tmpl) => (
             <Card key={tmpl.id} className={`overflow-hidden ${!tmpl.is_active ? "opacity-60" : ""}`}>
@@ -346,7 +346,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
             </Card>
           ))}
         </div>
-      )}
+      ) : null}
 
       <ConfirmDialog
         open={deleteId !== null}

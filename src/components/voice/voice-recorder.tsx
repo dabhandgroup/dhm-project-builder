@@ -24,12 +24,14 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
     error,
   } = useVoiceRecorder();
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
 
   const handleStop = useCallback(async () => {
     const blob = await stopRecording();
     if (!blob) return;
 
     setIsTranscribing(true);
+    setLastError(null);
     try {
       const formData = new FormData();
       formData.append("audio", blob, "recording.webm");
@@ -41,18 +43,22 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || "Transcription failed");
+        throw new Error(errData.error || `Transcription failed (${response.status})`);
       }
 
       const data = await response.json();
       if (data.transcription) {
         toast({ title: "Memo saved", description: "Transcription complete" });
         onMemoCreated?.();
+      } else {
+        throw new Error("No transcription returned");
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : "Please try again";
+      setLastError(message);
       toast({
         title: "Transcription failed",
-        description: err instanceof Error ? err.message : "Please try again",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -76,8 +82,8 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center gap-4 py-4">
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
+          {(error || lastError) && (
+            <p className="text-sm text-destructive">{error || lastError}</p>
           )}
 
           {isIdle && (
