@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { EditProjectFormWrapper } from "./form-wrapper";
 import { getProjectById } from "@/lib/queries/projects";
+import { getClients } from "@/lib/queries/clients";
+import { getTemplates } from "@/lib/queries/templates";
 
 export default async function EditProjectPage({
   params,
@@ -16,6 +18,25 @@ export default async function EditProjectPage({
   }
 
   if (!project) notFound();
+
+  const [allClients, allTemplates] = await Promise.all([getClients(), getTemplates()]);
+
+  const clientOptions = allClients.map((c) => ({
+    id: c.id,
+    name: c.name,
+    email: c.email,
+    phone: c.phone,
+    company: c.company,
+    address: c.address,
+  }));
+
+  const templateOptions = allTemplates.map((t) => ({
+    id: t.id,
+    name: t.name,
+    thumbnail_url: t.thumbnail_url,
+    category: t.category,
+    framework: t.framework,
+  }));
 
   const client = (project as Record<string, unknown>).clients as {
     name: string;
@@ -51,7 +72,7 @@ export default async function EditProjectPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
-      <EditProjectFormWrapper projectId={id} initialData={initialData} />
+      <EditProjectFormWrapper projectId={id} initialData={initialData} clients={clientOptions} templates={templateOptions} />
     </div>
   );
 }

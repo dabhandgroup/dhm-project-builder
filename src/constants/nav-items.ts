@@ -10,6 +10,7 @@ import {
   UserCog,
   Settings,
   LayoutDashboard,
+  LayoutTemplate,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +54,11 @@ export const navItems: NavItem[] = [
     label: "Content",
     href: "/content",
     icon: PenTool,
+  },
+  {
+    label: "Templates",
+    href: "/templates",
+    icon: LayoutTemplate,
   },
   {
     label: "Performance Audit",

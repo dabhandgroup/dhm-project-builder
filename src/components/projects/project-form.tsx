@@ -12,9 +12,25 @@ import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
 import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check } from "lucide-react";
-import { mockClients } from "@/lib/mock-data";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
+
+export interface ClientOption {
+  id: string;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  address?: string | null;
+}
+
+export interface TemplateOption {
+  id: string;
+  name: string;
+  thumbnail_url?: string | null;
+  category?: string | null;
+  framework?: string;
+}
 
 interface ProjectFormProps {
   initialData?: Partial<ProjectFormData>;
@@ -22,6 +38,8 @@ interface ProjectFormProps {
   onSubmit: (data: ProjectFormData) => Promise<void>;
   onSaveDraft?: (data: ProjectFormData) => Promise<void>;
   isEditing?: boolean;
+  clients?: ClientOption[];
+  templates?: TemplateOption[];
 }
 
 export function ProjectForm({
@@ -30,6 +48,8 @@ export function ProjectForm({
   onSubmit,
   onSaveDraft,
   isEditing = false,
+  clients = [],
+  templates = [],
 }: ProjectFormProps) {
   const [form, setForm] = useState<ProjectFormData>({
     ...defaultProjectFormData,
@@ -67,13 +87,13 @@ export function ProjectForm({
   }, []);
 
   const filteredClients = clientSearch.trim()
-    ? mockClients.filter(
+    ? clients.filter(
         (c) =>
           c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
           c.company?.toLowerCase().includes(clientSearch.toLowerCase()) ||
           c.email?.toLowerCase().includes(clientSearch.toLowerCase())
       )
-    : mockClients;
+    : clients;
 
   const updateField = useCallback(
     <K extends keyof ProjectFormData>(field: K, value: ProjectFormData[K]) => {
@@ -110,7 +130,7 @@ export function ProjectForm({
     [form.target_locations, updateField]
   );
 
-  function selectClient(client: typeof mockClients[0]) {
+  function selectClient(client: ClientOption) {
     updateField("client_id", client.id);
     updateField("client_name", client.name);
     updateContactField("phone", client.phone || "");
@@ -428,38 +448,53 @@ export function ProjectForm({
             <p className="text-xs text-muted-foreground">
               Select a pre-made template as the starting point. AI will adapt content, colours, and fonts to match the client.
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
-              {Array.from({ length: 16 }, (_, i) => {
-                const id = `template-${i + 1}`;
-                const isSelected = selectedTemplate === id;
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setSelectedTemplate(isSelected ? null : id)}
-                    className={`relative group rounded-lg border-2 overflow-hidden transition-all ${
-                      isSelected
-                        ? "border-green-500 ring-2 ring-green-500/20"
-                        : "border-muted hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center">
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Template {i + 1}
-                      </span>
-                    </div>
-                    {isSelected && (
-                      <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
-                        <Check className="h-3 w-3 text-white" />
+            {templates.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
+                {templates.map((tmpl) => {
+                  const isSelected = selectedTemplate === tmpl.id;
+                  return (
+                    <button
+                      key={tmpl.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTemplate(isSelected ? null : tmpl.id);
+                        updateField("template_id", isSelected ? null : tmpl.id);
+                      }}
+                      className={`relative group rounded-lg border-2 overflow-hidden transition-all ${
+                        isSelected
+                          ? "border-green-500 ring-2 ring-green-500/20"
+                          : "border-muted hover:border-muted-foreground/30"
+                      }`}
+                    >
+                      <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
+                        {tmpl.thumbnail_url ? (
+                          <img src={tmpl.thumbnail_url} alt={tmpl.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {tmpl.name}
+                          </span>
+                        )}
                       </div>
-                    )}
-                    <div className="px-2 py-1.5 border-t bg-background">
-                      <p className="text-[11px] font-medium truncate">Template {i + 1}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-green-500 flex items-center justify-center">
+                          <Check className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                      <div className="px-2 py-1.5 border-t bg-background">
+                        <p className="text-[11px] font-medium truncate">{tmpl.name}</p>
+                        {tmpl.category && (
+                          <p className="text-[10px] text-muted-foreground truncate">{tmpl.category}</p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-lg border-2 border-dashed p-6 text-center">
+                <p className="text-sm text-muted-foreground">No templates available. Add templates in Settings.</p>
+              </div>
+            )}
           </div>
 
           {/* Upload Project Zip */}
