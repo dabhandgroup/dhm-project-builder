@@ -234,7 +234,7 @@ export function Topbar() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search projects, clients, domains..."
-              className="flex-1 bg-transparent py-2 text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent py-2 text-base sm:text-sm outline-none placeholder:text-muted-foreground"
             />
             <button
               type="button"

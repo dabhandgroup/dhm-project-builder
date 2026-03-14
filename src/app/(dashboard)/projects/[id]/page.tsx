@@ -107,7 +107,7 @@ export default function ProjectDetailPage({
               <CardTitle className="text-base">Project Details</CardTitle>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
+          <CardContent className="space-y-3 text-sm overflow-hidden">
             {/* Logo */}
             {(project as Record<string, unknown>).logo_url ? (
               <div className="flex items-center gap-3 pb-2">
@@ -126,22 +126,22 @@ export default function ProjectDetailPage({
             )}
 
             {project.domain_name && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 text-muted-foreground" />
-                  <span>{project.domain_name}</span>
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{project.domain_name}</span>
                 </div>
                 <CopyButton text={project.domain_name} />
               </div>
             )}
             {project.preview_url && (
-              <div className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-2 min-w-0">
+                <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
                 <a
                   href={project.preview_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 hover:underline truncate"
                 >
                   {project.preview_url}
                 </a>

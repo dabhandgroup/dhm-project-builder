@@ -337,7 +337,7 @@ export default function ContentPlanDetailPage({
                             }
                           }}
                           placeholder="Add a blog post title..."
-                          className="flex-1 rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                          className="flex-1 rounded-md border bg-background px-3 py-1.5 text-base sm:text-sm outline-none focus:ring-1 focus:ring-ring"
                         />
                         <Button
                           size="sm"
