@@ -62,7 +62,7 @@ export async function pushFiles(
   token: string,
   owner: string,
   repo: string,
-  files: { path: string; content: string }[],
+  files: { path: string; content: string; encoding?: "utf-8" | "base64" }[],
   message = "Initial commit from DHM Project Builder",
   branch = "main",
 ) {
@@ -96,7 +96,7 @@ export async function pushFiles(
           headers,
           body: JSON.stringify({
             content: file.content,
-            encoding: "utf-8",
+            encoding: file.encoding || "utf-8",
           }),
         },
       );

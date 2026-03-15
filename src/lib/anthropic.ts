@@ -37,9 +37,10 @@ export async function generateSiteFiles(
     brief: string;
     clientName: string;
     existingSiteContent?: string;
+    imagePaths?: string[];
   },
 ): Promise<{ path: string; content: string }[]> {
-  const systemPrompt = `You are a web developer assistant. You take a website template and customize it for a specific client based on their brief. You must return a JSON array of files with path and content fields. Preserve the template's structure but update all content, colors, and branding to match the client.`;
+  const systemPrompt = `You are a web developer assistant. You take a website template and customize it for a specific client based on their brief. You must return a JSON array of files with path and content fields. Preserve the template's structure but update all content, colors, and branding to match the client. When image paths are provided, use them in the HTML with <img> tags. Place square images where logos, profile photos, or thumbnails fit, and landscape images where hero banners, feature images, or gallery images fit.`;
 
   const userPrompt = `Customize this website template for "${opts.clientName}".
 
@@ -47,7 +48,7 @@ Brief:
 ${opts.brief}
 
 ${opts.existingSiteContent ? `Existing site content to use as reference:\n${opts.existingSiteContent}\n` : ""}
-
+${opts.imagePaths?.length ? `${opts.imagePaths.map((p) => `- ${p}`).join("\n")}\nUse these exact paths in <img src="..."> tags throughout the site.\n` : ""}
 Template files:
 ${opts.templateFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join("\n\n")}
 
@@ -58,7 +59,7 @@ Return ONLY a JSON array of objects with "path" and "content" fields. No markdow
     headers: getHeaders(apiKey),
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 8192,
+      max_tokens: 16384,
       messages: [{ role: "user", content: userPrompt }],
       system: systemPrompt,
     }),
