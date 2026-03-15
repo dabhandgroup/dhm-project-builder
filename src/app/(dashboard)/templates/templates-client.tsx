@@ -73,9 +73,9 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
     let storage_path: string | undefined;
 
     if (thumbnailFile) {
-      const path = `thumbnails/${Date.now()}-${thumbnailFile.name}`;
-      await uploadFile("templates", path, thumbnailFile);
-      thumbnail_url = getPublicUrl("templates", path);
+      const path = `template-thumbnails/${Date.now()}-${thumbnailFile.name}`;
+      await uploadFile("project-assets", path, thumbnailFile);
+      thumbnail_url = getPublicUrl("project-assets", path);
     }
 
     if (templateFile) {
@@ -223,8 +223,6 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
                   options={[
                     { value: "nextjs", label: "Next.js" },
                     { value: "html", label: "HTML/CSS" },
-                    { value: "wordpress", label: "WordPress" },
-                    { value: "astro", label: "Astro" },
                   ]}
                 />
               </div>
@@ -310,7 +308,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
                     {tmpl.category && (
                       <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.category}</span>
                     )}
-                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.framework}</span>
+                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.framework === "nextjs" ? "Next.js" : "HTML/CSS"}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
