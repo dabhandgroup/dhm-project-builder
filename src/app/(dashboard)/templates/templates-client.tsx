@@ -20,7 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createTemplate, updateTemplate, deleteTemplate } from "@/actions/templates";
-import { uploadFile } from "@/lib/storage";
+import { uploadFile, getPublicUrl } from "@/lib/storage";
 import type { Template } from "@/types/template";
 
 interface TemplatesClientProps {
@@ -73,8 +73,9 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
     let storage_path: string | undefined;
 
     if (thumbnailFile) {
-      const url = await uploadFile("templates", `thumbnails/${Date.now()}-${thumbnailFile.name}`, thumbnailFile);
-      thumbnail_url = url;
+      const path = `thumbnails/${Date.now()}-${thumbnailFile.name}`;
+      await uploadFile("templates", path, thumbnailFile);
+      thumbnail_url = getPublicUrl("templates", path);
     }
 
     if (templateFile) {
@@ -284,7 +285,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
 
       {templates.length === 0 && !showForm ? (
         <Card>
-          <CardContent className="p-8 pt-8 pb-12 text-center">
+          <CardContent className="!p-8 !pb-12 text-center">
             <LayoutTemplate className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               No templates yet. Click &quot;Add Template&quot; to upload one.

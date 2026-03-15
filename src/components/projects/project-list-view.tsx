@@ -7,9 +7,10 @@ import { Select } from "@/components/ui/select";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { updateProjectStatus } from "@/actions/projects";
 import { toast } from "@/components/ui/toast";
-import { ArrowUpDown, ExternalLink } from "lucide-react";
+import { ArrowUpDown, ExternalLink, Trash2 } from "lucide-react";
 import { kanbanStatuses } from "@/constants/project-statuses";
 import { projectStatuses } from "@/constants/project-statuses";
+import { DeleteProjectDialog } from "./delete-project-dialog";
 import type { ProjectStatus } from "@/types/database";
 
 interface ListProject {
@@ -37,6 +38,7 @@ export function ProjectListView({
   const [projects, setProjects] = useState(initialProjects);
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   const sorted = [...projects].sort((a, b) => {
     const aVal = a[sortKey] ?? "";
@@ -93,6 +95,7 @@ export function ProjectListView({
   );
 
   return (
+    <>
     <div className="overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
         <thead>
@@ -113,6 +116,7 @@ export function ProjectListView({
             <th className="px-3 py-2 text-left hidden lg:table-cell">
               <SortHeader label="Created" sortKeyVal="created_at" />
             </th>
+            <th className="px-3 py-2 w-10" />
           </tr>
         </thead>
         <tbody>
@@ -180,10 +184,31 @@ export function ProjectListView({
               <td className="px-3 py-2 text-xs text-muted-foreground hidden lg:table-cell">
                 {formatDate(project.created_at)}
               </td>
+              <td className="px-3 py-2">
+                <button
+                  type="button"
+                  className="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  onClick={() => setDeleteTarget({ id: project.id, title: project.title })}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
+
+    {deleteTarget && (
+      <DeleteProjectDialog
+        projectId={deleteTarget.id}
+        projectTitle={deleteTarget.title}
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      />
+    )}
+    </>
   );
 }
