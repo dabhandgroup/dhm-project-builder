@@ -20,7 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createTemplate, updateTemplate, deleteTemplate } from "@/actions/templates";
-import { uploadFile, getPublicUrl } from "@/lib/storage";
+import { uploadFile } from "@/lib/storage";
 import type { Template } from "@/types/template";
 
 interface TemplatesClientProps {
@@ -75,7 +75,8 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
     if (thumbnailFile) {
       const path = `template-thumbnails/${Date.now()}-${thumbnailFile.name}`;
       await uploadFile("project-assets", path, thumbnailFile);
-      thumbnail_url = getPublicUrl("project-assets", path);
+      // Store as proxy URL so it works regardless of bucket privacy settings
+      thumbnail_url = `/api/storage?bucket=project-assets&path=${encodeURIComponent(path)}`;
     }
 
     if (templateFile) {
@@ -296,7 +297,23 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
             <Card key={tmpl.id} className={`overflow-hidden ${!tmpl.is_active ? "opacity-60" : ""}`}>
               <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
                 {tmpl.thumbnail_url ? (
-                  <img src={tmpl.thumbnail_url} alt={tmpl.name} className="w-full h-full object-cover" />
+                  <img
+                    src={tmpl.thumbnail_url}
+                    alt={tmpl.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // If direct URL fails (private bucket), try proxy
+                      const img = e.currentTarget;
+                      const url = img.src;
+                      if (!url.includes("/api/storage")) {
+                        // Extract bucket and path from Supabase URL
+                        const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+                        if (match) {
+                          img.src = `/api/storage?bucket=${match[1]}&path=${encodeURIComponent(match[2])}`;
+                        }
+                      }
+                    }}
+                  />
                 ) : (
                   <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
                 )}
