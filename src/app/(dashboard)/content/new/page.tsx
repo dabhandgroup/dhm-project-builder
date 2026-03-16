@@ -1,6 +1,8 @@
 import { getProjects } from "@/lib/queries/projects";
 import { NewContentPlanClient } from "./new-content-plan-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function NewContentPlanPage() {
   const projects = await getProjects();
 

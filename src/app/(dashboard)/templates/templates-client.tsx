@@ -20,7 +20,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { createTemplate, updateTemplate, deleteTemplate } from "@/actions/templates";
-import { uploadFile, getPublicUrl } from "@/lib/storage";
+import { uploadFile } from "@/lib/storage";
 import type { Template } from "@/types/template";
 
 interface TemplatesClientProps {
@@ -72,16 +72,24 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
     let thumbnail_url: string | undefined;
     let storage_path: string | undefined;
 
-    if (thumbnailFile) {
-      const path = `thumbnails/${Date.now()}-${thumbnailFile.name}`;
-      await uploadFile("templates", path, thumbnailFile);
-      thumbnail_url = getPublicUrl("templates", path);
-    }
+    try {
+      if (thumbnailFile) {
+        const path = `template-thumbnails/${Date.now()}-${thumbnailFile.name}`;
+        await uploadFile("project-assets", path, thumbnailFile);
+        // Store as proxy URL so it works regardless of bucket privacy settings
+        thumbnail_url = `/api/storage?bucket=project-assets&path=${encodeURIComponent(path)}`;
+      }
 
-    if (templateFile) {
-      const path = `files/${Date.now()}-${templateFile.name}`;
-      await uploadFile("templates", path, templateFile);
-      storage_path = path;
+      if (templateFile) {
+        const path = `files/${Date.now()}-${templateFile.name}`;
+        await uploadFile("templates", path, templateFile);
+        storage_path = path;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      toast({ title: `Upload error: ${message}`, variant: "destructive" });
+      setSaving(false);
+      return;
     }
 
     if (editingId) {
@@ -223,8 +231,6 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
                   options={[
                     { value: "nextjs", label: "Next.js" },
                     { value: "html", label: "HTML/CSS" },
-                    { value: "wordpress", label: "WordPress" },
-                    { value: "astro", label: "Astro" },
                   ]}
                 />
               </div>
@@ -296,9 +302,25 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
           {templates.map((tmpl) => (
             <Card key={tmpl.id} className={`overflow-hidden ${!tmpl.is_active ? "opacity-60" : ""}`}>
-              <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
+              <div className="aspect-[2/1] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
                 {tmpl.thumbnail_url ? (
-                  <img src={tmpl.thumbnail_url} alt={tmpl.name} className="w-full h-full object-cover" />
+                  <img
+                    src={tmpl.thumbnail_url}
+                    alt={tmpl.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // If direct URL fails (private bucket), try proxy
+                      const img = e.currentTarget;
+                      const url = img.src;
+                      if (!url.includes("/api/storage")) {
+                        // Extract bucket and path from Supabase URL
+                        const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+                        if (match) {
+                          img.src = `/api/storage?bucket=${match[1]}&path=${encodeURIComponent(match[2])}`;
+                        }
+                      }
+                    }}
+                  />
                 ) : (
                   <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
                 )}
@@ -310,7 +332,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
                     {tmpl.category && (
                       <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.category}</span>
                     )}
-                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.framework}</span>
+                    <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{tmpl.framework === "nextjs" ? "Next.js" : "HTML/CSS"}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
