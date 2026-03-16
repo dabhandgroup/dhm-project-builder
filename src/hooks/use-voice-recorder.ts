@@ -11,6 +11,7 @@ interface UseVoiceRecorderReturn {
   pauseRecording: () => void;
   resumeRecording: () => void;
   stopRecording: () => Promise<Blob | null>;
+  discardRecording: () => void;
   error: string | null;
 }
 
@@ -117,6 +118,27 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     });
   }, []);
 
+  const discardRecording = useCallback(() => {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
+      // Remove onstop handler to prevent saving the blob
+      mediaRecorderRef.current.onstop = () => {
+        const stream = mediaRecorderRef.current?.stream;
+        stream?.getTracks().forEach((track) => track.stop());
+      };
+      mediaRecorderRef.current.stop();
+    }
+    chunksRef.current = [];
+    resolveStopRef.current = null;
+    stopTimer();
+    setIsRecording(false);
+    setIsPaused(false);
+    setDuration(0);
+    setAudioBlob(null);
+  }, [stopTimer]);
+
   useEffect(() => {
     return () => {
       stopTimer();
@@ -138,6 +160,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     pauseRecording,
     resumeRecording,
     stopRecording,
+    discardRecording,
     error,
   };
 }
