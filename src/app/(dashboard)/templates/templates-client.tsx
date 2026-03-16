@@ -325,7 +325,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
                   <LayoutTemplate className="h-8 w-8 text-muted-foreground" />
                 )}
               </div>
-              <CardContent className="px-2 pb-2 pt-2 space-y-1.5">
+              <CardContent className="!p-2 !pt-2 space-y-1.5">
                 <div>
                   <p className="text-sm font-medium truncate">{tmpl.name}</p>
                   <div className="flex items-center gap-1.5 mt-0.5">
