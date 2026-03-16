@@ -4,8 +4,9 @@ import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Mic, Square, Loader2, Pause, Play } from "lucide-react";
+import { Mic, Square, Loader2, Pause, Play, Trash2 } from "lucide-react";
 import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "@/components/ui/toast";
 
 interface VoiceRecorderProps {
@@ -21,10 +22,12 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
     pauseRecording,
     resumeRecording,
     stopRecording,
+    discardRecording,
     error,
   } = useVoiceRecorder();
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   const handleStop = useCallback(async () => {
     const blob = await stopRecording();
@@ -151,9 +154,15 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
                     Resume
                   </Button>
                 )}
-                <p className="text-sm text-muted-foreground">
-                  Tap the stop button to finish
-                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDiscardConfirm(true)}
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Discard
+                </Button>
               </div>
             </>
           )}
@@ -173,6 +182,18 @@ export function VoiceRecorder({ onMemoCreated }: VoiceRecorderProps) {
         <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
           <p>Voice memos are transcribed using Groq Whisper AI. Your recording will be saved as a word-for-word transcript with an AI-ready summary of actionable points.</p>
         </div>
+
+        <ConfirmDialog
+          open={showDiscardConfirm}
+          onOpenChange={setShowDiscardConfirm}
+          title="Discard recording"
+          description="Are you sure you want to discard this recording? The audio will be lost."
+          confirmLabel="Discard"
+          onConfirm={() => {
+            discardRecording();
+            toast({ title: "Recording discarded" });
+          }}
+        />
       </CardContent>
     </Card>
   );
