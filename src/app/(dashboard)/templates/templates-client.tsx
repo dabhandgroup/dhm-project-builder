@@ -302,7 +302,7 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
           {templates.map((tmpl) => (
             <Card key={tmpl.id} className={`overflow-hidden ${!tmpl.is_active ? "opacity-60" : ""}`}>
-              <div className="aspect-[4/3] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
+              <div className="aspect-[2/1] bg-gradient-to-br from-muted/60 to-muted flex items-center justify-center overflow-hidden">
                 {tmpl.thumbnail_url ? (
                   <img
                     src={tmpl.thumbnail_url}
