@@ -10,7 +10,10 @@ export async function uploadFile(
   const supabase = createClient();
   const { data, error } = await supabase.storage
     .from(bucket)
-    .upload(path, file, { upsert: true });
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type || undefined,
+    });
 
   if (error) throw error;
   return data.path;

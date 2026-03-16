@@ -72,17 +72,24 @@ export function TemplatesClient({ initialTemplates }: TemplatesClientProps) {
     let thumbnail_url: string | undefined;
     let storage_path: string | undefined;
 
-    if (thumbnailFile) {
-      const path = `template-thumbnails/${Date.now()}-${thumbnailFile.name}`;
-      await uploadFile("project-assets", path, thumbnailFile);
-      // Store as proxy URL so it works regardless of bucket privacy settings
-      thumbnail_url = `/api/storage?bucket=project-assets&path=${encodeURIComponent(path)}`;
-    }
+    try {
+      if (thumbnailFile) {
+        const path = `template-thumbnails/${Date.now()}-${thumbnailFile.name}`;
+        await uploadFile("project-assets", path, thumbnailFile);
+        // Store as proxy URL so it works regardless of bucket privacy settings
+        thumbnail_url = `/api/storage?bucket=project-assets&path=${encodeURIComponent(path)}`;
+      }
 
-    if (templateFile) {
-      const path = `files/${Date.now()}-${templateFile.name}`;
-      await uploadFile("templates", path, templateFile);
-      storage_path = path;
+      if (templateFile) {
+        const path = `files/${Date.now()}-${templateFile.name}`;
+        await uploadFile("templates", path, templateFile);
+        storage_path = path;
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      toast({ title: `Upload error: ${message}`, variant: "destructive" });
+      setSaving(false);
+      return;
     }
 
     if (editingId) {
