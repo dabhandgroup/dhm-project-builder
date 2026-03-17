@@ -418,28 +418,52 @@ export function ProjectForm({
           <CardTitle className="text-lg">Branding</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-4 sm:grid-cols-3">
-            <ImageUploadZone
-              label="Favicon"
-              value={form.favicon ? [form.favicon] : []}
-              onChange={(files) => updateField("favicon", files[0] || null)}
-              single
-              accept="image/*"
-            />
-            <ImageUploadZone
-              label="Client Logo"
-              value={form.logo ? [form.logo] : []}
-              onChange={(files) => updateField("logo", files[0] || null)}
-              single
-              accept="image/*,.svg"
-            />
-            <ImageUploadZone
-              label="Alternative Logo"
-              value={form.alt_logo ? [form.alt_logo] : []}
-              onChange={(files) => updateField("alt_logo", files[0] || null)}
-              single
-              accept="image/*,.svg"
-            />
+          {/* Build Assets - favicon & OG image */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">Build Assets</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Favicon and Open Graph image used in the site build</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ImageUploadZone
+                label="Favicon"
+                value={form.favicon ? [form.favicon] : []}
+                onChange={(files) => updateField("favicon", files[0] || null)}
+                single
+                accept="image/*"
+              />
+              <ImageUploadZone
+                label="Open Graph Image"
+                value={form.og_image ? [form.og_image] : []}
+                onChange={(files) => updateField("og_image", files[0] || null)}
+                single
+                accept="image/*"
+              />
+            </div>
+          </div>
+
+          {/* Design Assets - logos */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium">Logos</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Client logos for the design</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ImageUploadZone
+                label="Client Logo"
+                value={form.logo ? [form.logo] : []}
+                onChange={(files) => updateField("logo", files[0] || null)}
+                single
+                accept="image/*,.svg"
+              />
+              <ImageUploadZone
+                label="Alternative Logo"
+                value={form.alt_logo ? [form.alt_logo] : []}
+                onChange={(files) => updateField("alt_logo", files[0] || null)}
+                single
+                accept="image/*,.svg"
+              />
+            </div>
           </div>
 
           {/* Choose Template */}

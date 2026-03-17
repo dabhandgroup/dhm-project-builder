@@ -26,6 +26,7 @@ export interface ProjectFormData {
   client_id: string;
   client_name: string;
   favicon: File | null;
+  og_image: File | null;
   logo: File | null;
   alt_logo: File | null;
   pages_required: string;
@@ -57,6 +58,7 @@ export const defaultProjectFormData: ProjectFormData = {
   client_id: "",
   client_name: "",
   favicon: null,
+  og_image: null,
   logo: null,
   alt_logo: null,
   pages_required: "",
