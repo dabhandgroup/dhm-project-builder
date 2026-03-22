@@ -31,14 +31,19 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Unauthenticated users can only access /login
-  if (!user && pathname !== "/login") {
+  // Public auth pages that don't require a session
+  const publicAuthPaths = ["/login", "/reset-password"];
+  const isPublicAuth = publicAuthPaths.includes(pathname);
+
+  // Unauthenticated users can only access public auth pages
+  if (!user && !isPublicAuth) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   // Authenticated user on /login -> redirect to dashboard
+  // (but NOT /reset-password — they need that to set a new password)
   if (user && pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";

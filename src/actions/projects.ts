@@ -114,14 +114,16 @@ export async function addProjectImage(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveDraft(data: Record<string, any>, projectId?: string) {
-  // Strip non-DB fields (File objects, client_name, etc.)
+  // Strip non-DB fields (File objects, client_name, crawl_data, etc.)
   const {
     client_name: _cn,
     favicon: _f,
+    og_image: _og,
     logo: _l,
     alt_logo: _al,
     square_images: _si,
     landscape_images: _li,
+    crawl_data: _cd,
     ...dbFields
   } = data;
 

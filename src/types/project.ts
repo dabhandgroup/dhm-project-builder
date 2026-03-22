@@ -1,4 +1,5 @@
 import type { Database } from "./database";
+import type { CrawlData } from "@/components/projects/site-crawler";
 
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
@@ -26,6 +27,7 @@ export interface ProjectFormData {
   client_id: string;
   client_name: string;
   favicon: File | null;
+  og_image: File | null;
   logo: File | null;
   alt_logo: File | null;
   pages_required: string;
@@ -48,6 +50,7 @@ export interface ProjectFormData {
   recurring_revenue: number;
   template_id: string | null;
   deploy_provider: string | null;
+  crawl_data: CrawlData | null;
 }
 
 export const defaultProjectFormData: ProjectFormData = {
@@ -57,6 +60,7 @@ export const defaultProjectFormData: ProjectFormData = {
   client_id: "",
   client_name: "",
   favicon: null,
+  og_image: null,
   logo: null,
   alt_logo: null,
   pages_required: "",
@@ -79,4 +83,5 @@ export const defaultProjectFormData: ProjectFormData = {
   recurring_revenue: 199,
   template_id: null,
   deploy_provider: null,
+  crawl_data: null,
 };
