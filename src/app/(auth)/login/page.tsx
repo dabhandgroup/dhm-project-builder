@@ -245,9 +245,14 @@ export default function LoginPage() {
 
       <p className="text-center text-xs text-muted-foreground">
         Don&apos;t have an account?{" "}
-        <span className="text-foreground font-medium cursor-pointer hover:underline">
+        <a
+          href="https://dabhandmarketing.com/contact"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-foreground font-medium hover:underline"
+        >
           Contact your admin
-        </span>
+        </a>
       </p>
     </div>
   );
