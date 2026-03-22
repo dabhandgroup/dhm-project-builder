@@ -1,4 +1,5 @@
 import type { Database } from "./database";
+import type { CrawlData } from "@/components/projects/site-crawler";
 
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
@@ -49,6 +50,7 @@ export interface ProjectFormData {
   recurring_revenue: number;
   template_id: string | null;
   deploy_provider: string | null;
+  crawl_data: CrawlData | null;
 }
 
 export const defaultProjectFormData: ProjectFormData = {
@@ -81,4 +83,5 @@ export const defaultProjectFormData: ProjectFormData = {
   recurring_revenue: 199,
   template_id: null,
   deploy_provider: null,
+  crawl_data: null,
 };

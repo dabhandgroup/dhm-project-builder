@@ -29,12 +29,31 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
       .catch(() => {});
   }, [initialClients, initialTemplates]);
 
+  async function saveCrawlData(projectId: string, crawlData: ProjectFormData["crawl_data"]) {
+    if (!crawlData) return;
+    try {
+      await fetch("/api/crawl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, crawlData }),
+      });
+    } catch {
+      // Non-fatal — crawl data is supplementary
+      console.error("Failed to save crawl data");
+    }
+  }
+
   async function handleSubmit(data: ProjectFormData) {
+    const { crawl_data, ...rest } = data;
+
     if (draftIdRef.current) {
-      // Update existing draft — it's already in the DB as a "lead"
-      await updateProject(draftIdRef.current, data);
+      await updateProject(draftIdRef.current, rest);
+      await saveCrawlData(draftIdRef.current, crawl_data);
     } else {
-      await createProject(data);
+      const result = await createProject(rest);
+      if (result && "id" in result && result.id) {
+        await saveCrawlData(result.id, crawl_data);
+      }
     }
   }
 

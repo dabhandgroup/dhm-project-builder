@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
+import { SiteCrawler } from "@/components/projects/site-crawler";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
@@ -393,6 +394,14 @@ export function ProjectForm({
                 The sitemap will be crawled to rebuild all existing pages
               </p>
             </div>
+          )}
+
+          {/* Site Crawler (shown for rebuilds with a domain) */}
+          {form.is_rebuild && form.domain_name && (
+            <SiteCrawler
+              domain={form.domain_name}
+              onCrawlComplete={(data) => updateField("crawl_data", data)}
+            />
           )}
 
           {/* AI Model */}

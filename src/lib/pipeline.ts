@@ -3,12 +3,13 @@ import { getProjectById } from "@/lib/queries/projects";
 import { getTemplateById } from "@/lib/queries/templates";
 import { getAllSettings } from "@/lib/queries/settings";
 import { createRepo, pushFiles } from "@/lib/github";
-import { crawlSite } from "@/lib/firecrawl";
+import { crawlSite, generateRedirects } from "@/lib/firecrawl";
 import { generateSiteFiles } from "@/lib/anthropic";
 import { createVercelProject, linkRepoToProject } from "@/lib/vercel";
 import { createSite, linkRepoToSite } from "@/lib/netlify";
 import { loadTemplateFiles } from "@/lib/template-loader";
 import { loadProjectImages, getImageManifest } from "@/lib/image-loader";
+import type { CrawlPage } from "@/lib/firecrawl";
 
 export type PipelineStep =
   | "pending"
@@ -36,6 +37,27 @@ export function getPipelineStatus(projectId: string): PipelineStatus | null {
 
 function setStatus(projectId: string, status: PipelineStatus) {
   statusMap.set(projectId, status);
+}
+
+// Load stored crawl data from Supabase storage (if exists)
+async function loadCrawlData(projectId: string): Promise<{
+  pages: CrawlPage[];
+  allUrls: string[];
+  domain: string;
+} | null> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.storage
+    .from("project-assets")
+    .download(`crawl-data/${projectId}.json`);
+
+  if (error || !data) return null;
+
+  try {
+    const text = await data.text();
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 export async function runPipeline(projectId: string) {
@@ -84,16 +106,31 @@ export async function runPipeline(projectId: string) {
     const projectImages = await loadProjectImages(projectId);
     const imagePaths = projectImages.map((img) => img.path);
 
-    // Step 1: Scrape existing site (if rebuild)
+    // Step 1: Load crawl data or scrape existing site (if rebuild)
     let existingSiteContent = "";
-    if (project.is_rebuild && project.domain_name && firecrawlKey) {
-      setStatus(projectId, { step: "scraping", message: "Scraping existing site..." });
-      try {
-        const result = await crawlSite(firecrawlKey, `https://${project.domain_name}`, 5);
-        existingSiteContent = result.pages.map((p) => `## ${p.url}\n${p.markdown}`).join("\n\n");
-      } catch {
-        // Scraping is optional — continue without it
-        existingSiteContent = "";
+    let discoveredUrls: string[] = [];
+
+    if (project.is_rebuild && project.domain_name) {
+      setStatus(projectId, { step: "scraping", message: "Loading site data..." });
+
+      // Try loading pre-crawled data from storage first
+      const storedCrawl = await loadCrawlData(projectId);
+
+      if (storedCrawl && storedCrawl.pages.length > 0) {
+        existingSiteContent = storedCrawl.pages
+          .map((p) => `## ${p.url}\n${p.markdown}`)
+          .join("\n\n");
+        discoveredUrls = storedCrawl.allUrls;
+      } else if (firecrawlKey) {
+        // Fallback: live crawl
+        setStatus(projectId, { step: "scraping", message: "Scraping existing site..." });
+        try {
+          const result = await crawlSite(firecrawlKey, `https://${project.domain_name}`, 20);
+          existingSiteContent = result.pages.map((p) => `## ${p.url}\n${p.markdown}`).join("\n\n");
+          discoveredUrls = result.pages.map((p) => p.url);
+        } catch {
+          existingSiteContent = "";
+        }
       }
     }
 
@@ -123,9 +160,31 @@ export async function runPipeline(projectId: string) {
     // Wait briefly for repo to be ready
     await new Promise((r) => setTimeout(r, 2000));
 
-    // Combine generated text files with binary image files
+    // Generate redirects file from discovered URLs
+    const redirectFiles: { path: string; content: string; encoding: "utf-8" }[] = [];
+    if (discoveredUrls.length > 0 && project.domain_name) {
+      if (deployProvider === "netlify") {
+        const redirectsContent = generateRedirects(discoveredUrls, project.domain_name, "netlify");
+        redirectFiles.push({
+          path: "_redirects",
+          content: redirectsContent as string,
+          encoding: "utf-8",
+        });
+      } else {
+        // Vercel: generate vercel.json with redirects
+        const redirectsConfig = generateRedirects(discoveredUrls, project.domain_name, "vercel");
+        redirectFiles.push({
+          path: "vercel.json",
+          content: JSON.stringify(redirectsConfig, null, 2),
+          encoding: "utf-8",
+        });
+      }
+    }
+
+    // Combine generated text files, redirects, and binary image files
     const allFiles = [
       ...generatedFiles.map((f) => ({ path: f.path, content: f.content, encoding: "utf-8" as const })),
+      ...redirectFiles,
       ...projectImages.map((img) => ({ path: img.path, content: img.base64, encoding: "base64" as const })),
     ];
 

@@ -25,59 +25,206 @@ export async function validateFirecrawlKey(apiKey: string) {
   }
 }
 
-export async function crawlSite(
+// ---------- Types ----------
+
+export interface CrawlPage {
+  url: string;
+  markdown: string;
+  html: string;
+  rawHtml: string;
+  links: string[];
+  screenshot: string | null; // base64 data URI or URL
+  metadata: {
+    title?: string;
+    description?: string;
+    ogImage?: string;
+    favicon?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface CrawlResult {
+  pages: CrawlPage[];
+  allUrls: string[];
+}
+
+export interface CrawlStatus {
+  status: "scraping" | "completed" | "failed";
+  total: number;
+  completed: number;
+  creditsUsed: number;
+  expiresAt: string;
+  data?: CrawlPage[];
+}
+
+// ---------- Map: discover all URLs ----------
+
+export async function mapSite(
   apiKey: string,
   url: string,
-  maxPages = 10,
-): Promise<{ pages: { url: string; markdown: string }[] }> {
-  // Start crawl
-  const startRes = await fetch(`${FIRECRAWL_API}/crawl`, {
+): Promise<string[]> {
+  const res = await fetch(`${FIRECRAWL_API}/map`, {
+    method: "POST",
+    headers: getHeaders(apiKey),
+    body: JSON.stringify({ url }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to map site");
+  }
+
+  const data = await res.json();
+  return data.links ?? [];
+}
+
+// ---------- Full crawl: all formats ----------
+
+export async function startCrawl(
+  apiKey: string,
+  url: string,
+  maxPages = 50,
+): Promise<string> {
+  const res = await fetch(`${FIRECRAWL_API}/crawl`, {
     method: "POST",
     headers: getHeaders(apiKey),
     body: JSON.stringify({
       url,
       limit: maxPages,
       scrapeOptions: {
-        formats: ["markdown"],
+        formats: ["markdown", "html", "rawHtml", "screenshot", "links"],
+        waitFor: 1000,
       },
     }),
   });
 
-  if (!startRes.ok) {
-    const err = await startRes.json();
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to start crawl");
   }
 
-  const { id } = await startRes.json();
+  const data = await res.json();
+  return data.id;
+}
 
-  // Poll for results
-  const maxAttempts = 30;
+export async function getCrawlStatus(
+  apiKey: string,
+  crawlId: string,
+): Promise<CrawlStatus> {
+  const res = await fetch(`${FIRECRAWL_API}/crawl/${crawlId}`, {
+    headers: getHeaders(apiKey),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to get crawl status");
+  }
+
+  const data = await res.json();
+
+  const pages: CrawlPage[] = (data.data ?? []).map((page: Record<string, unknown>) => {
+    const meta = (page.metadata ?? {}) as Record<string, unknown>;
+    return {
+      url: (meta.sourceURL as string) ?? (meta.url as string) ?? "",
+      markdown: (page.markdown as string) ?? "",
+      html: (page.html as string) ?? "",
+      rawHtml: (page.rawHtml as string) ?? "",
+      links: Array.isArray(page.links) ? page.links : [],
+      screenshot: (page.screenshot as string) ?? null,
+      metadata: {
+        title: (meta.title as string) ?? undefined,
+        description: (meta.description as string) ?? (meta.ogDescription as string) ?? undefined,
+        ogImage: (meta.ogImage as string) ?? undefined,
+        favicon: (meta.favicon as string) ?? undefined,
+        ...meta,
+      },
+    };
+  });
+
+  return {
+    status: data.status,
+    total: data.total ?? 0,
+    completed: data.completed ?? pages.length,
+    creditsUsed: data.creditsUsed ?? 0,
+    expiresAt: data.expiresAt ?? "",
+    data: pages.length > 0 ? pages : undefined,
+  };
+}
+
+// ---------- Full crawl with polling (legacy compat) ----------
+
+export async function crawlSite(
+  apiKey: string,
+  url: string,
+  maxPages = 10,
+): Promise<{ pages: { url: string; markdown: string }[] }> {
+  const crawlId = await startCrawl(apiKey, url, maxPages);
+
+  const maxAttempts = 60;
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise((r) => setTimeout(r, 2000));
 
-    const statusRes = await fetch(`${FIRECRAWL_API}/crawl/${id}`, {
-      headers: getHeaders(apiKey),
-    });
+    const status = await getCrawlStatus(apiKey, crawlId);
 
-    if (!statusRes.ok) continue;
-
-    const statusData = await statusRes.json();
-
-    if (statusData.status === "completed") {
+    if (status.status === "completed" && status.data) {
       return {
-        pages: (statusData.data ?? []).map(
-          (page: { metadata?: { sourceURL?: string }; markdown?: string }) => ({
-            url: page.metadata?.sourceURL ?? "",
-            markdown: page.markdown ?? "",
-          }),
-        ),
+        pages: status.data.map((p) => ({
+          url: p.url,
+          markdown: p.markdown,
+        })),
       };
     }
 
-    if (statusData.status === "failed") {
+    if (status.status === "failed") {
       throw new Error("Crawl failed");
     }
   }
 
   throw new Error("Crawl timed out");
+}
+
+// ---------- Redirects generator ----------
+
+export function generateRedirects(
+  discoveredUrls: string[],
+  domain: string,
+  format: "netlify" | "vercel" = "netlify",
+): string | Record<string, unknown> {
+  // Extract path from each URL
+  const paths = discoveredUrls
+    .map((u) => {
+      try {
+        return new URL(u).pathname;
+      } catch {
+        return u.startsWith("/") ? u : null;
+      }
+    })
+    .filter((p): p is string => p !== null && p !== "/")
+    // Remove duplicates
+    .filter((p, i, arr) => arr.indexOf(p) === i)
+    .sort();
+
+  if (format === "vercel") {
+    const redirects = paths.map((from) => ({
+      source: from,
+      destination: "/",
+      statusCode: 301,
+    }));
+    return { redirects };
+  }
+
+  // Netlify _redirects format
+  const lines = [
+    "# Redirects from old site URLs",
+    "# Update destinations as new pages are built",
+    "",
+    ...paths.map((from) => `${from}    /    301`),
+    "",
+    "# Ad campaign redirects",
+    "/ga/*    /    301",
+    "/fb/*    /    301",
+    "/ig/*    /    301",
+    "/li/*    /    301",
+    "/tt/*    /    301",
+  ];
+  return lines.join("\n");
 }
