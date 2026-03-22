@@ -123,7 +123,15 @@ export async function createUser(formData: FormData) {
 
 export async function resetPassword(email: string) {
   const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
+
+  // Determine the site URL for the redirect
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/reset-password`,
+  });
 
   if (error) {
     return { error: error.message };
