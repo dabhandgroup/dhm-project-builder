@@ -44,7 +44,7 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
   }
 
   async function handleSubmit(data: ProjectFormData) {
-    const { crawl_data, ...rest } = data;
+    const { crawl_data, is_manual: _im, ...rest } = data;
 
     if (draftIdRef.current) {
       await updateProject(draftIdRef.current, rest);

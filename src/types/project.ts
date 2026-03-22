@@ -24,6 +24,7 @@ export interface ProjectFormData {
   title: string;
   domain_name: string;
   is_rebuild: boolean;
+  is_manual: boolean;
   client_id: string;
   client_name: string;
   favicon: File | null;
@@ -51,12 +52,15 @@ export interface ProjectFormData {
   template_id: string | null;
   deploy_provider: string | null;
   crawl_data: CrawlData | null;
+  preview_url: string;
+  github_repo_url: string;
 }
 
 export const defaultProjectFormData: ProjectFormData = {
   title: "",
   domain_name: "",
   is_rebuild: false,
+  is_manual: false,
   client_id: "",
   client_name: "",
   favicon: null,
@@ -84,4 +88,6 @@ export const defaultProjectFormData: ProjectFormData = {
   template_id: null,
   deploy_provider: null,
   crawl_data: null,
+  preview_url: "",
+  github_repo_url: "",
 };

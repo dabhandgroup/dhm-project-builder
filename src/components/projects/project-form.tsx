@@ -12,7 +12,7 @@ import { SiteCrawler } from "@/components/projects/site-crawler";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
-import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check } from "lucide-react";
+import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github } from "lucide-react";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
 
@@ -191,6 +191,38 @@ export function ProjectForm({
         </div>
       </div>
 
+      {/* Project Mode Toggle */}
+      {!isEditing && (
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => updateField("is_manual", false)}
+            className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+              !form.is_manual
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-muted hover:border-muted-foreground/30"
+            }`}
+          >
+            <Wand2 className="h-6 w-6" />
+            <span className="text-sm font-medium">Project Builder</span>
+            <span className="text-xs text-muted-foreground">Use AI pipeline with templates &amp; briefs</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => updateField("is_manual", true)}
+            className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+              form.is_manual
+                ? "border-primary bg-primary/5 text-primary"
+                : "border-muted hover:border-muted-foreground/30"
+            }`}
+          >
+            <Wrench className="h-6 w-6" />
+            <span className="text-sm font-medium">Manual Project</span>
+            <span className="text-xs text-muted-foreground">Add your own preview links &amp; details</span>
+          </button>
+        </div>
+      )}
+
       {/* Project Details */}
       <Card>
         <CardHeader>
@@ -347,82 +379,118 @@ export function ProjectForm({
             )}
           </div>
 
-          {/* Build Type */}
-          <div className="space-y-2">
-            <Label>Build Type</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => updateField("is_rebuild", false)}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                  !form.is_rebuild
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-muted hover:border-muted-foreground/30"
-                }`}
-              >
-                <span className="text-2xl">🆕</span>
-                <span className="text-sm font-medium">New Build</span>
-                <span className="text-xs text-muted-foreground">Brand new website</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => updateField("is_rebuild", true)}
-                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                  form.is_rebuild
-                    ? "border-primary bg-primary/5 text-primary"
-                    : "border-muted hover:border-muted-foreground/30"
-                }`}
-              >
-                <span className="text-2xl">🔄</span>
-                <span className="text-sm font-medium">Rebuild</span>
-                <span className="text-xs text-muted-foreground">Replacing existing site</span>
-              </button>
-            </div>
-          </div>
+          {/* Build Type (builder mode only) */}
+          {!form.is_manual && (
+            <>
+              <div className="space-y-2">
+                <Label>Build Type</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => updateField("is_rebuild", false)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                      !form.is_rebuild
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-muted hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <span className="text-2xl">🆕</span>
+                    <span className="text-sm font-medium">New Build</span>
+                    <span className="text-xs text-muted-foreground">Brand new website</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateField("is_rebuild", true)}
+                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                      form.is_rebuild
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-muted hover:border-muted-foreground/30"
+                    }`}
+                  >
+                    <span className="text-2xl">🔄</span>
+                    <span className="text-sm font-medium">Rebuild</span>
+                    <span className="text-xs text-muted-foreground">Replacing existing site</span>
+                  </button>
+                </div>
+              </div>
 
-          {/* Sitemap URL (shown for rebuilds) */}
-          {form.is_rebuild && (
-            <div className="space-y-2">
-              <Label htmlFor="sitemap_url">Existing Sitemap URL</Label>
-              <Input
-                id="sitemap_url"
-                value={form.sitemap_url}
-                onChange={(e) => updateField("sitemap_url", e.target.value)}
-                placeholder="e.g. https://example.com/sitemap.xml"
-              />
-              <p className="text-xs text-muted-foreground">
-                The sitemap will be crawled to rebuild all existing pages
-              </p>
-            </div>
+              {/* Sitemap URL (shown for rebuilds) */}
+              {form.is_rebuild && (
+                <div className="space-y-2">
+                  <Label htmlFor="sitemap_url">Existing Sitemap URL</Label>
+                  <Input
+                    id="sitemap_url"
+                    value={form.sitemap_url}
+                    onChange={(e) => updateField("sitemap_url", e.target.value)}
+                    placeholder="e.g. https://example.com/sitemap.xml"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The sitemap will be crawled to rebuild all existing pages
+                  </p>
+                </div>
+              )}
+
+              {/* Site Crawler (shown for rebuilds with a domain) */}
+              {form.is_rebuild && form.domain_name && (
+                <SiteCrawler
+                  domain={form.domain_name}
+                  onCrawlComplete={(data) => updateField("crawl_data", data)}
+                />
+              )}
+
+              {/* AI Model */}
+              <div className="space-y-2">
+                <Label htmlFor="ai_model">AI Model</Label>
+                <Select
+                  id="ai_model"
+                  value={form.ai_model}
+                  onChange={(e) => updateField("ai_model", e.target.value)}
+                  options={aiModels.map((m) => ({
+                    value: m.value,
+                    label: m.label,
+                  }))}
+                  placeholder="Select AI model"
+                />
+              </div>
+            </>
           )}
 
-          {/* Site Crawler (shown for rebuilds with a domain) */}
-          {form.is_rebuild && form.domain_name && (
-            <SiteCrawler
-              domain={form.domain_name}
-              onCrawlComplete={(data) => updateField("crawl_data", data)}
-            />
+          {/* Preview URL & GitHub Repo (manual mode) */}
+          {form.is_manual && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="preview_url">Preview URL</Label>
+                <div className="relative">
+                  <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="preview_url"
+                    value={form.preview_url}
+                    onChange={(e) => updateField("preview_url", e.target.value)}
+                    placeholder="e.g. https://mysite.vercel.app"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="github_repo_url">GitHub Repo URL</Label>
+                <div className="relative">
+                  <Github className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="github_repo_url"
+                    value={form.github_repo_url}
+                    onChange={(e) => updateField("github_repo_url", e.target.value)}
+                    placeholder="e.g. https://github.com/org/repo"
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+            </>
           )}
-
-          {/* AI Model */}
-          <div className="space-y-2">
-            <Label htmlFor="ai_model">AI Model</Label>
-            <Select
-              id="ai_model"
-              value={form.ai_model}
-              onChange={(e) => updateField("ai_model", e.target.value)}
-              options={aiModels.map((m) => ({
-                value: m.value,
-                label: m.label,
-              }))}
-              placeholder="Select AI model"
-            />
-          </div>
         </CardContent>
       </Card>
 
-      {/* Branding */}
-      <Card>
+      {/* Branding (builder mode only) */}
+      {!form.is_manual && <Card>
         <CardHeader>
           <CardTitle className="text-lg">Branding</CardTitle>
         </CardHeader>
@@ -581,10 +649,10 @@ export function ProjectForm({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
-      {/* Brief & Content */}
-      <Card>
+      {/* Brief & Content (builder mode only) */}
+      {!form.is_manual && <Card>
         <CardHeader>
           <CardTitle className="text-lg">Brief & Content</CardTitle>
         </CardHeader>
@@ -668,10 +736,10 @@ export function ProjectForm({
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
-      {/* Images */}
-      <Card>
+      {/* Images (builder mode only) */}
+      {!form.is_manual && <Card>
         <CardHeader>
           <CardTitle className="text-lg">Images</CardTitle>
         </CardHeader>
@@ -691,7 +759,7 @@ export function ProjectForm({
             />
           </div>
         </CardContent>
-      </Card>
+      </Card>}
 
       {/* Contact & Location */}
       <Card>

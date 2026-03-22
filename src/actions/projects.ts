@@ -23,6 +23,8 @@ export async function createProject(data: {
   recurring_revenue?: number;
   template_id?: string | null;
   deploy_provider?: string | null;
+  preview_url?: string;
+  github_repo_url?: string;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -124,6 +126,7 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
     square_images: _si,
     landscape_images: _li,
     crawl_data: _cd,
+    is_manual: _im,
     ...dbFields
   } = data;
 
@@ -143,7 +146,7 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
   const optionalFields = [
     "domain_name", "pages_required", "brief", "brief_summary",
     "google_maps_embed", "additional_notes", "sitemap_url",
-    "ai_model", "deploy_provider",
+    "ai_model", "deploy_provider", "preview_url", "github_repo_url",
   ];
   for (const field of optionalFields) {
     if (dbFields[field] === "") dbFields[field] = null;

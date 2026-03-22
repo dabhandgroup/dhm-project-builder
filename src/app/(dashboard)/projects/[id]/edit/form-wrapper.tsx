@@ -19,7 +19,8 @@ export function EditProjectFormWrapper({
   templates,
 }: EditProjectFormWrapperProps) {
   async function handleSubmit(data: ProjectFormData) {
-    await updateProject(projectId, data);
+    const { is_manual: _im, ...rest } = data;
+    await updateProject(projectId, rest);
   }
 
   async function handleSaveDraft(data: ProjectFormData) {
