@@ -20,6 +20,7 @@ import {
   Globe,
   Bot,
   Flame,
+  ExternalLink,
 } from "lucide-react";
 import { updateProfile } from "@/actions/users";
 import { updatePassword } from "@/actions/auth";
@@ -93,6 +94,23 @@ export default function SettingsPage() {
       setAvatarUrl(profile.avatar_url ?? null);
     }
   }, [profile]);
+
+  // Load saved settings on mount
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((settings: Record<string, string | null>) => {
+        if (settings.github_pat) setGithubPat(settings.github_pat);
+        if (settings.github_org) setGithubOrg(settings.github_org);
+        if (settings.github_default_branch) setDefaultBranch(settings.github_default_branch);
+        if (settings.vercel_token) setVercelToken(settings.vercel_token);
+        if (settings.vercel_team_id) setVercelTeamId(settings.vercel_team_id);
+        if (settings.netlify_token) setNetlifyToken(settings.netlify_token);
+        if (settings.anthropic_api_key) setAnthropicKey(settings.anthropic_api_key);
+        if (settings.firecrawl_api_key) setFirecrawlKey(settings.firecrawl_api_key);
+      })
+      .catch(() => {});
+  }, []);
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -396,6 +414,15 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Add your GitHub Personal Access Token to enable repository creation and code management for client projects.
           </p>
+          <a
+            href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=DHM+Project+Builder"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Create a new GitHub Personal Access Token
+          </a>
           <StatusBadge connected={githubPat.length > 0} label={githubPat ? `Organisation: @${githubOrg}` : undefined} />
           <div className="space-y-3">
             <div className="space-y-2">
