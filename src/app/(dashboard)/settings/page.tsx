@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { updateProfile } from "@/actions/users";
 import { updatePassword } from "@/actions/auth";
-import { saveSettings } from "@/actions/settings";
+import { saveSettings, loadSettings } from "@/actions/settings";
 import { uploadAvatar } from "@/lib/storage";
 import {
   testGithubConnection,
@@ -88,6 +88,9 @@ export default function SettingsPage() {
   const [testingAnthropic, setTestingAnthropic] = useState(false);
   const [testingFirecrawl, setTestingFirecrawl] = useState(false);
 
+  // Track which integrations have been verified (saved + loaded from DB)
+  const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     if (profile) {
       setFullName(profile.full_name ?? "");
@@ -97,19 +100,25 @@ export default function SettingsPage() {
 
   // Load saved settings on mount
   useEffect(() => {
-    fetch("/api/settings")
-      .then((res) => res.json())
-      .then((settings: Record<string, string | null>) => {
-        if (settings.github_pat) setGithubPat(settings.github_pat);
-        if (settings.github_org) setGithubOrg(settings.github_org);
-        if (settings.github_default_branch) setDefaultBranch(settings.github_default_branch);
-        if (settings.vercel_token) setVercelToken(settings.vercel_token);
-        if (settings.vercel_team_id) setVercelTeamId(settings.vercel_team_id);
-        if (settings.netlify_token) setNetlifyToken(settings.netlify_token);
-        if (settings.anthropic_api_key) setAnthropicKey(settings.anthropic_api_key);
-        if (settings.firecrawl_api_key) setFirecrawlKey(settings.firecrawl_api_key);
-      })
-      .catch(() => {});
+    loadSettings().then((settings) => {
+      if (settings.github_pat) setGithubPat(settings.github_pat);
+      if (settings.github_org) setGithubOrg(settings.github_org);
+      if (settings.github_default_branch) setDefaultBranch(settings.github_default_branch);
+      if (settings.vercel_token) setVercelToken(settings.vercel_token);
+      if (settings.vercel_team_id) setVercelTeamId(settings.vercel_team_id);
+      if (settings.netlify_token) setNetlifyToken(settings.netlify_token);
+      if (settings.anthropic_api_key) setAnthropicKey(settings.anthropic_api_key);
+      if (settings.firecrawl_api_key) setFirecrawlKey(settings.firecrawl_api_key);
+
+      // Mark services as connected if they have saved keys
+      setConnectedServices({
+        github: !!settings.github_pat,
+        vercel: !!settings.vercel_token,
+        netlify: !!settings.netlify_token,
+        anthropic: !!settings.anthropic_api_key,
+        firecrawl: !!settings.firecrawl_api_key,
+      });
+    }).catch(() => {});
   }, []);
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -185,6 +194,7 @@ export default function SettingsPage() {
       toast({ title: result.error, variant: "destructive" });
     } else {
       toast({ title: "GitHub settings saved" });
+      setConnectedServices((prev) => ({ ...prev, github: !!githubPat }));
     }
     setSavingGithub(false);
   }
@@ -215,6 +225,7 @@ export default function SettingsPage() {
       toast({ title: result.error, variant: "destructive" });
     } else {
       toast({ title: "Vercel settings saved" });
+      setConnectedServices((prev) => ({ ...prev, vercel: !!vercelToken }));
     }
     setSavingVercel(false);
   }
@@ -244,6 +255,7 @@ export default function SettingsPage() {
       toast({ title: result.error, variant: "destructive" });
     } else {
       toast({ title: "Netlify settings saved" });
+      setConnectedServices((prev) => ({ ...prev, netlify: !!netlifyToken }));
     }
     setSavingNetlify(false);
   }
@@ -274,6 +286,11 @@ export default function SettingsPage() {
       toast({ title: result.error, variant: "destructive" });
     } else {
       toast({ title: "API keys saved" });
+      setConnectedServices((prev) => ({
+        ...prev,
+        anthropic: !!anthropicKey,
+        firecrawl: !!firecrawlKey,
+      }));
     }
     setSavingApiKeys(false);
   }
@@ -423,7 +440,7 @@ export default function SettingsPage() {
             <ExternalLink className="h-3 w-3" />
             Create a new GitHub Personal Access Token
           </a>
-          <StatusBadge connected={githubPat.length > 0} label={githubPat ? `Organisation: @${githubOrg}` : undefined} />
+          <StatusBadge connected={!!connectedServices.github} label={connectedServices.github ? `Organisation: @${githubOrg}` : undefined} />
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">GitHub Personal Access Token</Label>
@@ -464,7 +481,7 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Connect to Vercel for automatic deployments and preview URLs.
           </p>
-          <StatusBadge connected={vercelToken.length > 0} />
+          <StatusBadge connected={!!connectedServices.vercel} />
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">Vercel Token</Label>
@@ -500,7 +517,7 @@ export default function SettingsPage() {
           <p className="text-sm text-muted-foreground">
             Alternative deployment provider. Connect for Netlify-based deployments.
           </p>
-          <StatusBadge connected={netlifyToken.length > 0} />
+          <StatusBadge connected={!!connectedServices.netlify} />
           <div className="space-y-3">
             <div className="space-y-2">
               <Label className="text-xs">Netlify Personal Access Token</Label>
