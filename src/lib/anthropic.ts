@@ -1,5 +1,11 @@
 const ANTHROPIC_API = "https://api.anthropic.com/v1";
 
+// Rough token estimate: ~4 chars per token
+const CHARS_PER_TOKEN = 4;
+const MAX_EXISTING_CONTENT_CHARS = 30_000; // ~7,500 tokens
+const MAX_TEMPLATE_CHARS = 80_000; // ~20,000 tokens
+const MAX_SINGLE_FILE_CHARS = 20_000; // ~5,000 tokens per file
+
 function getHeaders(apiKey: string) {
   return {
     "x-api-key": apiKey,
@@ -30,6 +36,57 @@ export async function validateAnthropicKey(apiKey: string) {
   }
 }
 
+/**
+ * Truncate text to a character limit, appending a notice if truncated.
+ */
+function truncate(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, maxChars) + "\n...[truncated]";
+}
+
+/**
+ * Compress crawled site content: keep headings, nav items, and key text.
+ * Strips redundant whitespace and limits total size.
+ */
+function compressSiteContent(raw: string): string {
+  // Collapse excessive whitespace / blank lines
+  let compressed = raw.replace(/\n{3,}/g, "\n\n").trim();
+  return truncate(compressed, MAX_EXISTING_CONTENT_CHARS);
+}
+
+/**
+ * Trim template files to fit within the token budget.
+ * Prioritises smaller files (config, HTML pages) over large vendored assets.
+ */
+function trimTemplateFiles(
+  files: { path: string; content: string }[],
+): { path: string; content: string }[] {
+  // Sort: shorter files first so we keep more of them
+  const sorted = [...files].sort(
+    (a, b) => a.content.length - b.content.length,
+  );
+
+  const result: { path: string; content: string }[] = [];
+  let totalChars = 0;
+
+  for (const f of sorted) {
+    // Skip vendored / minified assets that Claude can't usefully read
+    if (
+      f.path.match(/\.(min\.(js|css)|map|lock|woff2?|ttf|eot|svg|png|jpg|gif|ico)$/)
+    ) {
+      continue;
+    }
+
+    const content = truncate(f.content, MAX_SINGLE_FILE_CHARS);
+    if (totalChars + content.length > MAX_TEMPLATE_CHARS) break;
+
+    result.push({ path: f.path, content });
+    totalChars += content.length;
+  }
+
+  return result;
+}
+
 export async function generateSiteFiles(
   apiKey: string,
   opts: {
@@ -40,19 +97,32 @@ export async function generateSiteFiles(
     imagePaths?: string[];
   },
 ): Promise<{ path: string; content: string }[]> {
-  const systemPrompt = `You are a web developer assistant. You take a website template and customize it for a specific client based on their brief. You must return a JSON array of files with path and content fields. Preserve the template's structure but update all content, colors, and branding to match the client. When image paths are provided, use them in the HTML with <img> tags. Place square images where logos, profile photos, or thumbnails fit, and landscape images where hero banners, feature images, or gallery images fit.`;
+  const systemPrompt =
+    "You are a web developer. Customise a website template for a client. " +
+    "Return ONLY a JSON array of {path, content} objects. No markdown fences. " +
+    "Preserve template structure. Update text, colours and branding per the brief. " +
+    "Use provided image paths in <img> tags: square images for logos/thumbnails, landscape for heroes/banners.";
 
-  const userPrompt = `Customize this website template for "${opts.clientName}".
+  // Trim inputs to stay within token limits
+  const trimmedTemplates = trimTemplateFiles(opts.templateFiles);
+  const existingContent = opts.existingSiteContent
+    ? compressSiteContent(opts.existingSiteContent)
+    : "";
 
-Brief:
-${opts.brief}
+  let userPrompt = `Client: "${opts.clientName}"
 
-${opts.existingSiteContent ? `Existing site content to use as reference:\n${opts.existingSiteContent}\n` : ""}
-${opts.imagePaths?.length ? `${opts.imagePaths.map((p) => `- ${p}`).join("\n")}\nUse these exact paths in <img src="..."> tags throughout the site.\n` : ""}
-Template files:
-${opts.templateFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join("\n\n")}
+Brief: ${opts.brief}
+`;
 
-Return ONLY a JSON array of objects with "path" and "content" fields. No markdown code blocks, just raw JSON.`;
+  if (existingContent) {
+    userPrompt += `\nExisting site (reference only):\n${existingContent}\n`;
+  }
+
+  if (opts.imagePaths?.length) {
+    userPrompt += `\nImages (use these paths in <img src>):\n${opts.imagePaths.map((p) => `- ${p}`).join("\n")}\n`;
+  }
+
+  userPrompt += `\nTemplate files:\n${trimmedTemplates.map((f) => `--- ${f.path} ---\n${f.content}`).join("\n\n")}`;
 
   const res = await fetch(`${ANTHROPIC_API}/messages`, {
     method: "POST",
