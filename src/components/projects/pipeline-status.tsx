@@ -24,9 +24,9 @@ interface PipelineStep {
 
 const steps: PipelineStep[] = [
   { key: "scraping", label: "Scrape Existing Site", icon: <Search className="h-4 w-4" /> },
-  { key: "generating", label: "Generate with AI", icon: <Cpu className="h-4 w-4" /> },
-  { key: "pushing", label: "Push to GitHub", icon: <Upload className="h-4 w-4" /> },
-  { key: "deploying", label: "Deploy", icon: <Rocket className="h-4 w-4" /> },
+  { key: "generating", label: "Building Site", icon: <Cpu className="h-4 w-4" /> },
+  { key: "pushing", label: "Pushing to GitHub", icon: <Upload className="h-4 w-4" /> },
+  { key: "deploying", label: "Deploying", icon: <Rocket className="h-4 w-4" /> },
 ];
 
 type StepStatus = "pending" | "scraping" | "generating" | "pushing" | "deploying" | "complete" | "failed" | "idle";
@@ -55,6 +55,7 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
     error?: string;
     preview_url?: string;
     github_repo_url?: string;
+    deploy_provider?: string;
   }>({ step: "idle", message: "" });
   const [starting, setStarting] = useState(false);
 
@@ -174,7 +175,9 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
                     <div className="flex items-center gap-2 text-sm">
                       {step.icon}
                       <span className={state === "active" ? "font-medium" : state === "pending" ? "text-muted-foreground" : ""}>
-                        {step.label}
+                        {step.key === "deploying" && status.deploy_provider
+                          ? `Deploying to ${status.deploy_provider.charAt(0).toUpperCase() + status.deploy_provider.slice(1)}`
+                          : step.label}
                       </span>
                     </div>
                   </div>
