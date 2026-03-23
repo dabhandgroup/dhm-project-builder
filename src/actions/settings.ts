@@ -3,6 +3,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+export async function loadSettings() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("settings")
+    .select("key, value");
+
+  if (error) return {};
+
+  const result: Record<string, string | null> = {};
+  for (const row of data) {
+    result[row.key] = row.value;
+  }
+  return result;
+}
+
 export async function saveSetting(key: string, value: string) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
