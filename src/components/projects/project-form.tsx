@@ -9,6 +9,8 @@ import { Select } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { SiteCrawler } from "@/components/projects/site-crawler";
+import { FirecrawlImport } from "@/components/projects/firecrawl-import";
+import type { FirecrawlImportResult } from "@/components/projects/firecrawl-import";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { aiModels } from "@/constants/ai-models";
@@ -148,6 +150,21 @@ export function ProjectForm({
     updateField("client_name", clientSearch);
     setClientDropdownOpen(false);
   }
+
+  const handleFirecrawlImport = useCallback(
+    (result: FirecrawlImportResult) => {
+      if (result.domain && !form.domain_name) {
+        updateField("domain_name", result.domain);
+      }
+      if (result.description && !form.brief) {
+        updateField("brief", result.description);
+      }
+      if (result.ogImage) {
+        // Store OG image URL in brief_summary as a note, or we can use it later
+      }
+    },
+    [form.domain_name, form.brief, updateField]
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -488,6 +505,9 @@ export function ProjectForm({
           )}
         </CardContent>
       </Card>
+
+      {/* Firecrawl JSON Import */}
+      <FirecrawlImport onImport={handleFirecrawlImport} />
 
       {/* Branding (builder mode only) */}
       {!form.is_manual && <Card>
