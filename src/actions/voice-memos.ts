@@ -40,3 +40,20 @@ export async function deleteVoiceMemo(id: string) {
   revalidatePath("/notes");
   return { success: true };
 }
+
+export async function updateVoiceMemo(id: string, data: {
+  transcription?: string;
+  summary?: string;
+}) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("voice_memos")
+    .update(data)
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/voice-memos");
+  revalidatePath("/notes");
+  return { success: true };
+}
