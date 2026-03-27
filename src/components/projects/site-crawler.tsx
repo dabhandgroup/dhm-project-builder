@@ -18,6 +18,7 @@ import {
   ChevronUp,
   ExternalLink,
   Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import type { CrawlPage } from "@/lib/firecrawl";
 import { toast } from "@/components/ui/toast";
@@ -170,6 +171,41 @@ export function SiteCrawler({ domain, onCrawlComplete }: SiteCrawlerProps) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `${crawlData.domain}-crawl.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [crawlData]);
+
+  const downloadCsv = useCallback(() => {
+    if (!crawlData) return;
+    const rows = ["old_url,old_path,new_path,status_code"];
+    for (const page of crawlData.pages) {
+      let urlPath: string;
+      try {
+        urlPath = new URL(page.url).pathname;
+      } catch {
+        urlPath = "/";
+      }
+      rows.push(`${page.url},${urlPath},,301`);
+    }
+    // Also add discovered-only URLs (not scraped but found in map)
+    const scrapedUrls = new Set(crawlData.pages.map((p) => p.url));
+    for (const url of crawlData.allUrls) {
+      if (scrapedUrls.has(url)) continue;
+      let urlPath: string;
+      try {
+        urlPath = new URL(url).pathname;
+      } catch {
+        urlPath = "/";
+      }
+      if (urlPath === "/") continue;
+      rows.push(`${url},${urlPath},,301`);
+    }
+    const csv = rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${crawlData.domain}-redirects.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }, [crawlData]);
@@ -350,6 +386,10 @@ export function SiteCrawler({ domain, onCrawlComplete }: SiteCrawlerProps) {
 
             {/* Actions */}
             <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={downloadCsv} className="gap-1.5 text-xs">
+                <FileSpreadsheet className="h-3 w-3" />
+                Redirects CSV
+              </Button>
               <Button variant="outline" size="sm" onClick={downloadZip} className="gap-1.5 text-xs">
                 <Download className="h-3 w-3" />
                 Download ZIP

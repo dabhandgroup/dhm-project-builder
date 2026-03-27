@@ -68,6 +68,7 @@ export default async function EditProjectPage({
     ai_model: project.ai_model ?? "orchids",
     one_off_revenue: Number(project.one_off_revenue),
     recurring_revenue: Number(project.recurring_revenue),
+    include_in_financials: project.include_in_financials ?? false,
   };
 
   return (

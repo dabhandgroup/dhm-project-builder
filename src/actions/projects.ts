@@ -66,16 +66,27 @@ export async function updateProject(projectId: string, data: Record<string, any>
 }
 
 export async function updateProjectStatus(projectId: string, status: string) {
-  return updateProject(projectId, { status });
+  const data: Record<string, unknown> = { status };
+  if (status === "complete") {
+    data.include_in_financials = true;
+  }
+  return updateProject(projectId, data);
 }
 
 export async function updateKanbanOrder(updates: { id: string; status: string; kanban_order: number }[]) {
   const supabase = await createClient();
 
   for (const update of updates) {
+    const updateData: Record<string, unknown> = {
+      status: update.status,
+      kanban_order: update.kanban_order,
+    };
+    if (update.status === "complete") {
+      updateData.include_in_financials = true;
+    }
     const { error } = await supabase
       .from("projects")
-      .update({ status: update.status, kanban_order: update.kanban_order })
+      .update(updateData)
       .eq("id", update.id);
 
     if (error) return { error: error.message };

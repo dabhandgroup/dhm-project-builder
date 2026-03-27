@@ -3,7 +3,7 @@ import { getProjectById } from "@/lib/queries/projects";
 import { getTemplateById } from "@/lib/queries/templates";
 import { getAllSettings } from "@/lib/queries/settings";
 import { createRepo, pushFiles } from "@/lib/github";
-import { crawlSite, generateRedirects } from "@/lib/firecrawl";
+import { crawlSite, generateRedirects, generateRedirectsCsv } from "@/lib/firecrawl";
 import { generateSiteFiles } from "@/lib/anthropic";
 import { createVercelProject, linkRepoToProject } from "@/lib/vercel";
 import { createSite, linkRepoToSite } from "@/lib/netlify";
@@ -179,12 +179,26 @@ export async function runPipeline(projectId: string) {
     setStatus(projectId, { step: "generating", message: "Building site..." });
 
     const client = (project as Record<string, unknown>).clients as { name: string } | null;
+
+    // Build old site page list for AI to recreate
+    let oldSitePages: { url: string; title: string }[] | undefined;
+    if (project.is_rebuild) {
+      const storedCrawl = await loadCrawlData(projectId);
+      if (storedCrawl?.pages.length) {
+        oldSitePages = storedCrawl.pages.map((p) => ({
+          url: p.url,
+          title: (p.metadata as Record<string, string>)?.title || p.url,
+        }));
+      }
+    }
+
     const generatedFiles = await generateSiteFiles(anthropicKey, {
       templateFiles,
       brief: project.brief || project.title,
       clientName: client?.name || project.title,
       existingSiteContent: existingSiteContent || undefined,
       imagePaths: imagePaths.length > 0 ? imagePaths : undefined,
+      oldSitePages,
     });
 
     // Step 3: Create GitHub repo and push files
@@ -201,24 +215,44 @@ export async function runPipeline(projectId: string) {
     // Wait briefly for repo to be ready
     await new Promise((r) => setTimeout(r, 2000));
 
-    // Generate redirects file from discovered URLs
+    // Generate redirects file from discovered URLs, matching to new pages where possible
+    const newPagePaths = generatedFiles.map((f) => `/${f.path}`);
     const redirectFiles: { path: string; content: string; encoding: "utf-8" }[] = [];
     if (discoveredUrls.length > 0 && project.domain_name) {
       if (deployProvider === "netlify") {
-        const redirectsContent = generateRedirects(discoveredUrls, project.domain_name, "netlify");
+        const redirectsContent = generateRedirects(discoveredUrls, project.domain_name, "netlify", newPagePaths);
         redirectFiles.push({
           path: "_redirects",
           content: redirectsContent as string,
           encoding: "utf-8",
         });
       } else {
-        // Vercel: generate vercel.json with redirects
-        const redirectsConfig = generateRedirects(discoveredUrls, project.domain_name, "vercel");
+        const redirectsConfig = generateRedirects(discoveredUrls, project.domain_name, "vercel", newPagePaths);
         redirectFiles.push({
           path: "vercel.json",
           content: JSON.stringify(redirectsConfig, null, 2),
           encoding: "utf-8",
         });
+      }
+
+      // Generate CSV redirect map for SEO tracking
+      const csv = generateRedirectsCsv(discoveredUrls, project.domain_name, newPagePaths);
+      redirectFiles.push({
+        path: "_redirects-map.csv",
+        content: csv,
+        encoding: "utf-8",
+      });
+
+      // Store CSV in Supabase for later download
+      try {
+        await supabase.storage
+          .from("project-assets")
+          .upload(`crawl-data/${projectId}-redirects.csv`, csv, {
+            contentType: "text/csv",
+            upsert: true,
+          });
+      } catch {
+        // Non-fatal
       }
     }
 
