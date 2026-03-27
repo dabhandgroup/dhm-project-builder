@@ -33,7 +33,7 @@ export async function getRevenueByProject(currency?: string) {
   const supabase = await createClient();
   let query = supabase
     .from("projects")
-    .select("id, title, one_off_revenue, recurring_revenue, include_in_financials, currency, status, clients(name), created_at");
+    .select("id, title, one_off_revenue, recurring_revenue, currency, status, clients(name), created_at");
 
   if (currency) {
     query = query.eq("currency", currency);
@@ -43,6 +43,8 @@ export async function getRevenueByProject(currency?: string) {
   if (error) throw error;
   return (data ?? []).map((p) => ({
     ...p,
+    // Include in financials if status is complete (or any non-lead/draft status with revenue)
+    include_in_financials: p.status === "complete" || p.status === "awaiting_payment",
     clients: Array.isArray(p.clients) ? p.clients[0] ?? null : p.clients ?? null,
   }));
 }

@@ -67,12 +67,6 @@ export async function updateProject(projectId: string, data: Record<string, any>
 }
 
 export async function updateProjectStatus(projectId: string, status: string) {
-  if (status === "complete") {
-    // Try combined update first
-    const result = await updateProject(projectId, { status, include_in_financials: true });
-    if (!result.error) return result;
-    // If schema cache issue, fall back to status-only update
-  }
   return updateProject(projectId, { status });
 }
 
@@ -80,25 +74,10 @@ export async function updateKanbanOrder(updates: { id: string; status: string; k
   const supabase = await createClient();
 
   for (const update of updates) {
-    const updateData: Record<string, unknown> = {
-      status: update.status,
-      kanban_order: update.kanban_order,
-    };
-    if (update.status === "complete") {
-      updateData.include_in_financials = true;
-    }
-    let { error } = await supabase
+    const { error } = await supabase
       .from("projects")
-      .update(updateData)
+      .update({ status: update.status, kanban_order: update.kanban_order })
       .eq("id", update.id);
-
-    // Fallback without include_in_financials if schema cache is stale
-    if (error && update.status === "complete") {
-      ({ error } = await supabase
-        .from("projects")
-        .update({ status: update.status, kanban_order: update.kanban_order })
-        .eq("id", update.id));
-    }
 
     if (error) return { error: error.message };
   }
