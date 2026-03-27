@@ -23,7 +23,7 @@ export async function GET() {
     (p) => p.status !== "complete" && p.status !== "lead"
   ).length;
   const totalMRR = projects
-    .filter((p) => p.include_in_financials)
+    .filter((p) => p.status === "complete" || p.status === "awaiting_payment")
     .reduce((sum, p) => sum + Number(p.recurring_revenue ?? 0), 0);
   const activeClients = clients.length;
 
