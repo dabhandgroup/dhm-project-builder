@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   ImageIcon,
   Upload,
@@ -20,6 +19,8 @@ import {
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 
+type OutputFormat = "avif" | "webp" | "original";
+
 interface ImageFile {
   id: string;
   file: File;
@@ -30,14 +31,21 @@ interface ImageFile {
   originalSize: number;
   outputSize?: number;
   outputName?: string;
+  originalDimensions?: string;
+  outputDimensions?: string;
 }
+
+const FORMAT_OPTIONS: { value: OutputFormat; label: string; description: string }[] = [
+  { value: "avif", label: "AVIF", description: "Best compression, modern browsers" },
+  { value: "webp", label: "WebP", description: "Great compression, wide support" },
+  { value: "original", label: "Original", description: "Keep original format" },
+];
 
 export default function ImageOptimiserPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
-  const [quality, setQuality] = useState(80);
-  const [maxWidth, setMaxWidth] = useState(1920);
-  const [convertToWebp, setConvertToWebp] = useState(true);
-  const [resizeEnabled, setResizeEnabled] = useState(true);
+  const [quality, setQuality] = useState(75);
+  const [maxWidth, setMaxWidth] = useState(2000);
+  const [format, setFormat] = useState<OutputFormat>("avif");
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -105,8 +113,10 @@ export default function ImageOptimiserPage() {
         image.onload = () => {
           const canvas = document.createElement("canvas");
           let { width, height } = image;
+          const originalDimensions = `${width}x${height}`;
 
-          if (resizeEnabled && width > maxWidth) {
+          // Always resize if wider than maxWidth
+          if (width > maxWidth) {
             const ratio = maxWidth / width;
             width = maxWidth;
             height = Math.round(height * ratio);
@@ -121,16 +131,52 @@ export default function ImageOptimiserPage() {
             return;
           }
 
+          // Draw image — canvas strips all metadata (EXIF, ICC, etc.)
           ctx.drawImage(image, 0, 0, width, height);
 
-          const mimeType = convertToWebp ? "image/webp" : img.file.type;
-          const ext = convertToWebp
-            ? "webp"
-            : img.file.name.split(".").pop() || "png";
+          const outputDimensions = `${width}x${height}`;
+
+          let mimeType: string;
+          let ext: string;
+          if (format === "avif") {
+            mimeType = "image/avif";
+            ext = "avif";
+          } else if (format === "webp") {
+            mimeType = "image/webp";
+            ext = "webp";
+          } else {
+            mimeType = img.file.type;
+            ext = img.file.name.split(".").pop() || "png";
+          }
 
           canvas.toBlob(
             (blob) => {
               if (!blob) {
+                // AVIF may not be supported, fall back to WebP
+                if (format === "avif") {
+                  canvas.toBlob(
+                    (webpBlob) => {
+                      if (!webpBlob) {
+                        resolve({ status: "error" });
+                        return;
+                      }
+                      const baseName = img.file.name.replace(/\.[^.]+$/, "");
+                      const outputUrl = URL.createObjectURL(webpBlob);
+                      resolve({
+                        status: "done",
+                        outputBlob: webpBlob,
+                        outputUrl,
+                        outputSize: webpBlob.size,
+                        outputName: `${baseName}.webp`,
+                        originalDimensions,
+                        outputDimensions,
+                      });
+                    },
+                    "image/webp",
+                    quality / 100
+                  );
+                  return;
+                }
                 resolve({ status: "error" });
                 return;
               }
@@ -145,6 +191,8 @@ export default function ImageOptimiserPage() {
                 outputUrl,
                 outputSize: blob.size,
                 outputName,
+                originalDimensions,
+                outputDimensions,
               });
             },
             mimeType,
@@ -156,7 +204,7 @@ export default function ImageOptimiserPage() {
         image.src = img.preview;
       });
     },
-    [quality, maxWidth, convertToWebp, resizeEnabled]
+    [quality, maxWidth, format]
   );
 
   const processAll = useCallback(async () => {
@@ -167,12 +215,10 @@ export default function ImageOptimiserPage() {
 
     setIsProcessing(true);
 
-    // Process in batches of 4 to avoid overwhelming the browser
     const batchSize = 4;
     for (let i = 0; i < pending.length; i += batchSize) {
       const batch = pending.slice(i, i + batchSize);
 
-      // Mark batch as processing
       setImages((prev) =>
         prev.map((img) =>
           batch.some((b) => b.id === img.id)
@@ -254,7 +300,7 @@ export default function ImageOptimiserPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Image Optimiser" description="Compress, resize, and convert images to WebP — all in your browser" />
+      <PageHeader title="Image Optimiser" description="Compress, resize, and convert images to AVIF — all in your browser" />
 
       {/* Settings */}
       <Card>
@@ -262,48 +308,46 @@ export default function ImageOptimiserPage() {
           <CardTitle className="text-base">Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="webp-toggle" className="text-sm">
-                Convert to WebP
-              </Label>
-              <Switch
-                id="webp-toggle"
-                checked={convertToWebp}
-                onCheckedChange={setConvertToWebp}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <Label htmlFor="resize-toggle" className="text-sm">
-                Resize images
-              </Label>
-              <Switch
-                id="resize-toggle"
-                checked={resizeEnabled}
-                onCheckedChange={setResizeEnabled}
-              />
-            </div>
-          </div>
-
+          {/* Format selector */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Quality</Label>
-              <span className="text-sm text-muted-foreground font-mono">
-                {quality}%
-              </span>
+            <Label className="text-sm">Output Format</Label>
+            <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5">
+              {FORMAT_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setFormat(opt.value)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    format === opt.value
+                      ? "bg-background shadow-sm"
+                      : "hover:bg-background/50"
+                  }`}
+                  title={opt.description}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
-            <input
-              type="range"
-              value={quality}
-              onChange={(e) => setQuality(Number(e.target.value))}
-              min={10}
-              max={100}
-              step={5}
-              className="w-full accent-primary"
-            />
           </div>
 
-          {resizeEnabled && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm">Quality</Label>
+                <span className="text-sm text-muted-foreground font-mono">
+                  {quality}%
+                </span>
+              </div>
+              <input
+                type="range"
+                value={quality}
+                onChange={(e) => setQuality(Number(e.target.value))}
+                min={10}
+                max={100}
+                step={5}
+                className="w-full accent-primary"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="max-width" className="text-sm">
                 Max width (px)
@@ -313,14 +357,18 @@ export default function ImageOptimiserPage() {
                 type="number"
                 value={maxWidth}
                 onChange={(e) =>
-                  setMaxWidth(Math.max(100, parseInt(e.target.value) || 1920))
+                  setMaxWidth(Math.max(100, parseInt(e.target.value) || 2000))
                 }
                 min={100}
                 max={10000}
                 className="w-32 text-base sm:text-sm"
               />
             </div>
-          )}
+          </div>
+
+          <p className="text-[10px] text-muted-foreground">
+            Images wider than {maxWidth}px are resized (aspect ratio preserved). All metadata (EXIF, GPS, ICC profiles) is stripped automatically.
+          </p>
         </CardContent>
       </Card>
 
@@ -337,7 +385,7 @@ export default function ImageOptimiserPage() {
             Drop images here or click to browse
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            PNG, JPG, GIF, SVG, WebP — up to 100 images
+            PNG, JPG, GIF, WebP — up to 100 images
           </p>
         </div>
         <input
@@ -438,6 +486,11 @@ export default function ImageOptimiserPage() {
                     </>
                   )}
                 </div>
+                {img.originalDimensions && img.outputDimensions && img.originalDimensions !== img.outputDimensions && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {img.originalDimensions} &rarr; {img.outputDimensions}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {img.status === "processing" && (
@@ -478,7 +531,7 @@ export default function ImageOptimiserPage() {
           <FileImage className="h-10 w-10 mx-auto mb-3 opacity-30" />
           <p>No images added yet</p>
           <p className="text-xs mt-1">
-            All processing happens in your browser — nothing is uploaded
+            All processing happens in your browser — nothing is uploaded to a server
           </p>
         </div>
       )}

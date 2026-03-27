@@ -14,7 +14,7 @@ const tools = [
   {
     title: "Image Optimiser",
     description:
-      "Compress, resize, and convert images to WebP. Processed entirely in your browser — nothing uploaded to a server.",
+      "Bulk compress, resize, and convert images to AVIF/WebP. Strips metadata automatically. Processed entirely in your browser.",
     href: "/tools/image-optimiser",
     icon: ImageIcon,
   },
