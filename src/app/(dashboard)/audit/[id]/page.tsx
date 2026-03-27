@@ -1,21 +1,10 @@
-import { notFound } from "next/navigation";
-import { getAuditById } from "@/lib/queries/audits";
-import { AuditDetailClient } from "./audit-detail-client";
+import { redirect } from "next/navigation";
 
-export default async function AuditDetailPage({
+export default async function AuditDetailRedirect({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let audit;
-  try {
-    audit = await getAuditById(id);
-  } catch {
-    notFound();
-  }
-
-  if (!audit) notFound();
-
-  return <AuditDetailClient audit={audit} id={id} />;
+  redirect(`/tools/performance-audit/${id}`);
 }
