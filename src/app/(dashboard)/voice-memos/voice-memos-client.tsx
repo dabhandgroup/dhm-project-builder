@@ -178,7 +178,7 @@ export function VoiceMemosClient({ initialMemos }: { initialMemos: Memo[] }) {
                             type="text"
                             value={editing.title}
                             onChange={(e) => setEditing({ ...editing, title: e.target.value })}
-                            className="w-full text-sm font-semibold bg-transparent border-b border-primary/50 outline-none focus:border-primary pb-0.5"
+                            className="w-full text-base sm:text-sm font-semibold bg-transparent border-b border-primary/50 outline-none focus:border-primary pb-0.5"
                             placeholder="Memo title"
                             autoFocus
                           />

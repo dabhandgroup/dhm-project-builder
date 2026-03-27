@@ -112,6 +112,7 @@ export interface Database {
           netlify_project_id: string | null;
           github_repo_url: string | null;
           template_id: string | null;
+          include_in_financials: boolean;
           pipeline_status: string | null;
           pipeline_error: string | null;
           created_by: string | null;
@@ -148,6 +149,7 @@ export interface Database {
           netlify_project_id?: string | null;
           github_repo_url?: string | null;
           template_id?: string | null;
+          include_in_financials?: boolean;
           pipeline_status?: string | null;
           pipeline_error?: string | null;
           created_by?: string | null;
@@ -183,6 +185,7 @@ export interface Database {
           netlify_project_id?: string | null;
           github_repo_url?: string | null;
           template_id?: string | null;
+          include_in_financials?: boolean;
           pipeline_status?: string | null;
           pipeline_error?: string | null;
           updated_at?: string;

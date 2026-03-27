@@ -844,6 +844,29 @@ export function ProjectForm({
           <CardTitle className="text-lg">Financials</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Include in Financials toggle */}
+          <label className="flex items-center justify-between gap-3 rounded-lg border p-3 cursor-pointer">
+            <div>
+              <p className="text-sm font-medium">Include in Financials</p>
+              <p className="text-xs text-muted-foreground">Count this project&apos;s revenue in financial reports</p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.include_in_financials}
+              onClick={() => updateField("include_in_financials", !form.include_in_financials)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 border-transparent transition-colors ${
+                form.include_in_financials ? "bg-primary" : "bg-muted"
+              }`}
+            >
+              <span
+                className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                  form.include_in_financials ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </label>
+
           {/* Currency Selector */}
           <div className="space-y-2">
             <Label>Currency / Region</Label>

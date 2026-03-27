@@ -33,7 +33,7 @@ export async function getRevenueByProject(currency?: string) {
   const supabase = await createClient();
   let query = supabase
     .from("projects")
-    .select("id, title, one_off_revenue, recurring_revenue, currency, status, clients(name), created_at");
+    .select("id, title, one_off_revenue, recurring_revenue, include_in_financials, currency, status, clients(name), created_at");
 
   if (currency) {
     query = query.eq("currency", currency);
@@ -52,8 +52,9 @@ export async function getFinancialSummary(currency?: string) {
   const costs = await getCosts(currency);
   const targets = await getFinancialTargets(currency);
 
-  const totalMRR = projects.reduce((sum, p) => sum + Number(p.recurring_revenue), 0);
-  const totalOneOff = projects.reduce((sum, p) => sum + Number(p.one_off_revenue), 0);
+  const includedProjects = projects.filter((p) => p.include_in_financials);
+  const totalMRR = includedProjects.reduce((sum, p) => sum + Number(p.recurring_revenue), 0);
+  const totalOneOff = includedProjects.reduce((sum, p) => sum + Number(p.one_off_revenue), 0);
   const monthlyCosts = costs
     .filter((c) => c.type === "monthly")
     .reduce((sum, c) => sum + Number(c.amount), 0);
