@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { deleteProject } from "@/actions/projects";
 import { toast } from "@/components/ui/toast";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface DeleteProjectDialogProps {
   projectId: string;
@@ -50,13 +51,15 @@ export function DeleteProjectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-950 mb-2">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+          </div>
           <DialogTitle>Delete Project</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete <strong>{projectTitle}</strong>? This
-            action cannot be undone and all project data will be permanently
-            removed.
+            This will permanently delete <span className="font-medium text-foreground">{projectTitle}</span> and
+            all associated data. This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -64,6 +67,7 @@ export function DeleteProjectDialog({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
+            className="flex-1"
           >
             Cancel
           </Button>
@@ -71,8 +75,16 @@ export function DeleteProjectDialog({
             variant="destructive"
             onClick={handleDelete}
             disabled={isDeleting}
+            className="flex-1"
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              "Delete Project"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
