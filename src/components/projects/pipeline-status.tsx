@@ -221,14 +221,24 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
                     {status.github_repo_url}
                   </a>
                 )}
-                <a
-                  href={`/api/projects/download?projectId=${projectId}`}
-                  download
-                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
-                >
-                  <Download className="h-4 w-4" />
-                  Download project as ZIP
-                </a>
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <a
+                    href={`/api/projects/download?projectId=${projectId}&type=build`}
+                    download
+                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Built project ZIP
+                  </a>
+                  <a
+                    href={`/api/projects/download?projectId=${projectId}&type=crawl`}
+                    download
+                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Crawled site files
+                  </a>
+                </div>
               </div>
             )}
           </>
