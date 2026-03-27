@@ -287,14 +287,13 @@ export async function runPipeline(projectId: string) {
       vercelProjectId = vercelProject.id;
     }
 
-    // Update project in database
+    // Update project in database (preserve current status)
     await supabase
       .from("projects")
       .update({
         preview_url: previewUrl,
         github_repo_url: githubRepoUrl,
         vercel_project_id: vercelProjectId,
-        status: "initial_draft" as const,
       })
       .eq("id", projectId);
 

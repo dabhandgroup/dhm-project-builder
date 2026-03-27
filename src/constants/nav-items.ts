@@ -4,7 +4,7 @@ import {
   Users,
   DollarSign,
   PenTool,
-  Gauge,
+  Wrench,
   StickyNote,
   Mic,
   UserCog,
@@ -61,9 +61,9 @@ export const navItems: NavItem[] = [
     icon: LayoutTemplate,
   },
   {
-    label: "Performance Audit",
-    href: "/audit",
-    icon: Gauge,
+    label: "Tools",
+    href: "/tools",
+    icon: Wrench,
   },
   {
     label: "Notes",
