@@ -10,7 +10,7 @@ export interface StatusConfig {
 
 export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
   lead: {
-    label: "Draft",
+    label: "Lead",
     color: "text-zinc-500",
     bgColor: "bg-zinc-100",
     textColor: "text-zinc-700",
@@ -24,7 +24,7 @@ export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
     borderColor: "border-blue-300",
   },
   awaiting_feedback: {
-    label: "Awaiting Feedback",
+    label: "Feedback",
     color: "text-amber-500",
     bgColor: "bg-amber-100",
     textColor: "text-amber-700",
@@ -38,7 +38,7 @@ export const projectStatuses: Record<ProjectStatus, StatusConfig> = {
     borderColor: "border-orange-300",
   },
   awaiting_payment: {
-    label: "Awaiting Payment",
+    label: "Payment",
     color: "text-purple-500",
     bgColor: "bg-purple-100",
     textColor: "text-purple-700",

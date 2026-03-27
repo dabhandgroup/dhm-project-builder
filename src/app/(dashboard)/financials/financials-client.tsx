@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AnimatedNumber } from "@/components/ui/animated-number";
+import { useCachedStats } from "@/hooks/use-cached-stats";
 import { formatCurrency } from "@/lib/utils";
 import { Select } from "@/components/ui/select";
 import { DollarSign, TrendingUp, BarChart3, Target, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
@@ -78,10 +80,21 @@ function SmallSkeleton() {
   return <Skeleton className="h-3.5 w-24 mt-1" />;
 }
 
+interface CachedKpis {
+  totalOneOff: number;
+  totalMRR: number;
+  oneOffCosts: number;
+  monthlyCosts: number;
+  netMonthlyProfit: number;
+  netTotalProfit: number;
+}
+
 export function FinancialsClient({ initialData }: { initialData?: FinancialData }) {
   const [data, setData] = useState<FinancialData | null>(initialData ?? null);
   const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode | "ALL">("AUD");
   const [selectedRange, setSelectedRange] = useState(9999);
+  const [computedKpis, setComputedKpis] = useState<CachedKpis | null>(null);
+  const { data: cachedKpis } = useCachedStats<CachedKpis>("financials-kpi", computedKpis);
 
   // Fetch data client-side if not provided via props
   useEffect(() => {
@@ -118,7 +131,14 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
   const netMonthlyProfit = totalMRR - monthlyCosts;
   const netTotalProfit = totalOneOff + totalMRR - monthlyCosts - oneOffCosts;
 
+  // Cache KPIs once fresh data has loaded
+  useEffect(() => {
+    if (!data) return;
+    setComputedKpis({ totalOneOff, totalMRR, oneOffCosts, monthlyCosts, netMonthlyProfit, netTotalProfit });
+  }, [data, totalOneOff, totalMRR, oneOffCosts, monthlyCosts, netMonthlyProfit, netTotalProfit]);
+
   const displayCurrency = selectedCurrency === "ALL" ? "AUD" : selectedCurrency;
+  const fmtCurr = useCallback((n: number) => formatCurrency(n, displayCurrency), [displayCurrency]);
 
   const target = data && selectedCurrency !== "ALL"
     ? data.targets.find((t) => t.currency === selectedCurrency)
@@ -167,6 +187,11 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
   } : null;
 
   const loading = !data;
+  // Use cached KPIs for immediate display, then animate to fresh
+  const kpi = data
+    ? { totalOneOff, totalMRR, oneOffCosts, monthlyCosts, netMonthlyProfit, netTotalProfit }
+    : cachedKpis;
+  const showNumbers = !!kpi;
 
   return (
     <div className="space-y-6">
@@ -218,7 +243,7 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
         </div>
       </div>
 
-      {/* KPI Cards — shells render instantly, only numbers load */}
+      {/* KPI Cards — cached numbers shown instantly, animate to fresh */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -226,15 +251,17 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {loading ? <NumberSkeleton /> : (
-              <div className="text-lg sm:text-2xl font-bold">{formatCurrency(totalOneOff, displayCurrency)}</div>
-            )}
-            {loading ? <SmallSkeleton /> : (
+            {showNumbers ? (
+              <div className="text-lg sm:text-2xl font-bold">
+                <AnimatedNumber value={kpi.totalOneOff} formatter={fmtCurr} />
+              </div>
+            ) : <NumberSkeleton />}
+            {showNumbers ? (
               <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
-                <span className="text-red-600 font-medium">-{formatCurrency(oneOffCosts, displayCurrency)}</span> <span className="hidden sm:inline">costs</span>
+                <span className="text-red-600 font-medium">-<AnimatedNumber value={kpi.oneOffCosts} formatter={fmtCurr} /></span> <span className="hidden sm:inline">costs</span>
               </p>
-            )}
+            ) : <SmallSkeleton />}
           </CardContent>
         </Card>
         <Card>
@@ -249,17 +276,17 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {loading ? <NumberSkeleton /> : (
+            {showNumbers ? (
               <div className="text-lg sm:text-2xl font-bold text-green-600">
-                {formatCurrency(totalMRR, displayCurrency)}
+                <AnimatedNumber value={kpi.totalMRR} formatter={fmtCurr} />
               </div>
-            )}
-            {loading ? <SmallSkeleton /> : (
+            ) : <NumberSkeleton />}
+            {showNumbers ? (
               <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <ArrowDownRight className="h-3 w-3 text-red-600 shrink-0" />
-                <span className="text-red-600 font-medium">-{formatCurrency(monthlyCosts, displayCurrency)}</span> <span className="hidden sm:inline">monthly costs</span>
+                <span className="text-red-600 font-medium">-<AnimatedNumber value={kpi.monthlyCosts} formatter={fmtCurr} /></span> <span className="hidden sm:inline">monthly costs</span>
               </p>
-            )}
+            ) : <SmallSkeleton />}
           </CardContent>
         </Card>
         <Card>
@@ -271,16 +298,16 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {loading ? <NumberSkeleton /> : (
-              <div className={`text-lg sm:text-2xl font-bold ${netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                {formatCurrency(netMonthlyProfit, displayCurrency)}
+            {showNumbers ? (
+              <div className={`text-lg sm:text-2xl font-bold ${kpi.netMonthlyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                <AnimatedNumber value={kpi.netMonthlyProfit} formatter={fmtCurr} />
               </div>
-            )}
-            {loading ? <SmallSkeleton /> : (
+            ) : <NumberSkeleton />}
+            {showNumbers ? (
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">
-                {formatCurrency(netMonthlyProfit * 12, displayCurrency)}/yr
+                <AnimatedNumber value={kpi.netMonthlyProfit * 12} formatter={fmtCurr} />/yr
               </p>
-            )}
+            ) : <SmallSkeleton />}
           </CardContent>
         </Card>
         <Card>
@@ -289,18 +316,18 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {loading ? <NumberSkeleton /> : (
-              <div className={`text-lg sm:text-2xl font-bold ${netTotalProfit >= 0 ? "" : "text-red-600"}`}>
-                {formatCurrency(netTotalProfit, displayCurrency)}
+            {showNumbers ? (
+              <div className={`text-lg sm:text-2xl font-bold ${kpi.netTotalProfit >= 0 ? "" : "text-red-600"}`}>
+                <AnimatedNumber value={kpi.netTotalProfit} formatter={fmtCurr} />
               </div>
-            )}
-            {loading ? <SmallSkeleton /> : (
+            ) : <NumberSkeleton />}
+            {showNumbers ? (
               <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 mt-1">
                 <ArrowUpRight className="h-3 w-3 text-green-600 shrink-0" />
                 <span className="hidden sm:inline">Revenue minus all costs</span>
                 <span className="sm:hidden">All revenue - costs</span>
               </p>
-            )}
+            ) : <SmallSkeleton />}
           </CardContent>
         </Card>
       </div>

@@ -68,9 +68,10 @@ export function Sidebar() {
       <nav className="flex-1 overflow-auto py-4">
         <ul className={cn("space-y-1", collapsed ? "px-0 flex flex-col items-center" : "px-2")}>
           {filteredItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
+            const exactMatch = filteredItems.some((other) => pathname === other.href);
+            const isActive = exactMatch
+              ? pathname === item.href
+              : pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
 
             const linkEl = (
               <li key={item.href}>
