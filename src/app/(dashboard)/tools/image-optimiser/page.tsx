@@ -41,9 +41,15 @@ const FORMAT_OPTIONS: { value: OutputFormat; label: string; description: string 
   { value: "original", label: "Original", description: "Keep original format" },
 ];
 
+const QUALITY_PRESETS = [
+  { label: "Web (recommended)", quality: 45, description: "Tiny files, great for web — visually near-identical" },
+  { label: "Balanced", quality: 60, description: "Good quality with solid compression" },
+  { label: "High", quality: 80, description: "Minimal compression, larger files" },
+];
+
 export default function ImageOptimiserPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
-  const [quality, setQuality] = useState(75);
+  const [quality, setQuality] = useState(45);
   const [maxWidth, setMaxWidth] = useState(2000);
   const [format, setFormat] = useState<OutputFormat>("avif");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -330,14 +336,27 @@ export default function ImageOptimiserPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm">Quality</Label>
-                <span className="text-sm text-muted-foreground font-mono">
-                  {quality}%
-                </span>
-              </div>
+          {/* Quality presets */}
+          <div className="space-y-2">
+            <Label className="text-sm">Quality</Label>
+            <div className="flex rounded-lg border bg-muted/40 p-1 gap-0.5">
+              {QUALITY_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setQuality(preset.quality)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                    quality === preset.quality
+                      ? "bg-background shadow-sm"
+                      : "hover:bg-background/50"
+                  }`}
+                  title={preset.description}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
               <input
                 type="range"
                 value={quality}
@@ -345,25 +364,29 @@ export default function ImageOptimiserPage() {
                 min={10}
                 max={100}
                 step={5}
-                className="w-full accent-primary"
+                className="flex-1 accent-primary"
               />
+              <span className="text-xs text-muted-foreground font-mono w-8 text-right">
+                {quality}%
+              </span>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="max-width" className="text-sm">
-                Max width (px)
-              </Label>
-              <Input
-                id="max-width"
-                type="number"
-                value={maxWidth}
-                onChange={(e) =>
-                  setMaxWidth(Math.max(100, parseInt(e.target.value) || 2000))
-                }
-                min={100}
-                max={10000}
-                className="w-32 text-base sm:text-sm"
-              />
-            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="max-width" className="text-sm">
+              Max width (px)
+            </Label>
+            <Input
+              id="max-width"
+              type="number"
+              value={maxWidth}
+              onChange={(e) =>
+                setMaxWidth(Math.max(100, parseInt(e.target.value) || 2000))
+              }
+              min={100}
+              max={10000}
+              className="w-32 text-base sm:text-sm"
+            />
           </div>
 
           <p className="text-[10px] text-muted-foreground">
