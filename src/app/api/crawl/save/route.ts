@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import JSZip from "jszip";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -60,6 +61,39 @@ export async function POST(req: NextRequest) {
           upsert: true,
         });
     }
+
+    // Build and store a ZIP of the full crawled site
+    const zip = new JSZip();
+    for (const page of pages as Record<string, unknown>[]) {
+      let urlPath: string;
+      try {
+        urlPath = new URL(page.url as string).pathname.replace(/^\//, "") || "index";
+      } catch {
+        urlPath = "index";
+      }
+      urlPath = urlPath.replace(/\/$/, "");
+
+      if (page.rawHtml || page.html) {
+        zip.file(`${urlPath}/index.html`, (page.rawHtml || page.html) as string);
+      }
+      if (page.markdown) {
+        zip.file(`${urlPath}/index.md`, page.markdown as string);
+      }
+      if (page.screenshot) {
+        const base64Match = (page.screenshot as string).match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          zip.file(`${urlPath}/screenshot.png`, base64Match[1], { base64: true });
+        }
+      }
+    }
+
+    const zipBuffer = await zip.generateAsync({ type: "nodebuffer" });
+    await admin.storage
+      .from("project-assets")
+      .upload(`crawl-data/${projectId}-site.zip`, zipBuffer, {
+        contentType: "application/zip",
+        upsert: true,
+      });
 
     return NextResponse.json({ success: true, path });
   } catch (err) {

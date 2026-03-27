@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import type { CrawlPage } from "@/lib/firecrawl";
 import { toast } from "@/components/ui/toast";
@@ -133,6 +134,45 @@ export function SiteCrawler({ domain, onCrawlComplete }: SiteCrawlerProps) {
         totalLinks: new Set(crawlData.pages.flatMap((p) => p.links)).size,
       }
     : null;
+
+  const downloadZip = useCallback(async () => {
+    if (!crawlData) return;
+    const JSZip = (await import("jszip")).default;
+    const zip = new JSZip();
+
+    for (const page of crawlData.pages) {
+      let urlPath: string;
+      try {
+        urlPath = new URL(page.url).pathname.replace(/^\//, "") || "index";
+      } catch {
+        urlPath = "index";
+      }
+      // Remove trailing slash
+      urlPath = urlPath.replace(/\/$/, "");
+
+      if (page.rawHtml || page.html) {
+        zip.file(`${urlPath}/index.html`, page.rawHtml || page.html);
+      }
+      if (page.markdown) {
+        zip.file(`${urlPath}/index.md`, page.markdown);
+      }
+      if (page.screenshot) {
+        // Screenshot can be a base64 data URI or a plain URL
+        const base64Match = page.screenshot.match(/^data:image\/\w+;base64,(.+)$/);
+        if (base64Match) {
+          zip.file(`${urlPath}/screenshot.png`, base64Match[1], { base64: true });
+        }
+      }
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${crawlData.domain}-crawl.zip`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [crawlData]);
 
   return (
     <Card className={state === "complete" ? "border-green-500/50" : "border-dashed"}>
@@ -308,8 +348,12 @@ export function SiteCrawler({ domain, onCrawlComplete }: SiteCrawlerProps) {
               </div>
             </div>
 
-            {/* Re-crawl option */}
-            <div className="flex justify-end">
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={downloadZip} className="gap-1.5 text-xs">
+                <Download className="h-3 w-3" />
+                Download ZIP
+              </Button>
               <Button variant="outline" size="sm" onClick={startCrawl} className="gap-1.5 text-xs">
                 <Globe className="h-3 w-3" />
                 Re-crawl
