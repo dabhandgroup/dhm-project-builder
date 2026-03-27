@@ -12,7 +12,7 @@ import { SiteCrawler } from "@/components/projects/site-crawler";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 
-import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github } from "lucide-react";
+import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github, Trash2 } from "lucide-react";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
 
@@ -38,6 +38,7 @@ interface ProjectFormProps {
   projectId?: string;
   onSubmit: (data: ProjectFormData) => Promise<void>;
   onSaveDraft?: (data: ProjectFormData) => Promise<void>;
+  onDelete?: () => void;
   isEditing?: boolean;
   clients?: ClientOption[];
   templates?: TemplateOption[];
@@ -48,6 +49,7 @@ export function ProjectForm({
   projectId,
   onSubmit,
   onSaveDraft,
+  onDelete,
   isEditing = false,
   clients = [],
   templates = [],
@@ -909,16 +911,16 @@ export function ProjectForm({
       </Card>
 
       {/* Submit */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-        {onSaveDraft && (
+      <div className="flex items-center gap-3 sm:justify-end">
+        {isEditing && onDelete && (
           <Button
             type="button"
             variant="outline"
-            onClick={() => onSaveDraft(form)}
-            disabled={isSubmitting}
+            size="icon"
+            onClick={onDelete}
+            className="text-muted-foreground hover:text-destructive hover:border-destructive shrink-0"
           >
-            <Save className="h-4 w-4" />
-            Save Draft
+            <Trash2 className="h-4 w-4" />
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
@@ -928,7 +930,10 @@ export function ProjectForm({
               {isEditing ? "Updating..." : "Creating..."}
             </>
           ) : isEditing ? (
-            "Update Project"
+            <>
+              <Save className="h-4 w-4" />
+              Save Project
+            </>
           ) : (
             "Create Project"
           )}
