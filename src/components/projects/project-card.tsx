@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { Globe, ExternalLink, MoreVertical, Pencil, Trash2 } from "lucide-react";
@@ -35,12 +36,25 @@ export function ProjectCard({
   preview_url,
   clientName,
 }: ProjectCardProps) {
+  const router = useRouter();
   const statusConfig = projectStatuses[status];
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleted = useCallback(() => {
+    setShowDeleteDialog(false);
+    setIsDeleting(true);
+    setTimeout(() => router.refresh(), 400);
+  }, [router]);
 
   return (
     <>
-      <div className="group rounded-lg border bg-card shadow-sm hover:shadow-md transition-all overflow-hidden">
+      <div
+        className={`group rounded-lg border bg-card shadow-sm hover:shadow-md transition-all overflow-hidden ${
+          isDeleting ? "opacity-0 scale-90 pointer-events-none" : "opacity-100 scale-100"
+        }`}
+        style={{ transition: "opacity 0.4s ease-out, transform 0.4s ease-out" }}
+      >
         {/* Status accent bar */}
         <div className={cn("h-1", statusConfig.bgColor.replace("bg-", "bg-").replace("100", "400"))} />
 
@@ -123,6 +137,7 @@ export function ProjectCard({
         projectTitle={title}
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
+        onDeleted={handleDeleted}
       />
     </>
   );

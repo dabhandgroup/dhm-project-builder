@@ -20,6 +20,7 @@ interface DeleteProjectDialogProps {
   projectTitle: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: () => void;
 }
 
 export function DeleteProjectDialog({
@@ -27,6 +28,7 @@ export function DeleteProjectDialog({
   projectTitle,
   open,
   onOpenChange,
+  onDeleted,
 }: DeleteProjectDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
@@ -41,7 +43,11 @@ export function DeleteProjectDialog({
       }
       toast({ title: "Project deleted" });
       onOpenChange(false);
-      router.push("/projects");
+      if (onDeleted) {
+        onDeleted();
+      } else {
+        router.push("/projects");
+      }
     } catch {
       toast({ title: "Failed to delete project", variant: "destructive" });
     } finally {

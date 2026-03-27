@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ProjectStatusBadge } from "./project-status-badge";
@@ -41,6 +41,7 @@ export function ProjectListView({
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const sorted = [...projects].sort((a, b) => {
     const aVal = a[sortKey] ?? "";
@@ -88,6 +89,19 @@ export function ProjectListView({
     }
   }
 
+  const handleDeleted = useCallback(() => {
+    if (!deleteTarget) return;
+    const id = deleteTarget.id;
+    setDeleteTarget(null);
+    setDeletingId(id);
+    // Let the animation play, then remove from state
+    setTimeout(() => {
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+      setDeletingId(null);
+      router.refresh();
+    }, 400);
+  }, [deleteTarget, router]);
+
   const SortHeader = ({
     label,
     sortKeyVal,
@@ -134,7 +148,12 @@ export function ProjectListView({
           {sorted.map((project) => (
             <tr
               key={project.id}
-              className="border-b last:border-0 hover:bg-muted/30 transition-colors"
+              className={`border-b last:border-0 hover:bg-muted/30 transition-all duration-400 origin-center ${
+                deletingId === project.id
+                  ? "opacity-0 scale-95 h-0 overflow-hidden"
+                  : "opacity-100 scale-100"
+              }`}
+              style={deletingId === project.id ? { transition: "opacity 0.4s ease-out, transform 0.4s ease-out" } : undefined}
             >
               <td className="px-3 py-2">
                 <Link
@@ -218,6 +237,7 @@ export function ProjectListView({
         onOpenChange={(open) => {
           if (!open) setDeleteTarget(null);
         }}
+        onDeleted={handleDeleted}
       />
     )}
     </>
