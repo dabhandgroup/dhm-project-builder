@@ -95,13 +95,17 @@ export async function generateSiteFiles(
     clientName: string;
     existingSiteContent?: string;
     imagePaths?: string[];
+    oldSitePages?: { url: string; title: string }[];
   },
 ): Promise<{ path: string; content: string }[]> {
   const systemPrompt =
     "You are a web developer. Customise a website template for a client. " +
     "Return ONLY a JSON array of {path, content} objects. No markdown fences. " +
     "Preserve template structure. Update text, colours and branding per the brief. " +
-    "Use provided image paths in <img> tags: square images for logos/thumbnails, landscape for heroes/banners.";
+    "Use provided image paths in <img> tags: square images for logos/thumbnails, landscape for heroes/banners." +
+    (opts.oldSitePages?.length
+      ? " IMPORTANT: The client has an existing site being rebuilt. Create equivalent pages for ALL old site pages listed below to preserve SEO. Keep the same URL structure where possible."
+      : "");
 
   // Trim inputs to stay within token limits
   const trimmedTemplates = trimTemplateFiles(opts.templateFiles);
@@ -114,8 +118,21 @@ export async function generateSiteFiles(
 Brief: ${opts.brief}
 `;
 
+  if (opts.oldSitePages?.length) {
+    userPrompt += `\nOld site pages to recreate (preserve these URL paths):\n${opts.oldSitePages
+      .map((p) => {
+        try {
+          const path = new URL(p.url).pathname;
+          return `- ${path} (${p.title})`;
+        } catch {
+          return `- ${p.url} (${p.title})`;
+        }
+      })
+      .join("\n")}\n`;
+  }
+
   if (existingContent) {
-    userPrompt += `\nExisting site (reference only):\n${existingContent}\n`;
+    userPrompt += `\nExisting site content (reference for tone and content):\n${existingContent}\n`;
   }
 
   if (opts.imagePaths?.length) {

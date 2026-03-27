@@ -24,6 +24,7 @@ interface FinancialProject {
   title: string;
   one_off_revenue: number;
   recurring_revenue: number;
+  include_in_financials: boolean;
   currency: string;
   status: string;
   clients: { name: string } | null;
@@ -94,8 +95,9 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - selectedRange);
 
-  // Filter projects by currency and date
+  // Filter projects by currency, date, and financials inclusion
   const filteredProjects = (data?.projects ?? []).filter((p) => {
+    if (!p.include_in_financials) return false;
     if (selectedCurrency !== "ALL" && p.currency !== selectedCurrency) return false;
     if (new Date(p.created_at) < cutoffDate) return false;
     return true;

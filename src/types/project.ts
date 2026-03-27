@@ -49,6 +49,7 @@ export interface ProjectFormData {
   currency: CurrencyCode;
   one_off_revenue: number;
   recurring_revenue: number;
+  include_in_financials: boolean;
   template_id: string | null;
   deploy_provider: string | null;
   crawl_data: CrawlData | null;
@@ -85,6 +86,7 @@ export const defaultProjectFormData: ProjectFormData = {
   currency: "AUD",
   one_off_revenue: 0,
   recurring_revenue: 199,
+  include_in_financials: false,
   template_id: null,
   deploy_provider: null,
   crawl_data: null,

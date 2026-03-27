@@ -12,9 +12,9 @@ export default function DashboardLayout({
   return (
     <div className="flex h-dvh overflow-hidden">
       <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Topbar />
-        <main className="flex-1 overflow-auto p-4 lg:p-6 pb-32 lg:pb-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6 pb-32 lg:pb-6">
           <ScrollToTop />
           {children}
         </main>

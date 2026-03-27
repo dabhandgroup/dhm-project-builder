@@ -182,15 +182,10 @@ export async function crawlSite(
   throw new Error("Crawl timed out");
 }
 
-// ---------- Redirects generator ----------
+// ---------- Helpers ----------
 
-export function generateRedirects(
-  discoveredUrls: string[],
-  domain: string,
-  format: "netlify" | "vercel" = "netlify",
-): string | Record<string, unknown> {
-  // Extract path from each URL
-  const paths = discoveredUrls
+function extractOldPaths(discoveredUrls: string[]): string[] {
+  return discoveredUrls
     .map((u) => {
       try {
         return new URL(u).pathname;
@@ -199,14 +194,50 @@ export function generateRedirects(
       }
     })
     .filter((p): p is string => p !== null && p !== "/")
-    // Remove duplicates
     .filter((p, i, arr) => arr.indexOf(p) === i)
     .sort();
+}
+
+function matchNewPath(oldPath: string, newPagePaths: string[]): string {
+  // Normalise: strip trailing slashes and .html extensions for comparison
+  const normalise = (p: string) =>
+    p.replace(/\/$/, "").replace(/\/index\.html$/, "").replace(/\.html$/, "") || "/";
+
+  const norm = normalise(oldPath);
+
+  // Direct match
+  for (const np of newPagePaths) {
+    if (normalise(np) === norm) return normalise(np) || "/";
+  }
+
+  // Partial match — last segment
+  const lastSeg = norm.split("/").filter(Boolean).pop();
+  if (lastSeg) {
+    for (const np of newPagePaths) {
+      const npNorm = normalise(np);
+      if (npNorm.split("/").filter(Boolean).pop() === lastSeg) {
+        return npNorm || "/";
+      }
+    }
+  }
+
+  return "/";
+}
+
+// ---------- Redirects generator ----------
+
+export function generateRedirects(
+  discoveredUrls: string[],
+  domain: string,
+  format: "netlify" | "vercel" = "netlify",
+  newPagePaths: string[] = [],
+): string | Record<string, unknown> {
+  const paths = extractOldPaths(discoveredUrls);
 
   if (format === "vercel") {
     const redirects = paths.map((from) => ({
       source: from,
-      destination: "/",
+      destination: matchNewPath(from, newPagePaths),
       statusCode: 301,
     }));
     return { redirects };
@@ -215,9 +246,8 @@ export function generateRedirects(
   // Netlify _redirects format
   const lines = [
     "# Redirects from old site URLs",
-    "# Update destinations as new pages are built",
     "",
-    ...paths.map((from) => `${from}    /    301`),
+    ...paths.map((from) => `${from}    ${matchNewPath(from, newPagePaths)}    301`),
     "",
     "# Ad campaign redirects",
     "/ga/*    /    301",
@@ -227,4 +257,23 @@ export function generateRedirects(
     "/tt/*    /    301",
   ];
   return lines.join("\n");
+}
+
+// ---------- CSV redirect map ----------
+
+export function generateRedirectsCsv(
+  discoveredUrls: string[],
+  domain: string,
+  newPagePaths: string[] = [],
+): string {
+  const paths = extractOldPaths(discoveredUrls);
+  const rows = [
+    "old_url,old_path,new_path,status_code",
+    ...paths.map((oldPath) => {
+      const oldUrl = `https://${domain}${oldPath}`;
+      const newPath = matchNewPath(oldPath, newPagePaths);
+      return `${oldUrl},${oldPath},${newPath},301`;
+    }),
+  ];
+  return rows.join("\n");
 }

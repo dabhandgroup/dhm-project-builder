@@ -57,7 +57,9 @@ async function DashboardStats() {
 
   const clientCount = clients.length;
   const activeProjects = projects.filter((p) => p.status !== "complete" && p.status !== "lead");
-  const totalMRR = projects.reduce((sum, p) => sum + Number(p.recurring_revenue ?? 0), 0);
+  const totalMRR = projects
+    .filter((p) => p.include_in_financials)
+    .reduce((sum, p) => sum + Number(p.recurring_revenue ?? 0), 0);
 
   return (
     <>
