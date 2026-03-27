@@ -14,6 +14,7 @@ import {
   Search,
   Upload,
   Rocket,
+  Download,
 } from "lucide-react";
 
 interface PipelineStep {
@@ -220,6 +221,14 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
                     {status.github_repo_url}
                   </a>
                 )}
+                <a
+                  href={`/api/projects/download?projectId=${projectId}`}
+                  download
+                  className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                >
+                  <Download className="h-4 w-4" />
+                  Download project as ZIP
+                </a>
               </div>
             )}
           </>

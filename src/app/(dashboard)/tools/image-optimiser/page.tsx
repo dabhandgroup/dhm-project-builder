@@ -42,16 +42,71 @@ const FORMAT_OPTIONS: { value: OutputFormat; label: string; description: string 
 ];
 
 const QUALITY_PRESETS = [
-  { label: "Web (recommended)", quality: 45, description: "Tiny files, great for web — visually near-identical" },
+  { label: "Web (recommended)", quality: 40, description: "Tiny files, great for web" },
   { label: "Balanced", quality: 60, description: "Good quality with solid compression" },
   { label: "High", quality: 80, description: "Minimal compression, larger files" },
 ];
 
+function canvasToBlob(canvas: HTMLCanvasElement, mime: string, q: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, mime, q));
+}
+
+async function compressToTarget(
+  canvas: HTMLCanvasElement,
+  image: HTMLImageElement,
+  startWidth: number,
+  startHeight: number,
+  mimeType: string,
+  startQuality: number,
+  targetBytes: number,
+): Promise<{ blob: Blob; finalWidth: number; finalHeight: number } | null> {
+  let q = startQuality;
+  let w = startWidth;
+  let h = startHeight;
+
+  // Draw at initial dimensions
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0, w, h);
+
+  // Phase 1: reduce quality
+  let blob = await canvasToBlob(canvas, mimeType, q);
+  while (blob && blob.size > targetBytes && q > 0.10) {
+    q = Math.round((q - 0.05) * 100) / 100;
+    blob = await canvasToBlob(canvas, mimeType, q);
+  }
+
+  // Phase 2: if still too big, scale down dimensions and retry
+  const minW = Math.round(startWidth * 0.3);
+  while (blob && blob.size > targetBytes && w > minW) {
+    w = Math.round(w * 0.8);
+    h = Math.round(h * 0.8);
+    canvas.width = w;
+    canvas.height = h;
+    const ctx2 = canvas.getContext("2d");
+    if (!ctx2) return null;
+    ctx2.drawImage(image, 0, 0, w, h);
+
+    q = startQuality;
+    blob = await canvasToBlob(canvas, mimeType, q);
+    while (blob && blob.size > targetBytes && q > 0.10) {
+      q = Math.round((q - 0.05) * 100) / 100;
+      blob = await canvasToBlob(canvas, mimeType, q);
+    }
+  }
+
+  if (!blob) return null;
+  return { blob, finalWidth: w, finalHeight: h };
+}
+
 export default function ImageOptimiserPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
-  const [quality, setQuality] = useState(45);
-  const [maxWidth, setMaxWidth] = useState(2000);
-  const [format, setFormat] = useState<OutputFormat>("avif");
+  const [quality, setQuality] = useState(40);
+  const [maxWidth, setMaxWidth] = useState(1600);
+  const [maxFileSize, setMaxFileSize] = useState(300);
+  const [format, setFormat] = useState<OutputFormat>("webp");
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,31 +171,17 @@ export default function ImageOptimiserPage() {
     async (img: ImageFile): Promise<Partial<ImageFile>> => {
       return new Promise((resolve) => {
         const image = new Image();
-        image.onload = () => {
+        image.onload = async () => {
           const canvas = document.createElement("canvas");
           let { width, height } = image;
           const originalDimensions = `${width}x${height}`;
 
-          // Always resize if wider than maxWidth
+          // Resize if wider than maxWidth
           if (width > maxWidth) {
             const ratio = maxWidth / width;
             width = maxWidth;
             height = Math.round(height * ratio);
           }
-
-          canvas.width = width;
-          canvas.height = height;
-
-          const ctx = canvas.getContext("2d");
-          if (!ctx) {
-            resolve({ status: "error" });
-            return;
-          }
-
-          // Draw image — canvas strips all metadata (EXIF, ICC, etc.)
-          ctx.drawImage(image, 0, 0, width, height);
-
-          const outputDimensions = `${width}x${height}`;
 
           let mimeType: string;
           let ext: string;
@@ -155,62 +196,56 @@ export default function ImageOptimiserPage() {
             ext = img.file.name.split(".").pop() || "png";
           }
 
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                // AVIF may not be supported, fall back to WebP
-                if (format === "avif") {
-                  canvas.toBlob(
-                    (webpBlob) => {
-                      if (!webpBlob) {
-                        resolve({ status: "error" });
-                        return;
-                      }
-                      const baseName = img.file.name.replace(/\.[^.]+$/, "");
-                      const outputUrl = URL.createObjectURL(webpBlob);
-                      resolve({
-                        status: "done",
-                        outputBlob: webpBlob,
-                        outputUrl,
-                        outputSize: webpBlob.size,
-                        outputName: `${baseName}.webp`,
-                        originalDimensions,
-                        outputDimensions,
-                      });
-                    },
-                    "image/webp",
-                    quality / 100
-                  );
-                  return;
-                }
-                resolve({ status: "error" });
-                return;
-              }
+          const targetBytes = maxFileSize * 1024;
 
-              const baseName = img.file.name.replace(/\.[^.]+$/, "");
-              const outputName = `${baseName}.${ext}`;
-              const outputUrl = URL.createObjectURL(blob);
-
-              resolve({
-                status: "done",
-                outputBlob: blob,
-                outputUrl,
-                outputSize: blob.size,
-                outputName,
-                originalDimensions,
-                outputDimensions,
-              });
-            },
-            mimeType,
-            quality / 100
+          // Try primary format with iterative compression
+          let result = await compressToTarget(
+            canvas, image, width, height, mimeType, quality / 100, targetBytes
           );
+
+          // AVIF not supported? Fall back to WebP
+          if (!result && format === "avif") {
+            mimeType = "image/webp";
+            ext = "webp";
+            result = await compressToTarget(
+              canvas, image, width, height, mimeType, quality / 100, targetBytes
+            );
+          }
+
+          // Original format still too large (e.g. PNG ignores quality)? Fall back to WebP
+          if (result && result.blob.size > targetBytes && format === "original") {
+            mimeType = "image/webp";
+            ext = "webp";
+            result = await compressToTarget(
+              canvas, image, width, height, mimeType, quality / 100, targetBytes
+            );
+          }
+
+          if (!result) {
+            resolve({ status: "error" });
+            return;
+          }
+
+          const baseName = img.file.name.replace(/\.[^.]+$/, "");
+          const outputUrl = URL.createObjectURL(result.blob);
+          const outputDimensions = `${result.finalWidth}x${result.finalHeight}`;
+
+          resolve({
+            status: "done",
+            outputBlob: result.blob,
+            outputUrl,
+            outputSize: result.blob.size,
+            outputName: `${baseName}.${ext}`,
+            originalDimensions,
+            outputDimensions,
+          });
         };
 
         image.onerror = () => resolve({ status: "error" });
         image.src = img.preview;
       });
     },
-    [quality, maxWidth, format]
+    [quality, maxWidth, maxFileSize, format]
   );
 
   const processAll = useCallback(async () => {
@@ -290,7 +325,7 @@ export default function ImageOptimiserPage() {
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
@@ -306,7 +341,7 @@ export default function ImageOptimiserPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Image Optimiser" description="Compress, resize, and convert images to AVIF — all in your browser" />
+      <PageHeader title="Image Optimiser" description="Compress, resize, and convert images for web — all in your browser" />
 
       {/* Settings */}
       <Card>
@@ -372,25 +407,43 @@ export default function ImageOptimiserPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="max-width" className="text-sm">
-              Max width (px)
-            </Label>
-            <Input
-              id="max-width"
-              type="number"
-              value={maxWidth}
-              onChange={(e) =>
-                setMaxWidth(Math.max(100, parseInt(e.target.value) || 2000))
-              }
-              min={100}
-              max={10000}
-              className="w-32 text-base sm:text-sm"
-            />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="max-width" className="text-sm">
+                Max width (px)
+              </Label>
+              <Input
+                id="max-width"
+                type="number"
+                value={maxWidth}
+                onChange={(e) =>
+                  setMaxWidth(Math.max(100, parseInt(e.target.value) || 1600))
+                }
+                min={100}
+                max={10000}
+                className="w-32 text-base sm:text-sm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="max-size" className="text-sm">
+                Max file size (KB)
+              </Label>
+              <Input
+                id="max-size"
+                type="number"
+                value={maxFileSize}
+                onChange={(e) =>
+                  setMaxFileSize(Math.max(10, parseInt(e.target.value) || 300))
+                }
+                min={10}
+                max={5000}
+                className="w-32 text-base sm:text-sm"
+              />
+            </div>
           </div>
 
           <p className="text-[10px] text-muted-foreground">
-            Images wider than {maxWidth}px are resized (aspect ratio preserved). All metadata (EXIF, GPS, ICC profiles) is stripped automatically.
+            Quality is iteratively reduced until under {maxFileSize}KB. If still too large, dimensions are scaled down. Metadata is stripped automatically.
           </p>
         </CardContent>
       </Card>
@@ -459,9 +512,9 @@ export default function ImageOptimiserPage() {
 
           {doneCount > 0 && (
             <div className="flex items-center gap-3 text-xs text-muted-foreground w-full sm:w-auto">
-              <span>{formatSize(totalOriginal)} original</span>
+              <span>{formatSize(totalOriginal)}</span>
               <span>&rarr;</span>
-              <span>{formatSize(totalOutput)} optimised</span>
+              <span>{formatSize(totalOutput)}</span>
               {savings > 0 && (
                 <Badge variant="secondary" className="text-green-600 bg-green-50 text-[10px]">
                   -{savings}%
@@ -494,7 +547,7 @@ export default function ImageOptimiserPage() {
                   {img.outputSize !== undefined && (
                     <>
                       <span>&rarr;</span>
-                      <span>{formatSize(img.outputSize)}</span>
+                      <span className="font-medium text-foreground">{formatSize(img.outputSize)}</span>
                       {img.outputSize < img.originalSize && (
                         <span className="text-green-600">
                           -

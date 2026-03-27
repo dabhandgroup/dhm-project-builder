@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ProjectStatusBadge } from "./project-status-badge";
 import { Select } from "@/components/ui/select";
@@ -35,6 +36,7 @@ type SortKey = "title" | "status" | "recurring_revenue" | "created_at";
 export function ProjectListView({
   projects: initialProjects,
 }: ProjectListViewProps) {
+  const router = useRouter();
   const [projects, setProjects] = useState(initialProjects);
   const [sortKey, setSortKey] = useState<SortKey>("created_at");
   const [sortAsc, setSortAsc] = useState(false);
@@ -62,18 +64,27 @@ export function ProjectListView({
     projectId: string,
     newStatus: ProjectStatus
   ) {
+    const prevStatus = projects.find((p) => p.id === projectId)?.status;
     setProjects((prev) =>
       prev.map((p) =>
         p.id === projectId ? { ...p, status: newStatus } : p
       )
     );
-    try {
-      await updateProjectStatus(projectId, newStatus);
-    } catch {
+    const result = await updateProjectStatus(projectId, newStatus);
+    if (result.error) {
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === projectId ? { ...p, status: prevStatus ?? newStatus } : p
+        )
+      );
       toast({
         title: "Failed to update status",
+        description: result.error,
         variant: "destructive",
       });
+    } else {
+      toast({ title: "Status updated" });
+      router.refresh();
     }
   }
 

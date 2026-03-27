@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { projectStatuses, kanbanStatuses } from "@/constants/project-statuses";
 import { updateProjectStatus } from "@/actions/projects";
 import { toast } from "@/components/ui/toast";
@@ -12,6 +13,7 @@ interface ProjectStatusSelectProps {
 }
 
 export function ProjectStatusSelect({ projectId, status: initialStatus }: ProjectStatusSelectProps) {
+  const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [isPending, startTransition] = useTransition();
 
@@ -24,6 +26,9 @@ export function ProjectStatusSelect({ projectId, status: initialStatus }: Projec
       if (result.error) {
         setStatus(prev);
         toast({ title: "Failed to update status", description: result.error, variant: "destructive" });
+      } else {
+        toast({ title: "Status updated" });
+        router.refresh();
       }
     });
   }
