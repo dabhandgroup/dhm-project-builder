@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { ProjectForm } from "@/components/projects/project-form";
 import type { ClientOption, TemplateOption } from "@/components/projects/project-form";
 import { createProject, saveDraft, updateProject } from "@/actions/projects";
@@ -12,6 +13,7 @@ interface ProjectFormWrapperProps {
 }
 
 export function ProjectFormWrapper({ clients: initialClients, templates: initialTemplates }: ProjectFormWrapperProps) {
+  const router = useRouter();
   const [clients, setClients] = useState<ClientOption[]>(initialClients ?? []);
   const [templates, setTemplates] = useState<TemplateOption[]>(initialTemplates ?? []);
   const draftIdRef = useRef<string | null>(null);
@@ -46,14 +48,21 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
   async function handleSubmit(data: ProjectFormData) {
     const { crawl_data, is_manual: _im, ...rest } = data;
 
-    if (draftIdRef.current) {
-      await updateProject(draftIdRef.current, rest);
-      await saveCrawlData(draftIdRef.current, crawl_data);
+    let projectId = draftIdRef.current;
+
+    if (projectId) {
+      await updateProject(projectId, rest);
+      await saveCrawlData(projectId, crawl_data);
     } else {
       const result = await createProject(rest);
       if (result && "id" in result && result.id) {
+        projectId = result.id;
         await saveCrawlData(result.id, crawl_data);
       }
+    }
+
+    if (projectId) {
+      router.push(`/projects/${projectId}`);
     }
   }
 

@@ -5,15 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { SiteCrawler } from "@/components/projects/site-crawler";
-import { FirecrawlImport } from "@/components/projects/firecrawl-import";
-import type { FirecrawlImportResult } from "@/components/projects/firecrawl-import";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
-import { aiModels } from "@/constants/ai-models";
+
 import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github } from "lucide-react";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
@@ -150,21 +148,6 @@ export function ProjectForm({
     updateField("client_name", clientSearch);
     setClientDropdownOpen(false);
   }
-
-  const handleFirecrawlImport = useCallback(
-    (result: FirecrawlImportResult) => {
-      if (result.domain && !form.domain_name) {
-        updateField("domain_name", result.domain);
-      }
-      if (result.description && !form.brief) {
-        updateField("brief", result.description);
-      }
-      if (result.ogImage) {
-        // Store OG image URL in brief_summary as a note, or we can use it later
-      }
-    },
-    [form.domain_name, form.brief, updateField]
-  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -455,20 +438,6 @@ export function ProjectForm({
                 />
               )}
 
-              {/* AI Model */}
-              <div className="space-y-2">
-                <Label htmlFor="ai_model">AI Model</Label>
-                <Select
-                  id="ai_model"
-                  value={form.ai_model}
-                  onChange={(e) => updateField("ai_model", e.target.value)}
-                  options={aiModels.map((m) => ({
-                    value: m.value,
-                    label: m.label,
-                  }))}
-                  placeholder="Select AI model"
-                />
-              </div>
             </>
           )}
 
@@ -506,8 +475,6 @@ export function ProjectForm({
         </CardContent>
       </Card>
 
-      {/* Firecrawl JSON Import */}
-      <FirecrawlImport onImport={handleFirecrawlImport} />
 
       {/* Branding (builder mode only) */}
       {!form.is_manual && <Card>
@@ -678,29 +645,6 @@ export function ProjectForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="pages_required">Pages Required</Label>
-            <div className="relative">
-              <Textarea
-                id="pages_required"
-                value={form.pages_required}
-                onChange={(e) => updateField("pages_required", e.target.value)}
-                placeholder="List the pages needed, e.g.:\n- Home\n- About\n- Services\n- Contact"
-                rows={4}
-                className="pr-10"
-              />
-              <div className="absolute right-1 top-1">
-                <MicButton
-                  onTranscription={(text) =>
-                    updateField("pages_required", form.pages_required ? `${form.pages_required}\n${text}` : text)
-                  }
-                  fieldName="pages_required"
-                  projectId={projectId}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="brief">Brief</Label>
             <div className="relative">
               <Textarea
@@ -718,6 +662,29 @@ export function ProjectForm({
                   }
                   onSummary={(summary) => updateField("brief_summary", summary)}
                   fieldName="brief"
+                  projectId={projectId}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="pages_required">Pages Required</Label>
+            <div className="relative">
+              <Textarea
+                id="pages_required"
+                value={form.pages_required}
+                onChange={(e) => updateField("pages_required", e.target.value)}
+                placeholder="List the pages needed, e.g.:\n- Home\n- About\n- Services\n- Contact"
+                rows={4}
+                className="pr-10"
+              />
+              <div className="absolute right-1 top-1">
+                <MicButton
+                  onTranscription={(text) =>
+                    updateField("pages_required", form.pages_required ? `${form.pages_required}\n${text}` : text)
+                  }
+                  fieldName="pages_required"
                   projectId={projectId}
                 />
               </div>
