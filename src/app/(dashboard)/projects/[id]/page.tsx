@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
-import { ProjectStatusBadge } from "@/components/projects/project-status-badge";
+import { ProjectStatusSelect } from "@/components/projects/project-status-select";
 import { OutreachMessageEditor } from "@/components/projects/outreach-message-editor";
 import { CopyButton } from "@/components/shared/copy-button";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default async function ProjectDetailPage({
           <CardHeader>
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base">Project Details</CardTitle>
-              <ProjectStatusBadge status={project.status as ProjectStatus} />
+              <ProjectStatusSelect projectId={id} status={project.status as ProjectStatus} />
             </div>
           </CardHeader>
           <CardContent className="space-y-3 text-sm overflow-hidden">

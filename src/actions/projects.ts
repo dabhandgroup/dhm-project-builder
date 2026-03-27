@@ -61,6 +61,7 @@ export async function updateProject(projectId: string, data: Record<string, any>
 
   revalidatePath("/projects");
   revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/financials");
   revalidatePath("/");
   return { success: true };
 }
