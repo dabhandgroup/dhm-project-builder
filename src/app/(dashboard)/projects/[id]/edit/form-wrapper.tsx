@@ -10,14 +10,12 @@ import { createClientAction } from "@/actions/clients";
 import { uploadProjectAsset, uploadProjectImage, uploadFaviconVariants } from "@/lib/storage";
 import type { ProjectFormData } from "@/types/project";
 import type { ProjectStatus } from "@/types/database";
-import type { CrawlData } from "@/components/projects/site-crawler";
 
 interface EditProjectFormWrapperProps {
   projectId: string;
   projectTitle: string;
   status: ProjectStatus;
   initialData: Partial<ProjectFormData>;
-  initialCrawlData?: CrawlData | null;
   clients: ClientOption[];
   templates: TemplateOption[];
 }
@@ -27,7 +25,6 @@ export function EditProjectFormWrapper({
   projectTitle,
   status,
   initialData,
-  initialCrawlData,
   clients,
   templates,
 }: EditProjectFormWrapperProps) {
@@ -135,7 +132,6 @@ export function EditProjectFormWrapper({
       </div>
       <ProjectForm
         initialData={initialData}
-        initialCrawlData={initialCrawlData}
         projectId={projectId}
         onSubmit={handleSubmit}
         onSaveDraft={handleSaveDraft}

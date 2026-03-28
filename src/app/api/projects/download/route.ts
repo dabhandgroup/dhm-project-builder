@@ -21,9 +21,19 @@ export async function GET(request: NextRequest) {
     .eq("id", projectId)
     .single();
 
-  const storagePath = type === "crawl"
-    ? `crawl-data/${projectId}-site.zip`
-    : `builds/${projectId}.zip`;
+  let storagePath: string;
+  let contentType = "application/zip";
+  let fileExt = ".zip";
+
+  if (type === "crawl") {
+    storagePath = `crawl-data/${projectId}-site.zip`;
+  } else if (type === "redirects") {
+    storagePath = `crawl-data/${projectId}-redirects.csv`;
+    contentType = "text/csv";
+    fileExt = "-redirects.csv";
+  } else {
+    storagePath = `builds/${projectId}.zip`;
+  }
 
   const { data, error } = await supabase.storage
     .from("project-assets")
@@ -32,7 +42,9 @@ export async function GET(request: NextRequest) {
   if (error || !data) {
     const msg = type === "crawl"
       ? "No crawled site files found. Crawl data may not have been saved."
-      : "No build zip found. Run the pipeline first.";
+      : type === "redirects"
+        ? "No redirects CSV found."
+        : "No build zip found. Run the pipeline first.";
     return NextResponse.json({ error: msg }, { status: 404 });
   }
 
@@ -42,12 +54,13 @@ export async function GET(request: NextRequest) {
     .replace(/(^-|-$)/g, "");
 
   const suffix = type === "crawl" ? "-crawl" : "";
+  const filename = type === "redirects" ? `${slug}${fileExt}` : `${slug}${suffix}.zip`;
   const buffer = Buffer.from(await data.arrayBuffer());
 
   return new NextResponse(buffer, {
     headers: {
-      "Content-Type": "application/zip",
-      "Content-Disposition": `attachment; filename="${slug}${suffix}.zip"`,
+      "Content-Type": contentType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
 }

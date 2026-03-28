@@ -3,7 +3,6 @@ import { EditProjectFormWrapper } from "./form-wrapper";
 import { getProjectById } from "@/lib/queries/projects";
 import { getClients } from "@/lib/queries/clients";
 import { getTemplates } from "@/lib/queries/templates";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export default async function EditProjectPage({
   params,
@@ -20,21 +19,7 @@ export default async function EditProjectPage({
 
   if (!project) notFound();
 
-  // Load clients, templates, and crawl data in parallel
-  const loadCrawlData = async () => {
-    try {
-      const admin = createAdminClient();
-      const { data, error } = await admin.storage
-        .from("project-assets")
-        .download(`crawl-data/${id}.json`);
-      if (error || !data) return null;
-      return JSON.parse(await data.text());
-    } catch {
-      return null;
-    }
-  };
-
-  const [allClients, allTemplates, crawlData] = await Promise.all([getClients(), getTemplates(), loadCrawlData()]);
+  const [allClients, allTemplates] = await Promise.all([getClients(), getTemplates()]);
 
   const clientOptions = allClients.map((c) => ({
     id: c.id,
@@ -93,7 +78,7 @@ export default async function EditProjectPage({
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 sm:space-y-6">
-      <EditProjectFormWrapper projectId={id} projectTitle={project.title} status={project.status} initialData={initialData} initialCrawlData={crawlData} clients={clientOptions} templates={templateOptions} />
+      <EditProjectFormWrapper projectId={id} projectTitle={project.title} status={project.status} initialData={initialData} clients={clientOptions} templates={templateOptions} />
     </div>
   );
 }
