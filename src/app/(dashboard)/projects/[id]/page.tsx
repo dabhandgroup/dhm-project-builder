@@ -223,7 +223,7 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* Pipeline */}
-      <PipelineStatus projectId={id} />
+      <PipelineStatus projectId={id} isRebuild={project.is_rebuild} />
 
       {/* Brief — full width, editable */}
       <BriefEditor

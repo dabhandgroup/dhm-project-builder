@@ -27,6 +27,25 @@ export async function GET(req: NextRequest) {
 
     const text = await data.text();
     const crawlData = JSON.parse(text);
+
+    // Try to merge screenshots back into pages (stored separately due to size)
+    try {
+      const { data: ssData } = await admin.storage
+        .from("project-assets")
+        .download(`crawl-data/${projectId}-screenshots.json`);
+      if (ssData) {
+        const screenshots: { url: string; screenshot: string }[] = JSON.parse(await ssData.text());
+        const ssMap = new Map(screenshots.map((s) => [s.url, s.screenshot]));
+        for (const page of crawlData.pages) {
+          if (!page.screenshot && ssMap.has(page.url)) {
+            page.screenshot = ssMap.get(page.url);
+          }
+        }
+      }
+    } catch {
+      // Non-fatal — screenshots are supplementary
+    }
+
     return NextResponse.json({ crawlData });
   } catch {
     return NextResponse.json({ crawlData: null });

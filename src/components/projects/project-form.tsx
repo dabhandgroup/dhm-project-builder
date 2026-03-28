@@ -8,9 +8,6 @@ import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
-import { SiteCrawler } from "@/components/projects/site-crawler";
-import type { CrawlData } from "@/components/projects/site-crawler";
-import { extractContactFromPages } from "@/lib/extract-contact";
 import { generateFaviconVariants, type FaviconVariant } from "@/lib/favicon-converter";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -39,7 +36,6 @@ export interface TemplateOption {
 
 interface ProjectFormProps {
   initialData?: Partial<ProjectFormData>;
-  initialCrawlData?: CrawlData | null;
   projectId?: string;
   onSubmit: (data: ProjectFormData) => Promise<void>;
   onSaveDraft?: (data: ProjectFormData) => Promise<void>;
@@ -51,7 +47,6 @@ interface ProjectFormProps {
 
 export function ProjectForm({
   initialData,
-  initialCrawlData,
   projectId,
   onSubmit,
   onSaveDraft,
@@ -458,85 +453,45 @@ export function ProjectForm({
       </Card>
 
 
-      {/* Site Scan (builder mode only) */}
+      {/* Build Type (builder mode only) */}
       {!form.is_manual && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Site Scan</CardTitle>
+            <CardTitle className="text-lg">Build Type</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Build Type */}
-            <div className="space-y-2">
-              <Label>Build Type</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => updateField("is_rebuild", false)}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                    !form.is_rebuild
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-muted hover:border-muted-foreground/30"
-                  }`}
-                >
-                  <span className="text-2xl">🆕</span>
-                  <span className="text-sm font-medium">New Build</span>
-                  <span className="text-xs text-muted-foreground">Brand new website</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateField("is_rebuild", true)}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                    form.is_rebuild
-                      ? "border-primary bg-primary/5 text-primary"
-                      : "border-muted hover:border-muted-foreground/30"
-                  }`}
-                >
-                  <span className="text-2xl">🔄</span>
-                  <span className="text-sm font-medium">Rebuild</span>
-                  <span className="text-xs text-muted-foreground">Replacing existing site</span>
-                </button>
-              </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => updateField("is_rebuild", false)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                  !form.is_rebuild
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <span className="text-2xl">🆕</span>
+                <span className="text-sm font-medium">New Build</span>
+                <span className="text-xs text-muted-foreground">Brand new website</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField("is_rebuild", true)}
+                className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                  form.is_rebuild
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-muted hover:border-muted-foreground/30"
+                }`}
+              >
+                <span className="text-2xl">🔄</span>
+                <span className="text-sm font-medium">Rebuild</span>
+                <span className="text-xs text-muted-foreground">Replacing existing site</span>
+              </button>
             </div>
-
-            {/* Sitemap URL (auto-set for rebuilds) */}
             {form.is_rebuild && form.domain_name && (
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Sitemap</Label>
-                <p className="text-sm font-mono text-muted-foreground">
-                  https://{form.domain_name}/sitemap.xml
-                </p>
-              </div>
-            )}
-
-            {/* Site Crawler (shown for rebuilds with a domain) */}
-            {form.is_rebuild && form.domain_name && (
-              <SiteCrawler
-                domain={form.domain_name}
-                initialData={initialCrawlData}
-                onCrawlComplete={(data) => {
-                  updateField("crawl_data", data);
-                  // Auto-fill contact details from crawled content
-                  const extracted = extractContactFromPages(data.pages);
-                  if (extracted.email && !form.contact_info.email) {
-                    updateContactField("email", extracted.email);
-                  }
-                  if (extracted.phone && !form.contact_info.phone) {
-                    updateContactField("phone", extracted.phone);
-                  }
-                  if (extracted.address && !form.contact_info.address) {
-                    updateContactField("address", extracted.address);
-                    // Auto-populate target locations from address
-                    if (form.target_locations.length === 0) {
-                      const parts = extracted.address.split(",").map(p => p.trim()).filter(Boolean);
-                      // Use location parts (city/area names), skip house numbers and postcodes
-                      const locations = parts.filter(p => !/^\d/.test(p) && !/^[A-Z]{1,2}\d/.test(p));
-                      if (locations.length > 0) {
-                        updateField("target_locations", locations);
-                      }
-                    }
-                  }
-                }}
-              />
+              <p className="text-xs text-muted-foreground">
+                The existing site at <span className="font-medium">{form.domain_name}</span> will be crawled automatically when you build.
+              </p>
             )}
           </CardContent>
         </Card>
