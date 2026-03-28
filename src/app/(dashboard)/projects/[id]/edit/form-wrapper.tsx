@@ -29,7 +29,19 @@ export function EditProjectFormWrapper({
   const [showDelete, setShowDelete] = useState(false);
 
   async function handleSubmit(data: ProjectFormData) {
-    const { is_manual: _im, ...rest } = data;
+    const {
+      is_manual: _im,
+      crawl_data: _cd,
+      client_name: _cn,
+      favicon: _fav,
+      og_image: _og,
+      logo: _logo,
+      alt_logo: _alt,
+      square_images: _sq,
+      landscape_images: _ls,
+      include_in_financials: _iif,
+      ...rest
+    } = data;
     await updateProject(projectId, rest);
   }
 

@@ -21,7 +21,6 @@ export async function createProject(data: {
   currency?: string;
   one_off_revenue?: number;
   recurring_revenue?: number;
-  include_in_financials?: boolean;
   template_id?: string | null;
   deploy_provider?: string | null;
   preview_url?: string;

@@ -26,6 +26,8 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
+import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
+import { Suspense } from "react";
 import type { ProjectStatus } from "@/types/database";
 
 export default async function ProjectDetailPage({
@@ -63,6 +65,7 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 sm:space-y-6">
+      <Suspense><ConfettiTrigger /></Suspense>
       <PageHeader title={project.title}>
         <Link href={`/projects/${id}/edit`}>
           <Button variant="outline" size="sm">
