@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { SiteCrawler } from "@/components/projects/site-crawler";
+import type { CrawlData } from "@/components/projects/site-crawler";
 import { extractContactFromPages } from "@/lib/extract-contact";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
@@ -37,6 +38,7 @@ export interface TemplateOption {
 
 interface ProjectFormProps {
   initialData?: Partial<ProjectFormData>;
+  initialCrawlData?: CrawlData | null;
   projectId?: string;
   onSubmit: (data: ProjectFormData) => Promise<void>;
   onSaveDraft?: (data: ProjectFormData) => Promise<void>;
@@ -48,6 +50,7 @@ interface ProjectFormProps {
 
 export function ProjectForm({
   initialData,
+  initialCrawlData,
   projectId,
   onSubmit,
   onSaveDraft,
@@ -389,81 +392,6 @@ export function ProjectForm({
             )}
           </div>
 
-          {/* Build Type (builder mode only) */}
-          {!form.is_manual && (
-            <>
-              <div className="space-y-2">
-                <Label>Build Type</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => updateField("is_rebuild", false)}
-                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                      !form.is_rebuild
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-muted hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <span className="text-2xl">🆕</span>
-                    <span className="text-sm font-medium">New Build</span>
-                    <span className="text-xs text-muted-foreground">Brand new website</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => updateField("is_rebuild", true)}
-                    className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
-                      form.is_rebuild
-                        ? "border-primary bg-primary/5 text-primary"
-                        : "border-muted hover:border-muted-foreground/30"
-                    }`}
-                  >
-                    <span className="text-2xl">🔄</span>
-                    <span className="text-sm font-medium">Rebuild</span>
-                    <span className="text-xs text-muted-foreground">Replacing existing site</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Sitemap URL (shown for rebuilds) */}
-              {form.is_rebuild && (
-                <div className="space-y-2">
-                  <Label htmlFor="sitemap_url">Existing Sitemap URL</Label>
-                  <Input
-                    id="sitemap_url"
-                    value={form.sitemap_url}
-                    onChange={(e) => updateField("sitemap_url", e.target.value)}
-                    placeholder="e.g. https://example.com/sitemap.xml"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    The sitemap will be crawled to rebuild all existing pages
-                  </p>
-                </div>
-              )}
-
-              {/* Site Crawler (shown for rebuilds with a domain) */}
-              {form.is_rebuild && form.domain_name && (
-                <SiteCrawler
-                  domain={form.domain_name}
-                  onCrawlComplete={(data) => {
-                    updateField("crawl_data", data);
-                    // Auto-fill contact details from crawled content
-                    const extracted = extractContactFromPages(data.pages);
-                    if (extracted.email && !form.contact_info.email) {
-                      updateContactField("email", extracted.email);
-                    }
-                    if (extracted.phone && !form.contact_info.phone) {
-                      updateContactField("phone", extracted.phone);
-                    }
-                    if (extracted.address && !form.contact_info.address) {
-                      updateContactField("address", extracted.address);
-                    }
-                  }}
-                />
-              )}
-
-            </>
-          )}
-
           {/* Preview URL & GitHub Repo (manual mode) */}
           {form.is_manual && (
             <>
@@ -498,6 +426,87 @@ export function ProjectForm({
         </CardContent>
       </Card>
 
+
+      {/* Site Scan (builder mode only) */}
+      {!form.is_manual && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Site Scan</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Build Type */}
+            <div className="space-y-2">
+              <Label>Build Type</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => updateField("is_rebuild", false)}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                    !form.is_rebuild
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <span className="text-2xl">🆕</span>
+                  <span className="text-sm font-medium">New Build</span>
+                  <span className="text-xs text-muted-foreground">Brand new website</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateField("is_rebuild", true)}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all ${
+                    form.is_rebuild
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-muted hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <span className="text-2xl">🔄</span>
+                  <span className="text-sm font-medium">Rebuild</span>
+                  <span className="text-xs text-muted-foreground">Replacing existing site</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Sitemap URL (shown for rebuilds) */}
+            {form.is_rebuild && (
+              <div className="space-y-2">
+                <Label htmlFor="sitemap_url">Existing Sitemap URL</Label>
+                <Input
+                  id="sitemap_url"
+                  value={form.sitemap_url}
+                  onChange={(e) => updateField("sitemap_url", e.target.value)}
+                  placeholder="e.g. https://example.com/sitemap.xml"
+                />
+                <p className="text-xs text-muted-foreground">
+                  The sitemap will be crawled to rebuild all existing pages
+                </p>
+              </div>
+            )}
+
+            {/* Site Crawler (shown for rebuilds with a domain) */}
+            {form.is_rebuild && form.domain_name && (
+              <SiteCrawler
+                domain={form.domain_name}
+                initialData={initialCrawlData}
+                onCrawlComplete={(data) => {
+                  updateField("crawl_data", data);
+                  // Auto-fill contact details from crawled content
+                  const extracted = extractContactFromPages(data.pages);
+                  if (extracted.email && !form.contact_info.email) {
+                    updateContactField("email", extracted.email);
+                  }
+                  if (extracted.phone && !form.contact_info.phone) {
+                    updateContactField("phone", extracted.phone);
+                  }
+                  if (extracted.address && !form.contact_info.address) {
+                    updateContactField("address", extracted.address);
+                  }
+                }}
+              />
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Branding (builder mode only) */}
       {!form.is_manual && <Card>

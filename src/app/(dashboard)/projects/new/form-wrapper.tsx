@@ -87,6 +87,8 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     }
   }
 
+  const crawlSavedRef = useRef(false);
+
   const handleSaveDraft = useCallback(async (data: ProjectFormData) => {
     const result = await saveDraft(data, draftIdRef.current ?? undefined);
     if (result && "error" in result) {
@@ -94,6 +96,16 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     }
     if (result && "id" in result && result.id) {
       draftIdRef.current = result.id;
+    }
+    // Persist crawl data to storage when we have a draft ID
+    const pid = draftIdRef.current;
+    if (pid && data.crawl_data && !crawlSavedRef.current) {
+      crawlSavedRef.current = true;
+      fetch("/api/crawl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: pid, crawlData: data.crawl_data }),
+      }).catch(() => { crawlSavedRef.current = false; });
     }
   }, []);
 

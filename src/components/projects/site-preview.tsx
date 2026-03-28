@@ -27,7 +27,7 @@ export function SitePreview({ projectId }: SitePreviewProps) {
   const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [expanded, setExpanded] = useState(false);
 
-  const previewUrl = `/api/projects/preview?projectId=${projectId}&file=index.html`;
+  const previewUrl = `/preview/${projectId}`;
   const currentViewport = viewports.find((v) => v.key === viewport)!;
 
   return (
