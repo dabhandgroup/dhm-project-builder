@@ -21,7 +21,6 @@ interface ListProject {
   status: ProjectStatus;
   one_off_revenue: number;
   recurring_revenue: number;
-  ai_model: string | null;
   preview_url: string | null;
   created_at: string;
   clientName?: string | null;
@@ -137,7 +136,6 @@ export function ProjectListView({
             <th className="px-3 py-2 text-right hidden md:table-cell">
               <SortHeader label="MRR" sortKeyVal="recurring_revenue" />
             </th>
-            <th className="px-3 py-2 text-left hidden lg:table-cell">Model</th>
             <th className="px-3 py-2 text-left hidden lg:table-cell">
               <SortHeader label="Created" sortKeyVal="created_at" />
             </th>
@@ -156,17 +154,19 @@ export function ProjectListView({
               style={deletingId === project.id ? { transition: "opacity 0.4s ease-out, transform 0.4s ease-out" } : undefined}
             >
               <td className="px-3 py-2">
-                <Link
-                  href={`/projects/${project.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {project.title}
-                </Link>
-                {project.clientName && (
-                  <p className="text-xs text-muted-foreground">
-                    {project.clientName}
-                  </p>
-                )}
+                <div className="flex items-center justify-between gap-2">
+                  <Link
+                    href={`/projects/${project.id}`}
+                    className="font-medium hover:underline truncate"
+                  >
+                    {project.title}
+                  </Link>
+                  {project.clientName && (
+                    <span className="text-xs text-muted-foreground shrink-0">
+                      {project.clientName}
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-3 py-2 hidden sm:table-cell">
                 <span className="text-xs text-muted-foreground">
@@ -203,13 +203,6 @@ export function ProjectListView({
                 <span className="text-xs font-medium text-green-600">
                   {formatCurrency(project.recurring_revenue)}
                 </span>
-              </td>
-              <td className="px-3 py-2 hidden lg:table-cell">
-                {project.ai_model && (
-                  <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase">
-                    {project.ai_model}
-                  </span>
-                )}
               </td>
               <td className="px-3 py-2 text-xs text-muted-foreground hidden lg:table-cell">
                 {formatDate(project.created_at)}
