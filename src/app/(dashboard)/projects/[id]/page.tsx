@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
+import { BriefEditor } from "@/components/projects/brief-editor";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
 import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
 import { Suspense } from "react";
@@ -224,30 +225,12 @@ export default async function ProjectDetailPage({
       {/* Pipeline */}
       <PipelineStatus projectId={id} />
 
-      {/* Brief — full width with copy */}
-      {project.brief && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Brief</CardTitle>
-              <CopyButton text={project.brief} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">{project.brief}</p>
-            {project.brief_summary && (
-              <div className="mt-4 rounded-md bg-muted/50 p-3">
-                <p className="text-xs font-medium text-muted-foreground mb-1">
-                  AI Summary
-                </p>
-                <p className="text-sm whitespace-pre-wrap">
-                  {project.brief_summary}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Brief — full width, editable */}
+      <BriefEditor
+        projectId={id}
+        initialBrief={project.brief || ""}
+        briefSummary={project.brief_summary}
+      />
 
       {/* Pages Required — full width with copy */}
       {project.pages_required && (
