@@ -32,16 +32,16 @@ async function ContentList() {
   return (
     <div className="space-y-4">
       {plans.map((plan) => {
-        const projectTitle = (plan as Record<string, unknown>).projects
-          ? ((plan as Record<string, unknown>).projects as { title: string })?.title
-          : "Unknown Project";
+        const project = (plan as Record<string, unknown>).projects as { title: string } | null;
+        const projectTitle = project?.title ?? "Standalone Plan";
         const planData = plan.plan_data as { month: string; topic: string; blogTitles?: string[] }[];
         const totalPosts = Array.isArray(planData)
           ? planData.reduce((sum, m) => sum + (m.blogTitles?.length ?? 0), 0)
           : 0;
+        const totalMonths = Array.isArray(planData) ? planData.length : 0;
 
         return (
-          <Link key={plan.id} href={`/content/${plan.project_id}`} className="block">
+          <Link key={plan.id} href={`/content/${plan.id}`} className="block">
             <Card className="hover:bg-accent/30 transition-colors cursor-pointer">
               <CardContent className="p-3 sm:p-4 flex items-center gap-3">
                 <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
@@ -52,7 +52,7 @@ async function ContentList() {
                     {projectTitle}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {totalPosts} posts across 12 months &middot; {formatDate(plan.created_at)}
+                    {totalPosts} posts across {totalMonths} months &middot; {formatDate(plan.created_at)}
                   </p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -5,14 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CopyButton } from "@/components/shared/copy-button";
-import { MessageSquare, Link2 } from "lucide-react";
+import { MessageSquare, Link2, Clock } from "lucide-react";
 
 interface OutreachMessageEditorProps {
   initialMessage: string;
   internalPreviewUrl?: string;
+  hasBuild?: boolean;
 }
 
-export function OutreachMessageEditor({ initialMessage, internalPreviewUrl }: OutreachMessageEditorProps) {
+export function OutreachMessageEditor({ initialMessage, internalPreviewUrl, hasBuild }: OutreachMessageEditorProps) {
   const [deployUrl, setDeployUrl] = useState("");
   const [message, setMessage] = useState(initialMessage);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,6 +52,16 @@ export function OutreachMessageEditor({ initialMessage, internalPreviewUrl }: Ou
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {!hasBuild ? (
+          <div className="flex items-center gap-3 rounded-lg border border-dashed p-4 text-muted-foreground">
+            <Clock className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">No message until website is delivered</p>
+              <p className="text-xs mt-0.5">Build the site first, then the outreach message will be ready to customise and send.</p>
+            </div>
+          </div>
+        ) : (
+        <>
         {/* Deploy URL field */}
         <div className="space-y-1.5">
           <Label className="text-xs flex items-center gap-1.5">
@@ -86,6 +97,8 @@ export function OutreachMessageEditor({ initialMessage, internalPreviewUrl }: Ou
         <p className="text-xs text-muted-foreground">
           Edit the message above, then click Copy to clipboard.
         </p>
+        </>
+        )}
       </CardContent>
     </Card>
   );

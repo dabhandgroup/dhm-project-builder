@@ -276,10 +276,12 @@ export default async function ProjectDetailPage({
         </Card>
       )}
 
-      {/* Outreach Message — only shown after site has been built */}
-      {hasBuild && (
-        <OutreachMessageEditor initialMessage={outreachMessage} internalPreviewUrl={`/preview/${id}`} />
-      )}
+      {/* Outreach Message */}
+      <OutreachMessageEditor
+        initialMessage={outreachMessage}
+        internalPreviewUrl={`/preview/${id}`}
+        hasBuild={hasBuild}
+      />
     </div>
   );
 }

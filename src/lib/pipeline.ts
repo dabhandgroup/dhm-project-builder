@@ -225,6 +225,7 @@ export async function runPipeline(projectId: string) {
       const storedCrawl = await loadCrawlData(projectId);
 
       if (storedCrawl && storedCrawl.pages.length > 0) {
+        substeps.push("scrape");
         setStatus(projectId, { step: "scraping", message: `Using saved crawl data (${storedCrawl.pages.length} pages)`, completed_substeps: [...substeps] });
         existingSiteContent = storedCrawl.pages
           .map((p) => `## ${p.url}\n${p.markdown}`)
@@ -251,7 +252,7 @@ export async function runPipeline(projectId: string) {
 
       // Load the crawled site ZIP for inclusion in the repo
       oldSiteFiles = await loadSiteZipFiles(projectId);
-      substeps.push("scrape");
+      if (!substeps.includes("scrape")) substeps.push("scrape");
     }
 
     // Step 2: Generate site files with AI

@@ -62,11 +62,13 @@ const defaultWordCounts: Record<ContentType, number> = {
 interface ContentPlanClientProps {
   projectId: string;
   projectTitle: string;
+  planId?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   planData: any[];
 }
 
-export function ContentPlanDetailClient({ projectId, projectTitle, planData: rawPlanData }: ContentPlanClientProps) {
+export function ContentPlanDetailClient({ projectId, projectTitle, planId, planData: rawPlanData }: ContentPlanClientProps) {
+  const routeId = planId ?? projectId;
   const planData = (rawPlanData as MonthPlan[]) ?? [];
 
   const [approvedMonths, setApprovedMonths] = useState<Set<number>>(new Set());
@@ -408,7 +410,7 @@ export function ContentPlanDetailClient({ projectId, projectTitle, planData: raw
                                     <div className="flex-1 min-w-0">
                                       {isGenerated ? (
                                         <Link
-                                          href={`/content/${projectId}/post/${i}-${j}`}
+                                          href={`/content/${routeId}/post/${i}-${j}`}
                                           className="text-sm text-primary hover:underline"
                                           onClick={(e) => e.stopPropagation()}
                                         >
@@ -539,7 +541,7 @@ export function ContentPlanDetailClient({ projectId, projectTitle, planData: raw
                     )}
 
                     {status === "generated" && (
-                      <Link href={`/content/${projectId}/post/${i}-0`}>
+                      <Link href={`/content/${routeId}/post/${i}-0`}>
                         <Button
                           size="sm"
                           variant="outline"

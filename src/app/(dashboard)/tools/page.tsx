@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, ImageIcon, ArrowRight, Instagram } from "lucide-react";
+import { Gauge, ImageIcon, ArrowRight, Instagram, PenTool } from "lucide-react";
 
 const tools = [
   {
@@ -24,6 +24,13 @@ const tools = [
       "Generate custom Instagram feed widgets for client websites. No third-party subscriptions needed.",
     href: "/tools/instagram-feed",
     icon: Instagram,
+  },
+  {
+    title: "Content Planner",
+    description:
+      "Generate monthly content plans with AI. Blog posts, service pages, and locational pages organised by month.",
+    href: "/content",
+    icon: PenTool,
   },
 ];
 

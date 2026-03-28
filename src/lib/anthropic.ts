@@ -241,3 +241,100 @@ function parseGeneratedFiles(
       : "Try rebuilding."),
   );
 }
+
+/**
+ * Generate a content plan with AI.
+ * Returns an array of monthly plans with titles, keywords, and notes.
+ */
+export async function generateContentPlan(
+  apiKey: string,
+  opts: {
+    clientName: string;
+    businessType: string;
+    targetAudience: string;
+    locations: string;
+    postsPerMonth: number;
+    months?: number;
+    notes?: string;
+    existingSiteContent?: string;
+  },
+): Promise<{
+  month: string;
+  topic: string;
+  keywords: string[];
+  locations: string[];
+  notes: string;
+  blogTitles: string[];
+}[]> {
+  const totalMonths = opts.months ?? 3;
+
+  const systemPrompt =
+    "You are an SEO content strategist. Generate a monthly content plan.\n" +
+    "CRITICAL: Your ENTIRE response must be a valid JSON array. No text before or after.\n" +
+    "Each element must have: month (string like 'Month 1 - April 2026'), topic (theme for the month), " +
+    "keywords (array of 3-5 target SEO keywords), locations (array of target locations if applicable), " +
+    "notes (brief strategy note for the month), blogTitles (array of post titles for that month).\n" +
+    "Make titles specific, keyword-rich, and actionable. Vary content types: how-to guides, listicles, case studies, FAQ posts.";
+
+  let userPrompt = `Create a ${totalMonths}-month content plan for:
+
+Client: ${opts.clientName}
+Business Type: ${opts.businessType}
+Target Audience: ${opts.targetAudience}
+Target Locations: ${opts.locations || "Not specified"}
+Posts per month: ${opts.postsPerMonth}
+`;
+
+  if (opts.notes) {
+    userPrompt += `\nAdditional notes: ${opts.notes}`;
+  }
+
+  if (opts.existingSiteContent) {
+    const trimmed = opts.existingSiteContent.slice(0, 10000);
+    userPrompt += `\n\nExisting website content (for context and tone):\n${trimmed}`;
+  }
+
+  const res = await fetch(`${ANTHROPIC_API}/messages`, {
+    method: "POST",
+    headers: getHeaders(apiKey),
+    body: JSON.stringify({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 8000,
+      messages: [
+        { role: "user", content: userPrompt },
+        { role: "assistant", content: "[" },
+      ],
+      system: systemPrompt,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || "Failed to generate content plan");
+  }
+
+  const data = await res.json();
+  const text = "[" + (data.content?.[0]?.text ?? "[]");
+
+  // Parse with fallback strategies
+  try {
+    return JSON.parse(text);
+  } catch {
+    // Try stripping markdown fences
+    const stripped = text.replace(/^```(?:json)?\s*\n?/gm, "").replace(/\n?```\s*$/gm, "").trim();
+    try {
+      return JSON.parse(stripped);
+    } catch {
+      // Try extracting JSON array
+      const match = stripped.match(/\[\s*\{[\s\S]*\}\s*\]/);
+      if (match) {
+        try {
+          return JSON.parse(match[0]);
+        } catch {
+          // ignore
+        }
+      }
+      throw new Error("Failed to parse content plan from AI response");
+    }
+  }
+}
