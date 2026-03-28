@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +39,7 @@ interface SubstepDef {
 const buildSubsteps: SubstepDef[] = [
   { key: "template", icon: <Code className="h-3.5 w-3.5" />, label: "Loading template files" },
   { key: "images", icon: <ImageIcon className="h-3.5 w-3.5" />, label: "Loading project images" },
-  { key: "scrape", icon: <Search className="h-3.5 w-3.5" />, label: "Scraping existing site" },
+  { key: "scrape", icon: <Search className="h-3.5 w-3.5" />, label: "Loading site data" },
   { key: "generate", icon: <Cpu className="h-3.5 w-3.5" />, label: "Generating pages with AI" },
   { key: "redirects", icon: <Shield className="h-3.5 w-3.5" />, label: "Creating 301 redirects" },
   { key: "zip", icon: <Package className="h-3.5 w-3.5" />, label: "Packaging downloadable ZIP" },
@@ -91,6 +91,8 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
     completed_substeps?: string[];
   }>({ step: "idle", message: "" });
   const [starting, setStarting] = useState(false);
+  // Prevents polling from resetting status to "idle" right after we click Build
+  const justStartedRef = useRef(false);
   const [crawlData, setCrawlData] = useState<CrawlDataResponse | null>(null);
   const [crawlExpanded, setCrawlExpanded] = useState(false);
   const [pagesExpanded, setPagesExpanded] = useState(true);
@@ -102,13 +104,20 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
       const res = await fetch(`/api/pipeline?projectId=${projectId}`);
       if (res.ok) {
         const data = await res.json();
+        // Don't let "idle" overwrite local state when we just started the pipeline
+        if (data.step === "idle" && justStartedRef.current) {
+          return "pending"; // Keep showing progress
+        }
+        if (data.step !== "idle") {
+          justStartedRef.current = false; // Server has caught up
+        }
         setStatus(data);
         return data.step;
       }
     } catch {
       // Ignore polling errors
     }
-    return "idle";
+    return justStartedRef.current ? "pending" : "idle";
   }, [projectId]);
 
   // Load crawl data for display
@@ -128,9 +137,13 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
+    let cancelled = false;
 
     async function poll() {
+      if (cancelled) return;
       const step = await pollStatus();
+      if (cancelled) return;
+      // Keep polling if pipeline is running OR if we just started (waiting for server to catch up)
       if (step && !["idle", "complete", "failed"].includes(step)) {
         timer = setTimeout(poll, 2000);
       }
@@ -143,11 +156,15 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
     poll();
     // Also try loading crawl data on mount (might already exist from a previous build)
     loadCrawlData();
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [pollStatus, loadCrawlData]);
 
   async function startPipeline() {
     setStarting(true);
+    justStartedRef.current = true;
     try {
       const res = await fetch("/api/pipeline", {
         method: "POST",
@@ -159,10 +176,12 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
         const data = await res.json();
         setStatus({ step: "failed", message: data.error || "Failed to start pipeline" });
         setStarting(false);
+        justStartedRef.current = false;
         return;
       }
 
       setStatus({ step: "pending", message: "Starting pipeline..." });
+      setStarting(false);
 
       const poll = async () => {
         const step = await pollStatus();
@@ -176,8 +195,9 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
       setTimeout(poll, 1000);
     } catch {
       setStatus({ step: "failed", message: "Failed to start pipeline" });
+      setStarting(false);
+      justStartedRef.current = false;
     }
-    setStarting(false);
   }
 
   const isRunning = !["idle", "complete", "failed"].includes(status.step);

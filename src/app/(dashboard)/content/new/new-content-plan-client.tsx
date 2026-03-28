@@ -77,6 +77,11 @@ export function NewContentPlanClient({
     : clients;
 
   async function handleGenerate() {
+    if (!formData.client_name.trim() || !formData.business_type.trim()) {
+      toast({ title: "Please fill in client name and business type", variant: "destructive" });
+      return;
+    }
+
     // Create new client if needed
     if (isNewClient && newClientData.name) {
       const result = await createClientAction({
@@ -95,18 +100,54 @@ export function NewContentPlanClient({
     }
 
     setGenerating(true);
-    const result = await createContentPlan({
-      project_id: formData.project_id || null,
-      plan_data: [],
-    });
 
-    if (result.error) {
-      toast({ title: result.error, variant: "destructive" });
+    try {
+      // Generate plan with AI
+      const aiRes = await fetch("/api/content-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: formData.client_name,
+          businessType: formData.business_type,
+          targetAudience: formData.target_audience,
+          locations: formData.locations,
+          postsPerMonth: formData.monthly_post_count,
+          notes: formData.notes,
+          projectId: formData.project_id || undefined,
+        }),
+      });
+
+      if (!aiRes.ok) {
+        const err = await aiRes.json();
+        toast({ title: err.error || "Failed to generate plan", variant: "destructive" });
+        setGenerating(false);
+        return;
+      }
+
+      const { plan } = await aiRes.json();
+
+      // Save the generated plan
+      const result = await createContentPlan({
+        project_id: formData.project_id || null,
+        plan_data: plan,
+      });
+
+      if (result.error) {
+        toast({ title: result.error, variant: "destructive" });
+        setGenerating(false);
+        return;
+      }
+
+      // Navigate to the new plan
+      if (result.id) {
+        router.push(`/content/${result.id}`);
+      } else {
+        router.push("/content");
+      }
+    } catch (err) {
+      toast({ title: "Failed to generate content plan", variant: "destructive" });
       setGenerating(false);
-      return;
     }
-
-    router.push("/content");
   }
 
   return (

@@ -22,3 +22,15 @@ export async function getContentPlanByProject(projectId: string) {
   if (error) return null;
   return data;
 }
+
+export async function getContentPlanById(planId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("content_plans")
+    .select("*, projects(title)")
+    .eq("id", planId)
+    .single();
+
+  if (error) return null;
+  return data;
+}

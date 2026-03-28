@@ -1,26 +1,18 @@
 import { notFound } from "next/navigation";
-import { getContentPlanByProject } from "@/lib/queries/content-plans";
-import { getProjectById } from "@/lib/queries/projects";
+import { getContentPlanById } from "@/lib/queries/content-plans";
 import { ContentPostClient } from "./content-post-client";
 
 export default async function ContentPostPage({
   params,
 }: {
-  params: Promise<{ projectId: string; postId: string }>;
+  params: Promise<{ planId: string; postId: string }>;
 }) {
-  const { projectId, postId } = await params;
+  const { planId, postId } = await params;
 
-  let project;
-  try {
-    project = await getProjectById(projectId);
-  } catch {
-    notFound();
-  }
-  if (!project) notFound();
-
-  const plan = await getContentPlanByProject(projectId);
+  const plan = await getContentPlanById(planId);
   if (!plan) notFound();
 
+  const project = (plan as Record<string, unknown>).projects as { title: string } | null;
   const planData = (plan.plan_data ?? []) as { month: string; topic: string; blogTitles?: string[] }[];
   const [monthIdx, titleIdx] = postId.split("-").map(Number);
   const monthPlan = planData[monthIdx];
@@ -30,9 +22,9 @@ export default async function ContentPostPage({
 
   return (
     <ContentPostClient
-      projectId={projectId}
+      projectId={plan.project_id ?? planId}
       postId={postId}
-      projectTitle={project.title}
+      projectTitle={project?.title ?? "Content Plan"}
       postTitle={postTitle}
       monthName={monthPlan.month}
     />

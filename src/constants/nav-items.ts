@@ -3,7 +3,6 @@ import {
   FolderKanban,
   Users,
   DollarSign,
-  PenTool,
   Wrench,
   StickyNote,
   Mic,
@@ -49,11 +48,6 @@ export const navItems: NavItem[] = [
     label: "Financials",
     href: "/financials",
     icon: DollarSign,
-  },
-  {
-    label: "Content",
-    href: "/content",
-    icon: PenTool,
   },
   {
     label: "Templates",
