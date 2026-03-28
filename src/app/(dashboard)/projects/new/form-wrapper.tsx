@@ -46,7 +46,19 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
   }
 
   async function handleSubmit(data: ProjectFormData) {
-    const { crawl_data, is_manual: _im, ...rest } = data;
+    const {
+      crawl_data,
+      is_manual: _im,
+      client_name: _cn,
+      favicon: _fav,
+      og_image: _og,
+      logo: _logo,
+      alt_logo: _alt,
+      square_images: _sq,
+      landscape_images: _ls,
+      include_in_financials: _iif,
+      ...rest
+    } = data;
 
     let projectId = draftIdRef.current;
 
@@ -62,7 +74,7 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     }
 
     if (projectId) {
-      router.push(`/projects/${projectId}`);
+      router.push(`/projects/${projectId}?new=1`);
     }
   }
 

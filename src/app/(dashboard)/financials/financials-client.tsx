@@ -351,7 +351,7 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
       ) : (
         <>
           {/* Targets */}
-          {formattedTarget ? (
+          {formattedTarget && (formattedTarget.monthlyMrrTarget > 0 || formattedTarget.monthlyOneOffTarget > 0) ? (
             <TargetsCard
               target={formattedTarget}
               currentMrr={totalMRR}
