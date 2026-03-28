@@ -13,7 +13,8 @@ import { extractContactFromPages } from "@/lib/extract-contact";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 
-import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github, Trash2 } from "lucide-react";
+import { toast } from "@/components/ui/toast";
+import { X, Save, Loader2, Cloud, CloudOff, Search, UserPlus, Building2, Upload, Check, Wrench, Wand2, Globe, Github, Trash2, Rocket } from "lucide-react";
 import type { ProjectFormData } from "@/types/project";
 import { defaultProjectFormData } from "@/types/project";
 
@@ -157,6 +158,12 @@ export function ProjectForm({
     setIsSubmitting(true);
     try {
       await onSubmit(form);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to save project",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -941,7 +948,7 @@ export function ProjectForm({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              {isEditing ? "Updating..." : "Creating..."}
+              {isEditing ? "Saving..." : "Building..."}
             </>
           ) : isEditing ? (
             <>
@@ -949,7 +956,10 @@ export function ProjectForm({
               Save Project
             </>
           ) : (
-            "Create Project"
+            <>
+              <Rocket className="h-4 w-4" />
+              Build Site
+            </>
           )}
         </Button>
       </div>
