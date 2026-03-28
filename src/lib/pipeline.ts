@@ -106,6 +106,11 @@ export async function runPipeline(projectId: string) {
     const project = await getProjectById(projectId);
     if (!project) throw new Error("Project not found");
 
+    // Auto-advance status to initial_draft when build starts
+    if (project.status === "lead") {
+      await supabase.from("projects").update({ status: "initial_draft" }).eq("id", projectId);
+    }
+
     // Load settings
     const settings = await getAllSettings();
     const githubPat = settings.github_pat;
