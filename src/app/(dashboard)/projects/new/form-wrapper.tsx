@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectForm } from "@/components/projects/project-form";
 import type { ClientOption, TemplateOption } from "@/components/projects/project-form";
-import { createProject, saveDraft, updateProject } from "@/actions/projects";
+import { createProject, saveDraft, updateProject, addProjectImage } from "@/actions/projects";
+import { createClientAction } from "@/actions/clients";
+import { uploadProjectAsset, uploadProjectImage, uploadFaviconVariants } from "@/lib/storage";
 import type { ProjectFormData } from "@/types/project";
 
 interface ProjectFormWrapperProps {
@@ -49,7 +51,7 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     const {
       crawl_data,
       is_manual: _im,
-      client_name: _cn,
+      client_name,
       favicon: _fav,
       og_image: _og,
       logo: _logo,
@@ -59,6 +61,19 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
       include_in_financials: _iif,
       ...rest
     } = data;
+
+    // Create new client if name is provided but no existing client selected
+    if (client_name && !rest.client_id) {
+      const clientResult = await createClientAction({
+        name: client_name,
+        email: data.contact_info.email || undefined,
+        phone: data.contact_info.phone || undefined,
+        address: data.contact_info.address || undefined,
+      });
+      if (clientResult && "id" in clientResult) {
+        rest.client_id = clientResult.id;
+      }
+    }
 
     let projectId = draftIdRef.current;
 
@@ -88,8 +103,28 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
   }
 
   const crawlSavedRef = useRef(false);
+  const uploadedFilesRef = useRef<Set<string>>(new Set());
+  const clientCreatedRef = useRef(false);
 
   const handleSaveDraft = useCallback(async (data: ProjectFormData) => {
+    // Create new client if needed (once)
+    if (data.client_name && !data.client_id && !clientCreatedRef.current) {
+      clientCreatedRef.current = true;
+      try {
+        const clientResult = await createClientAction({
+          name: data.client_name,
+          email: data.contact_info.email || undefined,
+          phone: data.contact_info.phone || undefined,
+          address: data.contact_info.address || undefined,
+        });
+        if (clientResult && "id" in clientResult) {
+          data = { ...data, client_id: clientResult.id };
+        }
+      } catch {
+        clientCreatedRef.current = false;
+      }
+    }
+
     const result = await saveDraft(data, draftIdRef.current ?? undefined);
     if (result && "error" in result) {
       throw new Error(result.error);
@@ -97,9 +132,72 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     if (result && "id" in result && result.id) {
       draftIdRef.current = result.id;
     }
-    // Persist crawl data to storage when we have a draft ID
+
     const pid = draftIdRef.current;
-    if (pid && data.crawl_data && !crawlSavedRef.current) {
+    if (!pid) return;
+
+    // Upload file assets to Supabase Storage (skip already-uploaded files)
+    const assetUpdates: Record<string, string> = {};
+    const assetFiles: { file: File | null; type: "favicon" | "og-image" | "logo" | "alt-logo"; dbField: string }[] = [
+      { file: data.favicon, type: "favicon", dbField: "favicon_url" },
+      { file: data.logo, type: "logo", dbField: "logo_url" },
+      { file: data.alt_logo, type: "alt-logo", dbField: "alt_logo_url" },
+    ];
+
+    for (const { file, type, dbField } of assetFiles) {
+      if (!file) continue;
+      const fingerprint = `${type}-${file.name}-${file.size}`;
+      if (uploadedFilesRef.current.has(fingerprint)) continue;
+      try {
+        const url = await uploadProjectAsset(pid, file, type);
+        assetUpdates[dbField] = url;
+        uploadedFilesRef.current.add(fingerprint);
+      } catch (err) {
+        console.error(`Failed to upload ${type}:`, err);
+      }
+    }
+
+    // Upload square/landscape images
+    for (const file of data.square_images) {
+      const fingerprint = `square-${file.name}-${file.size}`;
+      if (uploadedFilesRef.current.has(fingerprint)) continue;
+      try {
+        const url = await uploadProjectImage(pid, file, "square");
+        await addProjectImage(pid, url, "square");
+        uploadedFilesRef.current.add(fingerprint);
+      } catch (err) {
+        console.error("Failed to upload square image:", err);
+      }
+    }
+    for (const file of data.landscape_images) {
+      const fingerprint = `landscape-${file.name}-${file.size}`;
+      if (uploadedFilesRef.current.has(fingerprint)) continue;
+      try {
+        const url = await uploadProjectImage(pid, file, "landscape");
+        await addProjectImage(pid, url, "landscape");
+        uploadedFilesRef.current.add(fingerprint);
+      } catch (err) {
+        console.error("Failed to upload landscape image:", err);
+      }
+    }
+
+    // Upload favicon variants
+    if (data.favicon_variants.length > 0 && !uploadedFilesRef.current.has("favicon-variants")) {
+      try {
+        await uploadFaviconVariants(pid, data.favicon_variants);
+        uploadedFilesRef.current.add("favicon-variants");
+      } catch (err) {
+        console.error("Failed to upload favicon variants:", err);
+      }
+    }
+
+    // Update project with asset URLs
+    if (Object.keys(assetUpdates).length > 0) {
+      await updateProject(pid, assetUpdates);
+    }
+
+    // Persist crawl data to storage
+    if (data.crawl_data && !crawlSavedRef.current) {
       crawlSavedRef.current = true;
       fetch("/api/crawl/save", {
         method: "POST",

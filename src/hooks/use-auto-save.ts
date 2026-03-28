@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
-interface UseAutoSaveOptions<T> {
-  data: T;
-  onSave: (data: T) => Promise<void>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface UseAutoSaveOptions<S = any> {
+  /** Serializable data used for change detection (must not contain File objects etc.) */
+  data: unknown;
+  /** Actual data passed to onSave — may contain non-serializable objects like Files */
+  saveData?: S;
+  onSave: (data: S) => Promise<void>;
   delay?: number;
   enabled?: boolean;
 }
@@ -15,12 +19,13 @@ interface UseAutoSaveReturn {
   isDirty: boolean;
 }
 
-export function useAutoSave<T>({
+export function useAutoSave<S>({
   data,
+  saveData,
   onSave,
   delay = 2000,
   enabled = true,
-}: UseAutoSaveOptions<T>): UseAutoSaveReturn {
+}: UseAutoSaveOptions<S>): UseAutoSaveReturn {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -28,21 +33,24 @@ export function useAutoSave<T>({
   const prevDataRef = useRef<string>("");
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
+  const saveDataRef = useRef(saveData);
+  saveDataRef.current = saveData;
 
-  const save = useCallback(async (saveData: T, serialized: string) => {
+  const save = useCallback(async (serialized: string) => {
     setIsSaving(true);
     try {
-      await onSaveRef.current(saveData);
+      // Use saveData if provided, otherwise fall back to data
+      const payload = (saveDataRef.current ?? data) as S;
+      await onSaveRef.current(payload);
       prevDataRef.current = serialized;
       setLastSaved(new Date());
       setIsDirty(false);
     } catch (err) {
       console.error("Auto-save failed:", err);
-      // Keep isDirty true so the UI shows unsaved state
-      // Don't update prevDataRef so retry is triggered on next change
     } finally {
       setIsSaving(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -58,7 +66,7 @@ export function useAutoSave<T>({
     }
 
     timerRef.current = setTimeout(() => {
-      save(data, serialized);
+      save(serialized);
     }, delay);
 
     return () => {

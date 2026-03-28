@@ -9,18 +9,34 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, PenTool, Loader2 } from "lucide-react";
+import { ArrowLeft, PenTool, Loader2, UserPlus, Search, Building2, X } from "lucide-react";
 import { createContentPlan } from "@/actions/content-plans";
+import { createClientAction } from "@/actions/clients";
 import { toast } from "@/components/ui/toast";
 
 interface ProjectOption {
   id: string;
   title: string;
+  client_id: string | null;
 }
 
-export function NewContentPlanClient({ projects }: { projects: ProjectOption[] }) {
+interface ClientOption {
+  id: string;
+  name: string;
+  email?: string | null;
+  company?: string | null;
+}
+
+export function NewContentPlanClient({
+  projects,
+  clients: initialClients,
+}: {
+  projects: ProjectOption[];
+  clients: ClientOption[];
+}) {
   const router = useRouter();
   const [generating, setGenerating] = useState(false);
+  const [clients, setClients] = useState(initialClients);
   const [formData, setFormData] = useState({
     project_id: "",
     client_name: "",
@@ -31,9 +47,41 @@ export function NewContentPlanClient({ projects }: { projects: ProjectOption[] }
     notes: "",
   });
 
+  // Inline client creation state
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientDropdownOpen, setClientDropdownOpen] = useState(false);
+  const [isNewClient, setIsNewClient] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [newClientData, setNewClientData] = useState({ name: "", email: "", phone: "" });
+
+  const filteredClients = clientSearch.trim()
+    ? clients.filter(
+        (c) =>
+          c.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+          c.company?.toLowerCase().includes(clientSearch.toLowerCase())
+      )
+    : clients;
+
   async function handleGenerate() {
+    // Create new client if needed
+    if (isNewClient && newClientData.name) {
+      const result = await createClientAction({
+        name: newClientData.name,
+        email: newClientData.email || undefined,
+        phone: newClientData.phone || undefined,
+      });
+      if (result && "error" in result) {
+        toast({ title: result.error, variant: "destructive" });
+        return;
+      }
+      if (result && "id" in result) {
+        setSelectedClientId(result.id);
+        setClients((prev) => [...prev, { id: result.id, name: newClientData.name }]);
+      }
+    }
+
     if (!formData.project_id) {
-      toast({ title: "Please select a project", variant: "destructive" });
+      toast({ title: "Please select a project to link this content plan to", variant: "destructive" });
       return;
     }
 
@@ -68,8 +116,124 @@ export function NewContentPlanClient({ projects }: { projects: ProjectOption[] }
           <CardTitle className="text-base">Plan Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Client selector with inline creation */}
+          <div className="space-y-2 relative">
+            <Label>Client (optional)</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={isNewClient ? newClientData.name : clientSearch}
+                onChange={(e) => {
+                  if (isNewClient) {
+                    setNewClientData((prev) => ({ ...prev, name: e.target.value }));
+                  } else {
+                    setClientSearch(e.target.value);
+                    setClientDropdownOpen(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (!isNewClient) setClientDropdownOpen(true);
+                }}
+                placeholder="Search clients or create new..."
+                className="pl-9"
+              />
+              {isNewClient && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewClient(false);
+                    setClientSearch("");
+                    setSelectedClientId(null);
+                    setNewClientData({ name: "", email: "", phone: "" });
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {clientDropdownOpen && !isNewClient && (
+              <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border bg-background shadow-lg max-h-[240px] overflow-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewClient(true);
+                    setNewClientData({ name: clientSearch, email: "", phone: "" });
+                    setClientDropdownOpen(false);
+                  }}
+                  className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors border-b text-sm"
+                >
+                  <UserPlus className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-primary font-medium">
+                    Create new client{clientSearch.trim() ? `: "${clientSearch}"` : ""}
+                  </span>
+                </button>
+
+                {filteredClients.length === 0 ? (
+                  <p className="px-3 py-4 text-center text-sm text-muted-foreground">No clients found</p>
+                ) : (
+                  filteredClients.map((client) => (
+                    <button
+                      key={client.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedClientId(client.id);
+                        setClientSearch(client.name);
+                        setClientDropdownOpen(false);
+                        setFormData((prev) => ({ ...prev, client_name: client.name }));
+                        // Auto-select project linked to this client
+                        const linkedProject = projects.find((p) => p.client_id === client.id);
+                        if (linkedProject) {
+                          setFormData((prev) => ({ ...prev, project_id: linkedProject.id }));
+                        }
+                      }}
+                      className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
+                    >
+                      <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{client.name}</p>
+                        {client.company && (
+                          <p className="text-xs text-muted-foreground truncate">{client.company}</p>
+                        )}
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+
+            {isNewClient && (
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <p className="text-xs font-medium flex items-center gap-1">
+                  <UserPlus className="h-3 w-3 text-primary" />
+                  New Client Details
+                </p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Email</Label>
+                    <Input
+                      type="email"
+                      value={newClientData.email}
+                      onChange={(e) => setNewClientData((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder="e.g. john@business.com"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Phone</Label>
+                    <Input
+                      value={newClientData.phone}
+                      onChange={(e) => setNewClientData((prev) => ({ ...prev, phone: e.target.value }))}
+                      placeholder="e.g. 07700 900000"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-2">
-            <Label>Link to Project (optional)</Label>
+            <Label>Link to Project</Label>
             <Select
               value={formData.project_id}
               onChange={(e) => {
@@ -81,10 +245,19 @@ export function NewContentPlanClient({ projects }: { projects: ProjectOption[] }
                 }));
               }}
               options={[
-                { value: "", label: "None — standalone plan" },
+                { value: "", label: "Select a project..." },
                 ...projects.map((p) => ({ value: p.id, label: p.title })),
               ]}
             />
+            {projects.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                No projects yet.{" "}
+                <Link href="/projects/new" className="text-primary underline">
+                  Create a project
+                </Link>{" "}
+                first to link content to it.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

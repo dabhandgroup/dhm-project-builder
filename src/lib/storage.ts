@@ -42,6 +42,38 @@ export async function uploadProjectImage(
   return getPublicUrl("project-assets", path);
 }
 
+export async function uploadProjectAsset(
+  projectId: string,
+  file: File,
+  assetType: "favicon" | "og-image" | "logo" | "alt-logo",
+) {
+  const ext = file.name.split(".").pop() ?? "png";
+  const path = `${projectId}/${assetType}.${ext}`;
+  await uploadFile("project-assets", path, file);
+  return getPublicUrl("project-assets", path);
+}
+
+export async function uploadFaviconVariants(
+  projectId: string,
+  variants: { name: string; blob: Blob }[],
+) {
+  const urls: Record<string, string> = {};
+  for (const variant of variants) {
+    const path = `${projectId}/favicon/${variant.name}`;
+    const supabase = createClient();
+    const { error } = await supabase.storage
+      .from("project-assets")
+      .upload(path, variant.blob, {
+        upsert: true,
+        contentType: "image/png",
+      });
+    if (!error) {
+      urls[variant.name] = getPublicUrl("project-assets", path);
+    }
+  }
+  return urls;
+}
+
 export async function uploadAvatar(userId: string, file: File) {
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${userId}/avatar-${Date.now()}.${ext}`;

@@ -65,6 +65,7 @@ const NON_DB_FIELDS = [
   "include_in_financials", "is_manual", "client_name",
   "favicon", "og_image", "logo", "alt_logo",
   "square_images", "landscape_images", "crawl_data",
+  "favicon_variants",
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,6 +162,7 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
     crawl_data: _cd,
     is_manual: _im,
     include_in_financials: _iif,
+    favicon_variants: _fv,
     ...dbFields
   } = data;
 
