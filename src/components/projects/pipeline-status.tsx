@@ -57,6 +57,7 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
     preview_url?: string;
     github_repo_url?: string;
     deploy_provider?: string;
+    has_build_zip?: boolean;
   }>({ step: "idle", message: "" });
   const [starting, setStarting] = useState(false);
 
@@ -191,8 +192,31 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
 
             {/* Error */}
             {isFailed && status.error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-3">
+              <div className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950 p-3 space-y-2">
                 <p className="text-sm text-red-600">{status.error}</p>
+                {status.has_build_zip && (
+                  <div className="pt-1">
+                    <p className="text-xs text-muted-foreground mb-1.5">The site was generated before the failure. You can download it:</p>
+                    <div className="flex flex-wrap gap-3">
+                      <a
+                        href={`/api/projects/download?projectId=${projectId}&type=build`}
+                        download
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download built site ZIP
+                      </a>
+                      <a
+                        href={`/api/projects/download?projectId=${projectId}&type=crawl`}
+                        download
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download crawled site files
+                      </a>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

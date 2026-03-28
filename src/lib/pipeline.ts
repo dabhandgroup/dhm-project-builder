@@ -28,6 +28,7 @@ export interface PipelineStatus {
   preview_url?: string;
   github_repo_url?: string;
   deploy_provider?: string;
+  has_build_zip?: boolean;
 }
 
 // In-memory status store (for simplicity — could be Redis/DB in production)
@@ -330,13 +331,24 @@ export async function runPipeline(projectId: string) {
       github_repo_url: githubRepoUrl,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Pipeline failed";
-    setStatus(projectId, { step: "failed", message, error: message });
+    let message = err instanceof Error ? err.message : "Pipeline failed";
 
-    // Update project status to failed
-    await supabase
-      .from("projects")
-      .update({ status: "in_progress" })
-      .eq("id", projectId);
+    // Provide actionable guidance for common GitHub errors
+    if (message.includes("Resource not accessible by personal access token")) {
+      message = "GitHub PAT doesn't have permission to push. Check that your token has 'repo' scope and access to the organisation. Go to Settings to update it.";
+    }
+
+    // Check if a build ZIP was saved before the failure
+    let hasBuildZip = false;
+    try {
+      const { data: zipCheck } = await supabase.storage
+        .from("project-assets")
+        .list("builds", { search: projectId });
+      hasBuildZip = (zipCheck?.length ?? 0) > 0;
+    } catch {
+      // ignore
+    }
+
+    setStatus(projectId, { step: "failed", message, error: message, has_build_zip: hasBuildZip });
   }
 }
