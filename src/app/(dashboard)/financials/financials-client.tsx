@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/page-header";
 import {
   Card,
@@ -154,12 +156,20 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
     clientName: p.clients?.name ?? "",
   }));
 
+  // Pie chart: show ALL projects (not just financially-included ones)
+  const allProjectsFiltered = (data?.projects ?? []).filter((p) => {
+    if (selectedCurrency !== "ALL" && p.currency !== selectedCurrency) return false;
+    if (new Date(p.created_at) < cutoffDate) return false;
+    return true;
+  });
+
   const statusData = [
-    { name: "Lead", value: filteredProjects.filter((p) => p.status === "lead").length, color: "#94a3b8" },
-    { name: "Initial Draft", value: filteredProjects.filter((p) => p.status === "initial_draft").length, color: "#3b82f6" },
-    { name: "Awaiting Feedback", value: filteredProjects.filter((p) => p.status === "awaiting_feedback").length, color: "#f59e0b" },
-    { name: "Revisions", value: filteredProjects.filter((p) => p.status === "revisions").length, color: "#f97316" },
-    { name: "Complete", value: filteredProjects.filter((p) => p.status === "complete").length, color: "#22c55e" },
+    { name: "Lead", value: allProjectsFiltered.filter((p) => p.status === "lead").length, color: "#94a3b8" },
+    { name: "Initial Draft", value: allProjectsFiltered.filter((p) => p.status === "initial_draft").length, color: "#3b82f6" },
+    { name: "Feedback", value: allProjectsFiltered.filter((p) => p.status === "awaiting_feedback").length, color: "#f59e0b" },
+    { name: "Revisions", value: allProjectsFiltered.filter((p) => p.status === "revisions").length, color: "#f97316" },
+    { name: "Payment", value: allProjectsFiltered.filter((p) => p.status === "awaiting_payment").length, color: "#a855f7" },
+    { name: "Complete", value: allProjectsFiltered.filter((p) => p.status === "complete").length, color: "#22c55e" },
   ];
 
   const clientRevMap = new Map<string, { oneOff: number; mrr: number }>();
@@ -341,13 +351,22 @@ export function FinancialsClient({ initialData }: { initialData?: FinancialData 
       ) : (
         <>
           {/* Targets */}
-          {formattedTarget && (
+          {formattedTarget ? (
             <TargetsCard
               target={formattedTarget}
               currentMrr={totalMRR}
               currentOneOff={totalOneOff}
               currency={displayCurrency}
             />
+          ) : (
+            <Card>
+              <CardContent className="flex items-center justify-between py-4">
+                <p className="text-sm text-muted-foreground">No targets set for {displayCurrency}</p>
+                <Link href="/financials/targets">
+                  <Button variant="outline" size="sm">Set Targets</Button>
+                </Link>
+              </CardContent>
+            </Card>
           )}
 
           {/* Charts */}

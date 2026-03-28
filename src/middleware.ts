@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public auth pages that don't require a session
-  const publicAuthPaths = ["/login", "/reset-password"];
+  const publicAuthPaths = ["/login", "/reset-password", "/get-started"];
   const isPublicAuth = publicAuthPaths.includes(pathname);
 
   // Unauthenticated users can only access public auth pages

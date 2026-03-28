@@ -18,6 +18,7 @@ import {
   FileImage,
 } from "lucide-react";
 import { toast } from "@/components/ui/toast";
+import { compressToTarget } from "@/lib/image-compress";
 
 type OutputFormat = "avif" | "webp" | "original";
 
@@ -46,60 +47,6 @@ const QUALITY_PRESETS = [
   { label: "Balanced", quality: 60, description: "Good quality with solid compression" },
   { label: "High", quality: 80, description: "Minimal compression, larger files" },
 ];
-
-function canvasToBlob(canvas: HTMLCanvasElement, mime: string, q: number): Promise<Blob | null> {
-  return new Promise((resolve) => canvas.toBlob(resolve, mime, q));
-}
-
-async function compressToTarget(
-  canvas: HTMLCanvasElement,
-  image: HTMLImageElement,
-  startWidth: number,
-  startHeight: number,
-  mimeType: string,
-  startQuality: number,
-  targetBytes: number,
-): Promise<{ blob: Blob; finalWidth: number; finalHeight: number } | null> {
-  let q = startQuality;
-  let w = startWidth;
-  let h = startHeight;
-
-  // Draw at initial dimensions
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.drawImage(image, 0, 0, w, h);
-
-  // Phase 1: reduce quality
-  let blob = await canvasToBlob(canvas, mimeType, q);
-  while (blob && blob.size > targetBytes && q > 0.10) {
-    q = Math.round((q - 0.05) * 100) / 100;
-    blob = await canvasToBlob(canvas, mimeType, q);
-  }
-
-  // Phase 2: if still too big, scale down dimensions and retry
-  const minW = Math.round(startWidth * 0.3);
-  while (blob && blob.size > targetBytes && w > minW) {
-    w = Math.round(w * 0.8);
-    h = Math.round(h * 0.8);
-    canvas.width = w;
-    canvas.height = h;
-    const ctx2 = canvas.getContext("2d");
-    if (!ctx2) return null;
-    ctx2.drawImage(image, 0, 0, w, h);
-
-    q = startQuality;
-    blob = await canvasToBlob(canvas, mimeType, q);
-    while (blob && blob.size > targetBytes && q > 0.10) {
-      q = Math.round((q - 0.05) * 100) / 100;
-      blob = await canvasToBlob(canvas, mimeType, q);
-    }
-  }
-
-  if (!blob) return null;
-  return { blob, finalWidth: w, finalHeight: h };
-}
 
 export default function ImageOptimiserPage() {
   const [images, setImages] = useState<ImageFile[]>([]);
