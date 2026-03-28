@@ -63,6 +63,60 @@ async function loadCrawlData(projectId: string): Promise<{
   }
 }
 
+// Save crawl data to Supabase storage (reusable by pipeline after live crawl)
+async function saveCrawlDataToStorage(
+  projectId: string,
+  domain: string,
+  pages: { url: string; markdown: string; html?: string; rawHtml?: string; links?: string[]; metadata?: Record<string, unknown>; screenshot?: string | null }[],
+  allUrls: string[],
+) {
+  const supabase = createAdminClient();
+
+  // Save main crawl JSON
+  const crawlJson = JSON.stringify({
+    domain,
+    allUrls,
+    crawledAt: new Date().toISOString(),
+    pages: pages.map((p) => ({
+      url: p.url,
+      markdown: p.markdown,
+      html: p.html || p.rawHtml || "",
+      links: p.links || [],
+      metadata: p.metadata || {},
+      hasScreenshot: !!p.screenshot,
+    })),
+  });
+
+  await supabase.storage
+    .from("project-assets")
+    .upload(`crawl-data/${projectId}.json`, crawlJson, {
+      contentType: "application/json",
+      upsert: true,
+    });
+
+  // Save site ZIP with markdown content
+  const zip = new JSZip();
+  for (const page of pages) {
+    let urlPath: string;
+    try {
+      urlPath = new URL(page.url).pathname.replace(/^\//, "") || "index";
+    } catch {
+      urlPath = "index";
+    }
+    urlPath = urlPath.replace(/\/$/, "");
+    const htmlContent = page.rawHtml || page.html;
+    if (htmlContent) zip.file(`${urlPath}/index.html`, htmlContent);
+    if (page.markdown) zip.file(`${urlPath}/index.md`, page.markdown);
+  }
+  const zipBlob = await zip.generateAsync({ type: "nodebuffer" });
+  await supabase.storage
+    .from("project-assets")
+    .upload(`crawl-data/${projectId}-site.zip`, zipBlob, {
+      contentType: "application/zip",
+      upsert: true,
+    });
+}
+
 // Load stored site ZIP and extract files for inclusion in the repo
 async function loadSiteZipFiles(projectId: string): Promise<{ path: string; content: string; encoding: "utf-8" | "base64" }[]> {
   const supabase = createAdminClient();
@@ -155,23 +209,31 @@ export async function runPipeline(projectId: string) {
     let oldSiteFiles: { path: string; content: string; encoding: "utf-8" | "base64" }[] = [];
 
     if (project.is_rebuild && project.domain_name) {
-      setStatus(projectId, { step: "scraping", message: "Loading site data..." });
+      setStatus(projectId, { step: "scraping", message: "Checking for saved crawl data..." });
 
       // Try loading pre-crawled data from storage first
       const storedCrawl = await loadCrawlData(projectId);
 
       if (storedCrawl && storedCrawl.pages.length > 0) {
+        setStatus(projectId, { step: "scraping", message: `Using saved crawl data (${storedCrawl.pages.length} pages)` });
         existingSiteContent = storedCrawl.pages
           .map((p) => `## ${p.url}\n${p.markdown}`)
           .join("\n\n");
         discoveredUrls = storedCrawl.allUrls;
       } else if (firecrawlKey) {
         // Fallback: live crawl
-        setStatus(projectId, { step: "scraping", message: "Scraping existing site..." });
+        setStatus(projectId, { step: "scraping", message: "No saved data — scraping existing site..." });
         try {
           const result = await crawlSite(firecrawlKey, `https://${project.domain_name}`, 20);
           existingSiteContent = result.pages.map((p) => `## ${p.url}\n${p.markdown}`).join("\n\n");
           discoveredUrls = result.pages.map((p) => p.url);
+
+          // Save crawl data so future builds don't re-scrape
+          try {
+            await saveCrawlDataToStorage(projectId, project.domain_name, result.pages, discoveredUrls);
+          } catch (saveErr) {
+            console.error("Failed to save crawl data:", saveErr);
+          }
         } catch {
           existingSiteContent = "";
         }

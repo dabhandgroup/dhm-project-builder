@@ -52,9 +52,13 @@ export default async function ProjectDetailPage({
     company: string | null;
   } | null;
 
+  // Use the internal preview URL for the outreach message
+  // The user can edit the message to replace with a deployed URL later
+  const internalPreviewUrl = `PREVIEW_URL_PLACEHOLDER`;
+
   const outreachMessage = generateOutreachMessage({
     clientName: client?.name || "there",
-    previewUrl: project.preview_url || `https://${project.domain_name || "preview.dabhandmarketing.com"}`,
+    previewUrl: internalPreviewUrl,
     projectTitle: project.title,
   });
 
@@ -265,7 +269,7 @@ export default async function ProjectDetailPage({
       )}
 
       {/* Outreach Message — full width, editable */}
-      <OutreachMessageEditor initialMessage={outreachMessage} />
+      <OutreachMessageEditor initialMessage={outreachMessage} internalPreviewUrl={`/preview/${id}`} />
     </div>
   );
 }

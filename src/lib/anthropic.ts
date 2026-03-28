@@ -146,7 +146,7 @@ Brief: ${opts.brief}
     headers: getHeaders(apiKey),
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
-      max_tokens: 16384,
+      max_tokens: 64000,
       messages: [{ role: "user", content: userPrompt }],
       system: systemPrompt,
     }),
@@ -159,13 +159,78 @@ Brief: ${opts.brief}
 
   const data = await res.json();
   const text = data.content?.[0]?.text ?? "[]";
+  const stopReason = data.stop_reason;
 
+  return parseGeneratedFiles(text, stopReason);
+}
+
+/**
+ * Parse AI-generated file output with multiple fallback strategies.
+ */
+function parseGeneratedFiles(
+  text: string,
+  stopReason?: string,
+): { path: string; content: string }[] {
+  // Strategy 1: Direct parse
   try {
-    return JSON.parse(text);
+    const result = JSON.parse(text);
+    if (Array.isArray(result)) return result;
   } catch {
-    // Try to extract JSON from the response
-    const jsonMatch = text.match(/\[[\s\S]*\]/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    throw new Error("Failed to parse generated files");
+    // continue to fallbacks
   }
+
+  // Strategy 2: Strip markdown code fences
+  const stripped = text
+    .replace(/^```(?:json)?\s*\n?/gm, "")
+    .replace(/\n?```\s*$/gm, "")
+    .trim();
+  try {
+    const result = JSON.parse(stripped);
+    if (Array.isArray(result)) return result;
+  } catch {
+    // continue
+  }
+
+  // Strategy 3: Extract JSON array from text
+  const match = stripped.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (match) {
+    try {
+      const result = JSON.parse(match[0]);
+      if (Array.isArray(result)) return result;
+    } catch {
+      // continue
+    }
+  }
+
+  // Strategy 4: If response was truncated (max_tokens), try to close the JSON
+  if (stopReason === "max_tokens" || !stripped.trimEnd().endsWith("]")) {
+    // Find the last complete object (ends with }) and close the array
+    const lastBrace = stripped.lastIndexOf("}");
+    if (lastBrace > 0) {
+      const truncated = stripped.slice(0, lastBrace + 1) + "]";
+      // Find the start of the array
+      const arrayStart = truncated.indexOf("[");
+      if (arrayStart >= 0) {
+        try {
+          const result = JSON.parse(truncated.slice(arrayStart));
+          if (Array.isArray(result)) return result;
+        } catch {
+          // continue
+        }
+      }
+    }
+  }
+
+  console.error(
+    "Failed to parse AI response. stop_reason:",
+    stopReason,
+    "First 500 chars:",
+    text.slice(0, 500),
+  );
+  throw new Error(
+    "Failed to parse generated files — the AI response could not be parsed as JSON. " +
+    (stopReason === "max_tokens"
+      ? "The response was truncated due to length. Try a shorter brief or fewer pages."
+      : "Try rebuilding."),
+  );
 }
