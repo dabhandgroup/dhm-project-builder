@@ -34,7 +34,7 @@ async function ProjectsList() {
         title="No projects yet"
         description="Create your first project to get started."
       >
-        <Link href="/projects/new">
+        <Link href="/">
           <Button size="sm">
             <Plus className="h-4 w-4" />
             New Project
@@ -61,7 +61,7 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Projects">
-        <Link href="/projects/new">
+        <Link href="/">
           <Button>
             <Plus className="h-4 w-4" />
             New Project

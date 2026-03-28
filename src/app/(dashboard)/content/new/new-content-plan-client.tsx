@@ -302,7 +302,7 @@ export function NewContentPlanClient({
             {projects.length === 0 && (
               <p className="text-xs text-muted-foreground">
                 No projects yet.{" "}
-                <Link href="/projects/new" className="text-primary underline">
+                <Link href="/" className="text-primary underline">
                   Create a project
                 </Link>{" "}
                 first to link content to it.
