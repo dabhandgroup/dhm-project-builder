@@ -39,11 +39,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
   const addToast = React.useCallback((t: Omit<Toast, "id">) => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts((prev) => [...prev, { ...t, id }]);
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((toast) => toast.id !== id));
-    }, 5000);
+    setToasts((prev) => {
+      // Deduplicate: skip if an identical toast is already showing
+      if (prev.some((existing) => existing.title === t.title && existing.description === t.description)) {
+        return prev;
+      }
+      const id = Math.random().toString(36).slice(2);
+      setTimeout(() => {
+        setToasts((p) => p.filter((toast) => toast.id !== id));
+      }, 5000);
+      return [...prev, { ...t, id }];
+    });
   }, []);
 
   const dismiss = React.useCallback((id: string) => {

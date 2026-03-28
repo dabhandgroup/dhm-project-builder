@@ -10,6 +10,7 @@ interface OnboardingData {
   hasWebsite: boolean;
   websiteUrl: string;
   competitors: string[];
+  coolSites: string[];
 }
 
 export async function submitOnboarding(data: OnboardingData) {
@@ -40,7 +41,10 @@ export async function submitOnboarding(data: OnboardingData) {
     briefParts.push(`Existing website: ${data.websiteUrl}`);
   }
   if (data.competitors.length > 0) {
-    briefParts.push(`Competitor sites they like:\n${data.competitors.map((c) => `  - ${c}`).join("\n")}`);
+    briefParts.push(`Competitors:\n${data.competitors.map((c) => `  - ${c}`).join("\n")}`);
+  }
+  if (data.coolSites.length > 0) {
+    briefParts.push(`Cool sites they liked the look of:\n${data.coolSites.map((c) => `  - ${c}`).join("\n")}`);
   }
 
   // Create project record
