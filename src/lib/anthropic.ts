@@ -100,7 +100,10 @@ export async function generateSiteFiles(
 ): Promise<{ path: string; content: string }[]> {
   const systemPrompt =
     "You are a web developer. Customise a website template for a client. " +
-    "Return ONLY a JSON array of {path, content} objects. No markdown fences. " +
+    "CRITICAL: Return ONLY a raw JSON array of {path, content} objects. " +
+    "No markdown fences, no explanation, no text before or after the array. " +
+    "Start your response with [ and end with ]. " +
+    "Each object must have exactly two keys: \"path\" (file path string) and \"content\" (file content string). " +
     "Preserve template structure. Update text, colours and branding per the brief. " +
     "Use provided image paths in <img> tags: square images for logos/thumbnails, landscape for heroes/banners." +
     (opts.oldSitePages?.length
@@ -147,7 +150,10 @@ Brief: ${opts.brief}
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: 64000,
-      messages: [{ role: "user", content: userPrompt }],
+      messages: [
+        { role: "user", content: userPrompt },
+        { role: "assistant", content: "[" },
+      ],
       system: systemPrompt,
     }),
   });
@@ -158,7 +164,8 @@ Brief: ${opts.brief}
   }
 
   const data = await res.json();
-  const text = data.content?.[0]?.text ?? "[]";
+  // Prepend "[" because assistant prefill starts the response with it
+  const text = "[" + (data.content?.[0]?.text ?? "[]");
   const stopReason = data.stop_reason;
 
   return parseGeneratedFiles(text, stopReason);

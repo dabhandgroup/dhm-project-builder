@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
+import { createClient } from "@/lib/supabase/server";
 import { BriefEditor } from "@/components/projects/brief-editor";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
 import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
@@ -45,6 +46,13 @@ export default async function ProjectDetailPage({
   }
 
   if (!project) notFound();
+
+  // Check if a build ZIP exists (to conditionally show outreach message)
+  const supabase = await createClient();
+  const { data: buildFiles } = await supabase.storage
+    .from("project-assets")
+    .list("builds", { search: id });
+  const hasBuild = (buildFiles?.length ?? 0) > 0;
 
   const client = (project as Record<string, unknown>).clients as {
     id: string;
@@ -268,8 +276,10 @@ export default async function ProjectDetailPage({
         </Card>
       )}
 
-      {/* Outreach Message — full width, editable */}
-      <OutreachMessageEditor initialMessage={outreachMessage} internalPreviewUrl={`/preview/${id}`} />
+      {/* Outreach Message — only shown after site has been built */}
+      {hasBuild && (
+        <OutreachMessageEditor initialMessage={outreachMessage} internalPreviewUrl={`/preview/${id}`} />
+      )}
     </div>
   );
 }

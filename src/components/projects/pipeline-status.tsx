@@ -25,32 +25,28 @@ import {
   FileSpreadsheet,
   Package,
   Shield,
-  Paintbrush,
-  FileCheck,
+  Image as ImageIcon,
+  Github,
 } from "lucide-react";
 import { SitePreview } from "@/components/projects/site-preview";
 
-interface StepDef {
+interface SubstepDef {
   key: string;
   label: string;
   icon: React.ReactNode;
-  description?: string;
 }
 
-const buildSteps: StepDef[] = [
-  { key: "scraping", label: "Scrape Existing Site", icon: <Search className="h-4 w-4" />, description: "Crawling pages, extracting content, screenshots & assets" },
-  { key: "generating", label: "Building Site", icon: <Cpu className="h-4 w-4" />, description: "AI generating HTML, CSS, images & page structure" },
+const buildSubsteps: SubstepDef[] = [
+  { key: "template", icon: <Code className="h-3.5 w-3.5" />, label: "Loading template files" },
+  { key: "images", icon: <ImageIcon className="h-3.5 w-3.5" />, label: "Loading project images" },
+  { key: "scrape", icon: <Search className="h-3.5 w-3.5" />, label: "Scraping existing site" },
+  { key: "generate", icon: <Cpu className="h-3.5 w-3.5" />, label: "Generating pages with AI" },
+  { key: "redirects", icon: <Shield className="h-3.5 w-3.5" />, label: "Creating 301 redirects" },
+  { key: "zip", icon: <Package className="h-3.5 w-3.5" />, label: "Packaging downloadable ZIP" },
+  { key: "push", icon: <Github className="h-3.5 w-3.5" />, label: "Pushing to GitHub" },
 ];
 
-const buildChecklist = [
-  { icon: <FileText className="h-3.5 w-3.5" />, label: "Page content & structure" },
-  { icon: <Paintbrush className="h-3.5 w-3.5" />, label: "Styles & responsive design" },
-  { icon: <FileCheck className="h-3.5 w-3.5" />, label: "SEO meta tags & sitemap" },
-  { icon: <Shield className="h-3.5 w-3.5" />, label: "301 redirects from old URLs" },
-  { icon: <Package className="h-3.5 w-3.5" />, label: "Downloadable ZIP package" },
-];
-
-type StepStatus = "pending" | "scraping" | "generating" | "complete" | "failed" | "idle";
+type StepStatus = "pending" | "scraping" | "generating" | "pushing" | "complete" | "failed" | "idle";
 
 interface CrawlPage {
   url: string;
@@ -69,20 +65,20 @@ interface CrawlDataResponse {
   crawledAt?: string;
 }
 
-function getStepState(currentStep: StepStatus, stepKey: string): "done" | "active" | "pending" | "failed" {
-  const order = [...buildSteps.map((s) => s.key), "complete"];
-  const currentIdx = order.indexOf(currentStep);
-  const stepIdx = order.indexOf(stepKey);
-
-  if (currentStep === "failed") {
-    if (stepIdx < currentIdx) return "done";
-    if (stepIdx === currentIdx) return "failed";
-    return "pending";
+function getSubstepState(
+  substepKey: string,
+  completedSubsteps: string[],
+  isRunning: boolean,
+  isComplete: boolean,
+): "done" | "active" | "pending" {
+  if (completedSubsteps.includes(substepKey)) return "done";
+  if (isComplete) return "done";
+  // The next uncompleted substep is active if pipeline is still running
+  if (isRunning) {
+    const allKeys = buildSubsteps.map((s) => s.key);
+    const nextKey = allKeys.find((k) => !completedSubsteps.includes(k));
+    if (nextKey === substepKey) return "active";
   }
-
-  if (currentStep === "complete") return "done";
-  if (stepIdx < currentIdx) return "done";
-  if (stepIdx === currentIdx) return "active";
   return "pending";
 }
 
@@ -92,6 +88,7 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
     message: string;
     error?: string;
     has_build_zip?: boolean;
+    completed_substeps?: string[];
   }>({ step: "idle", message: "" });
   const [starting, setStarting] = useState(false);
   const [crawlData, setCrawlData] = useState<CrawlDataResponse | null>(null);
@@ -217,48 +214,35 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
         <CardContent className="space-y-4">
           {status.step !== "idle" && (
             <>
-              {/* Step indicators */}
-              <div className="space-y-2">
-                {buildSteps.map((step) => {
-                  const state = getStepState(status.step, step.key);
-                  return (
-                    <div key={step.key} className="flex items-start gap-3">
-                      <div className="shrink-0 mt-0.5">
-                        {state === "done" && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-                        {state === "active" && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
-                        {state === "pending" && <div className="h-5 w-5 rounded-full border-2 border-muted" />}
-                        {state === "failed" && <XCircle className="h-5 w-5 text-red-500" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 text-sm">
-                          {step.icon}
-                          <span className={state === "active" ? "font-medium" : state === "pending" ? "text-muted-foreground" : ""}>
-                            {step.label}
-                          </span>
+              {/* Live build checklist */}
+              <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Build Progress</p>
+                <div className="grid gap-1.5">
+                  {buildSubsteps.map((substep) => {
+                    const state = getSubstepState(
+                      substep.key,
+                      status.completed_substeps ?? [],
+                      isRunning,
+                      isComplete,
+                    );
+                    return (
+                      <div key={substep.key} className="flex items-center gap-2.5 text-xs">
+                        <div className="shrink-0">
+                          {state === "done" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
+                          {state === "active" && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
+                          {state === "pending" && <div className="h-4 w-4 rounded-full border-2 border-muted" />}
                         </div>
-                        {state === "active" && step.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{step.description}</p>
-                        )}
+                        <span className={state === "done" ? "text-foreground" : state === "active" ? "text-foreground font-medium" : "text-muted-foreground"}>
+                          {substep.icon}
+                        </span>
+                        <span className={state === "done" ? "text-foreground" : state === "active" ? "text-foreground font-medium" : "text-muted-foreground"}>
+                          {substep.label}
+                        </span>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Building checklist (shown during generation) */}
-              {status.step === "generating" && (
-                <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Building includes</p>
-                  <div className="grid gap-1.5">
-                    {buildChecklist.map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
-              )}
+              </div>
 
               {/* Status message */}
               <p className="text-xs text-muted-foreground">{status.message}</p>

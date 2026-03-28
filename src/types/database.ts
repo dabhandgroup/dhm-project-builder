@@ -322,7 +322,7 @@ export interface Database {
       content_plans: {
         Row: {
           id: string;
-          project_id: string;
+          project_id: string | null;
           plan_data: Json;
           google_sheet_url: string | null;
           google_doc_url: string | null;
@@ -332,7 +332,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          project_id: string;
+          project_id?: string | null;
           plan_data?: Json;
           google_sheet_url?: string | null;
           google_doc_url?: string | null;
