@@ -33,7 +33,7 @@ export default async function ClientDetailPage({
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader title={client.name}>
-        <Link href={`/projects/new?client=${encodeURIComponent(client.name)}`}>
+        <Link href={`/?client=${encodeURIComponent(client.name)}`}>
           <Button size="sm">
             <Plus className="h-4 w-4" />
             New Project

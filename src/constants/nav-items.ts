@@ -8,7 +8,6 @@ import {
   Mic,
   UserCog,
   Settings,
-  LayoutDashboard,
   LayoutTemplate,
   type LucideIcon,
 } from "lucide-react";
@@ -24,13 +23,8 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   {
-    label: "Dashboard",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
     label: "New Project",
-    href: "/projects/new",
+    href: "/",
     icon: Plus,
     accent: true,
   },
