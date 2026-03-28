@@ -27,6 +27,7 @@ import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
 import { createClient } from "@/lib/supabase/server";
 import { BriefEditor } from "@/components/projects/brief-editor";
+import { AiPromptCard } from "@/components/projects/ai-prompt-card";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
 import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
 import { Suspense } from "react";
@@ -242,6 +243,19 @@ export default async function ProjectDetailPage({
         projectId={id}
         initialBrief={project.brief || ""}
         briefSummary={project.brief_summary}
+      />
+
+      {/* AI Prompt */}
+      <AiPromptCard
+        projectId={id}
+        brief={project.brief || ""}
+        pagesRequired={project.pages_required}
+        domainName={project.domain_name}
+        isRebuild={project.is_rebuild}
+        clientName={client?.name || project.title}
+        targetLocations={project.target_locations}
+        additionalNotes={project.additional_notes}
+        contactInfo={contactInfo}
       />
 
       {/* Pages Required — full width with copy */}

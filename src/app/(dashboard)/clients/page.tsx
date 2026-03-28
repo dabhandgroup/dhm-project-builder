@@ -22,53 +22,67 @@ async function ClientsList() {
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {formattedClients.map((client) => (
-        <Link key={client.id} href={`/clients/${client.id}`}>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <CardContent className="p-4 sm:p-4 space-y-2">
-              <div className="flex items-start justify-between">
-                <h3 className="font-semibold text-sm">{client.name}</h3>
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+    <Card>
+      <CardContent className="p-0 divide-y">
+        {formattedClients.map((client) => (
+          <Link key={client.id} href={`/clients/${client.id}`} className="block">
+            <div className="flex items-center gap-4 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium text-sm truncate">{client.name}</h3>
+                  {client.company && (
+                    <span className="text-xs text-muted-foreground truncate hidden sm:inline">
+                      {client.company}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                  {client.email && (
+                    <span className="flex items-center gap-1 truncate">
+                      <Mail className="h-3 w-3 shrink-0" /> {client.email}
+                    </span>
+                  )}
+                  {client.phone && (
+                    <span className="flex items-center gap-1 hidden sm:flex">
+                      <Phone className="h-3 w-3 shrink-0" /> {client.phone}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-3 shrink-0 text-xs">
+                {client.total_mrr > 0 && (
+                  <span className="font-medium text-green-600">
+                    ${client.total_mrr}/mo
+                  </span>
+                )}
+                <span className="flex items-center gap-1 text-muted-foreground">
                   <FolderKanban className="h-3 w-3" />
                   {client.project_count}
                 </span>
               </div>
-              {client.company && (
-                <p className="text-xs text-muted-foreground">{client.company}</p>
-              )}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                {client.email && (
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3 w-3" /> {client.email}
-                  </span>
-                )}
-                {client.phone && (
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3 w-3" /> {client.phone}
-                  </span>
-                )}
-              </div>
-              {client.total_mrr > 0 && (
-                <p className="text-xs font-medium text-green-600">
-                  ${client.total_mrr}/mo
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </Link>
-      ))}
-    </div>
+            </div>
+          </Link>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 
 function ClientsListLoading() {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-28 rounded-lg" />
-      ))}
-    </div>
+    <Card>
+      <CardContent className="p-0 divide-y">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-4 px-4 py-3">
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -18,9 +18,25 @@ import {
   Loader2,
   Settings2,
   Eye,
+  RefreshCw,
+  LayoutGrid,
+  GalleryHorizontal,
+  Rows3,
+  Check,
 } from "lucide-react";
 
 // --- Types ---
+
+type LayoutType = "grid" | "slider" | "carousel";
+
+interface InstagramPost {
+  id: string;
+  shortcode: string;
+  imageUrl: string;
+  caption: string;
+  link: string;
+  isVideo: boolean;
+}
 
 interface WidgetConfig {
   id: string;
@@ -33,6 +49,14 @@ interface WidgetConfig {
   showCaption: boolean;
   bgColor: string;
   hoverEffect: boolean;
+  layout: LayoutType;
+  photosOnly: boolean;
+  showHeader: boolean;
+  // Fetched data (baked into embed)
+  posts?: InstagramPost[];
+  profilePicUrl?: string;
+  fullName?: string;
+  fetchedAt?: number;
 }
 
 const DEFAULT_CONFIG: Omit<WidgetConfig, "id" | "clientName" | "username"> = {
@@ -43,6 +67,9 @@ const DEFAULT_CONFIG: Omit<WidgetConfig, "id" | "clientName" | "username"> = {
   showCaption: false,
   bgColor: "#ffffff",
   hoverEffect: true,
+  layout: "grid",
+  photosOnly: true,
+  showHeader: true,
 };
 
 const STORAGE_KEY = "dhm-instagram-widgets";
@@ -64,11 +91,43 @@ function saveWidgets(widgets: WidgetConfig[]) {
 
 function generateEmbedCode(config: WidgetConfig): string {
   const widgetId = `dhm-ig-${config.username.replace(/[^a-z0-9]/gi, "")}`;
+  const posts = (config.posts || []).slice(0, config.postCount);
+
+  if (posts.length === 0) {
+    return `<!-- DHM Instagram Feed Widget — ${config.clientName} -->\n<!-- No posts loaded. Refresh the widget to fetch posts. -->`;
+  }
+
+  // Build header HTML
+  const headerHtml = config.showHeader
+    ? `<div class="dhm-ig-header">
+    ${config.profilePicUrl ? `<img src="${config.profilePicUrl}" alt="${config.username}"/>` : ""}
+    <a href="https://www.instagram.com/${config.username}/" target="_blank" rel="noopener">@${config.username}</a>
+  </div>`
+    : "";
+
+  // Build posts HTML
+  const postsHtml = posts
+    .map(
+      (p) =>
+        `<div class="dhm-ig-item">
+      <a href="${p.link}" target="_blank" rel="noopener">
+        <img src="${p.imageUrl}" alt="${p.caption ? p.caption.substring(0, 80) : "Instagram post"}" loading="lazy"/>
+        <div class="dhm-ig-overlay"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5"/></svg></div>
+      </a>${config.showCaption && p.caption ? `\n      <div class="dhm-ig-caption">${p.caption.substring(0, 100)}</div>` : ""}
+    </div>`,
+    )
+    .join("\n    ");
+
   const hoverCss = config.hoverEffect
     ? `#${widgetId} .dhm-ig-item:hover{transform:scale(1.03);z-index:1}#${widgetId} .dhm-ig-item:hover .dhm-ig-overlay{opacity:1}`
     : "";
 
-  return `<!-- DHM Instagram Feed Widget — ${config.clientName} -->
+  const captionCss = config.showCaption
+    ? `#${widgetId} .dhm-ig-caption{padding:8px;font-size:13px;color:#262626;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}`
+    : "";
+
+  if (config.layout === "grid") {
+    return `<!-- DHM Instagram Feed Widget — ${config.clientName} -->
 <div id="${widgetId}">
   <style>
     #${widgetId}{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:${config.bgColor};max-width:100%}
@@ -79,55 +138,114 @@ function generateEmbedCode(config: WidgetConfig): string {
     #${widgetId} .dhm-ig-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
     #${widgetId} .dhm-ig-overlay svg{width:28px;height:28px;color:#fff;fill:#fff}
     ${hoverCss}
-    ${config.showCaption ? `#${widgetId} .dhm-ig-caption{padding:8px;font-size:13px;color:#262626;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}` : ""}
+    ${captionCss}
     #${widgetId} .dhm-ig-header{display:flex;align-items:center;gap:10px;padding:12px 0;margin-bottom:8px}
     #${widgetId} .dhm-ig-header img{width:36px;height:36px;border-radius:50%}
     #${widgetId} .dhm-ig-header a{font-weight:600;font-size:14px;color:#262626;text-decoration:none}
     #${widgetId} .dhm-ig-header a:hover{color:#0095f6}
-    #${widgetId} .dhm-ig-loading{text-align:center;padding:40px;color:#8e8e8e;font-size:14px}
-    #${widgetId} .dhm-ig-error{text-align:center;padding:40px;color:#ed4956;font-size:14px}
     @media(max-width:640px){#${widgetId} .dhm-ig-grid{grid-template-columns:repeat(2,1fr)}}
   </style>
-  <div class="dhm-ig-loading">Loading Instagram feed…</div>
+  ${headerHtml}
+  <div class="dhm-ig-grid">
+    ${postsHtml}
+  </div>
+</div>`;
+  }
+
+  if (config.layout === "slider") {
+    return `<!-- DHM Instagram Feed Widget — ${config.clientName} -->
+<div id="${widgetId}">
+  <style>
+    #${widgetId}{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:${config.bgColor};max-width:100%;position:relative}
+    #${widgetId} .dhm-ig-slider{display:flex;gap:${config.gap}px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px}
+    #${widgetId} .dhm-ig-slider::-webkit-scrollbar{display:none}
+    #${widgetId} .dhm-ig-item{flex:0 0 calc(${100 / config.columns}% - ${config.gap * (config.columns - 1) / config.columns}px);scroll-snap-align:start;position:relative;overflow:hidden;border-radius:${config.borderRadius}px;transition:transform .2s;aspect-ratio:1}
+    #${widgetId} .dhm-ig-item img{width:100%;height:100%;object-fit:cover;display:block}
+    #${widgetId} .dhm-ig-item a{display:block;width:100%;height:100%}
+    #${widgetId} .dhm-ig-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+    #${widgetId} .dhm-ig-overlay svg{width:28px;height:28px;color:#fff;fill:#fff}
+    ${hoverCss}
+    ${captionCss}
+    #${widgetId} .dhm-ig-header{display:flex;align-items:center;gap:10px;padding:12px 0;margin-bottom:8px}
+    #${widgetId} .dhm-ig-header img{width:36px;height:36px;border-radius:50%}
+    #${widgetId} .dhm-ig-header a{font-weight:600;font-size:14px;color:#262626;text-decoration:none}
+    #${widgetId} .dhm-ig-header a:hover{color:#0095f6}
+    #${widgetId} .dhm-ig-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.9);border:1px solid #ddd;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+    #${widgetId} .dhm-ig-nav:hover{background:#fff}
+    #${widgetId} .dhm-ig-prev{left:4px}
+    #${widgetId} .dhm-ig-next{right:4px}
+    @media(max-width:640px){#${widgetId} .dhm-ig-item{flex:0 0 calc(50% - ${config.gap / 2}px)}}
+  </style>
+  ${headerHtml}
+  <div style="position:relative">
+    <div class="dhm-ig-slider" id="${widgetId}-track">
+      ${postsHtml}
+    </div>
+    <button class="dhm-ig-nav dhm-ig-prev" onclick="document.getElementById('${widgetId}-track').scrollBy({left:-300,behavior:'smooth'})" aria-label="Previous">&lsaquo;</button>
+    <button class="dhm-ig-nav dhm-ig-next" onclick="document.getElementById('${widgetId}-track').scrollBy({left:300,behavior:'smooth'})" aria-label="Next">&rsaquo;</button>
+  </div>
+</div>`;
+  }
+
+  // Carousel layout
+  return `<!-- DHM Instagram Feed Widget — ${config.clientName} -->
+<div id="${widgetId}">
+  <style>
+    #${widgetId}{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:${config.bgColor};max-width:100%;position:relative}
+    #${widgetId} .dhm-ig-carousel{position:relative;overflow:hidden;border-radius:${config.borderRadius}px;aspect-ratio:1}
+    #${widgetId} .dhm-ig-slide{position:absolute;inset:0;opacity:0;transition:opacity .5s}
+    #${widgetId} .dhm-ig-slide.active{opacity:1}
+    #${widgetId} .dhm-ig-slide img{width:100%;height:100%;object-fit:cover;display:block}
+    #${widgetId} .dhm-ig-slide a{display:block;width:100%;height:100%}
+    #${widgetId} .dhm-ig-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+    #${widgetId} .dhm-ig-overlay svg{width:28px;height:28px;color:#fff;fill:#fff}
+    ${hoverCss}
+    ${captionCss}
+    #${widgetId} .dhm-ig-header{display:flex;align-items:center;gap:10px;padding:12px 0;margin-bottom:8px}
+    #${widgetId} .dhm-ig-header img{width:36px;height:36px;border-radius:50%}
+    #${widgetId} .dhm-ig-header a{font-weight:600;font-size:14px;color:#262626;text-decoration:none}
+    #${widgetId} .dhm-ig-header a:hover{color:#0095f6}
+    #${widgetId} .dhm-ig-dots{display:flex;justify-content:center;gap:6px;padding:12px 0}
+    #${widgetId} .dhm-ig-dot{width:8px;height:8px;border-radius:50%;background:#ccc;border:none;cursor:pointer;padding:0;transition:background .2s}
+    #${widgetId} .dhm-ig-dot.active{background:#262626}
+    #${widgetId} .dhm-ig-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.9);border:1px solid #ddd;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;z-index:2;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+    #${widgetId} .dhm-ig-nav:hover{background:#fff}
+    #${widgetId} .dhm-ig-prev{left:8px}
+    #${widgetId} .dhm-ig-next{right:8px}
+  </style>
+  ${headerHtml}
+  <div class="dhm-ig-carousel" id="${widgetId}-carousel">
+    ${posts.map((p, i) => `<div class="dhm-ig-slide${i === 0 ? " active" : ""}">
+      <a href="${p.link}" target="_blank" rel="noopener">
+        <img src="${p.imageUrl}" alt="${p.caption ? p.caption.substring(0, 80) : "Instagram post"}" loading="lazy"/>
+        <div class="dhm-ig-overlay"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5"/></svg></div>
+      </a>${config.showCaption && p.caption ? `\n      <div class="dhm-ig-caption" style="position:absolute;bottom:0;left:0;right:0;background:rgba(255,255,255,.9);padding:10px">${p.caption.substring(0, 100)}</div>` : ""}
+    </div>`).join("\n    ")}
+    <button class="dhm-ig-nav dhm-ig-prev" aria-label="Previous">&lsaquo;</button>
+    <button class="dhm-ig-nav dhm-ig-next" aria-label="Next">&rsaquo;</button>
+  </div>
+  <div class="dhm-ig-dots" id="${widgetId}-dots">
+    ${posts.map((_, i) => `<button class="dhm-ig-dot${i === 0 ? " active" : ""}" aria-label="Slide ${i + 1}"></button>`).join("")}
+  </div>
 </div>
 <script>
 (function(){
-  var el=document.getElementById("${widgetId}");
-  var username="${config.username}";
-  var count=${config.postCount};
-  var showCaption=${config.showCaption};
-
-  fetch("https://www.instagram.com/api/v1/users/web_profile_info/?username.="+username,{headers:{"x-ig-app-id":"936619743392459"}})
-    .then(function(r){if(!r.ok)throw new Error(r.status);return r.json()})
-    .then(function(d){
-      var user=d.data.user;
-      var edges=user.edge_owner_to_timeline_media.edges.slice(0,count);
-      var pic=user.profile_pic_url;
-      var html='<div class="dhm-ig-header"><img src="'+pic+'" alt="'+username+'"/><a href="https://www.instagram.com/'+username+'/" target="_blank" rel="noopener">@'+username+'</a></div>';
-      html+='<div class="dhm-ig-grid">';
-      edges.forEach(function(e){
-        var node=e.node;
-        var src=node.thumbnail_src||node.display_url;
-        var link="https://www.instagram.com/p/"+node.shortcode+"/";
-        var cap=node.edge_media_to_caption.edges[0]?node.edge_media_to_caption.edges[0].node.text:"";
-        html+='<div class="dhm-ig-item">';
-        html+='<a href="'+link+'" target="_blank" rel="noopener">';
-        html+='<img src="'+src+'" alt="Instagram post" loading="lazy"/>';
-        html+='<div class="dhm-ig-overlay"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5"/></svg></div>';
-        html+='</a>';
-        if(showCaption&&cap)html+='<div class="dhm-ig-caption">'+cap.substring(0,100)+'</div>';
-        html+='</div>';
-      });
-      html+='</div>';
-      el.innerHTML=html;
-    })
-    .catch(function(){
-      el.innerHTML='<div class="dhm-ig-grid">';
-      for(var i=0;i<count;i++){
-        el.innerHTML+='<div class="dhm-ig-item" style="background:#f0f0f0"></div>';
-      }
-      el.innerHTML+='</div><p style="text-align:center;margin-top:12px"><a href="https://www.instagram.com/'+username+'/" target="_blank" rel="noopener" style="color:#0095f6;font-size:14px;text-decoration:none">Follow @'+username+' on Instagram</a></p>';
-    });
+  var current=0,total=${posts.length};
+  var carousel=document.getElementById("${widgetId}-carousel");
+  var dots=document.getElementById("${widgetId}-dots");
+  function go(n){
+    var slides=carousel.querySelectorAll(".dhm-ig-slide");
+    var btns=dots.querySelectorAll(".dhm-ig-dot");
+    slides[current].classList.remove("active");
+    btns[current].classList.remove("active");
+    current=((n%total)+total)%total;
+    slides[current].classList.add("active");
+    btns[current].classList.add("active");
+  }
+  carousel.querySelector(".dhm-ig-prev").onclick=function(){go(current-1)};
+  carousel.querySelector(".dhm-ig-next").onclick=function(){go(current+1)};
+  dots.querySelectorAll(".dhm-ig-dot").forEach(function(b,i){b.onclick=function(){go(i)}});
+  setInterval(function(){go(current+1)},4000);
 })();
 </script>`;
 }
@@ -141,21 +259,61 @@ export default function InstagramFeedPage() {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
   const [previewCode, setPreviewCode] = useState<string | null>(null);
   const [expandedWidget, setExpandedWidget] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     setWidgets(loadWidgets());
   }, []);
 
-  const addWidget = useCallback(() => {
+  const fetchPosts = async (user: string): Promise<{
+    posts: InstagramPost[];
+    profilePicUrl: string;
+    fullName: string;
+  } | null> => {
+    try {
+      const res = await fetch(`/api/instagram?username=${encodeURIComponent(user)}`);
+      if (!res.ok) {
+        const err = await res.json();
+        toast({ title: err.error || "Failed to fetch Instagram data", variant: "destructive" });
+        return null;
+      }
+      const data = await res.json();
+      return {
+        posts: data.posts || [],
+        profilePicUrl: data.profilePicUrl || "",
+        fullName: data.fullName || user,
+      };
+    } catch {
+      toast({ title: "Failed to connect to Instagram", variant: "destructive" });
+      return null;
+    }
+  };
+
+  const addWidget = useCallback(async () => {
     const user = username.trim().replace(/^@/, "").replace(/^https?:\/\/(www\.)?instagram\.com\//, "").replace(/\/$/, "");
     const name = clientName.trim();
     if (!user || !name) return;
+
+    setFetching(true);
+    const result = await fetchPosts(user);
+    setFetching(false);
+
+    if (!result) return;
+
+    let posts = result.posts;
+    if (config.photosOnly) {
+      posts = posts.filter((p) => !p.isVideo);
+    }
 
     const widget: WidgetConfig = {
       ...config,
       id: Math.random().toString(36).slice(2),
       clientName: name,
       username: user,
+      posts: posts.slice(0, config.postCount),
+      profilePicUrl: result.profilePicUrl,
+      fullName: result.fullName,
+      fetchedAt: Date.now(),
     };
     const updated = [...widgets, widget];
     setWidgets(updated);
@@ -163,8 +321,39 @@ export default function InstagramFeedPage() {
     setUsername("");
     setClientName("");
     setConfig(DEFAULT_CONFIG);
-    toast({ title: "Widget created" });
+    toast({ title: `Widget created with ${widget.posts?.length || 0} posts` });
   }, [widgets, username, clientName, config]);
+
+  const refreshWidget = useCallback(async (widgetId: string) => {
+    const widget = widgets.find((w) => w.id === widgetId);
+    if (!widget) return;
+
+    setFetching(true);
+    const result = await fetchPosts(widget.username);
+    setFetching(false);
+
+    if (!result) return;
+
+    let posts = result.posts;
+    if (widget.photosOnly) {
+      posts = posts.filter((p) => !p.isVideo);
+    }
+
+    const updated = widgets.map((w) =>
+      w.id === widgetId
+        ? {
+            ...w,
+            posts: posts.slice(0, w.postCount),
+            profilePicUrl: result.profilePicUrl,
+            fullName: result.fullName,
+            fetchedAt: Date.now(),
+          }
+        : w,
+    );
+    setWidgets(updated);
+    saveWidgets(updated);
+    toast({ title: "Widget refreshed with latest posts" });
+  }, [widgets]);
 
   const removeWidget = useCallback((id: string) => {
     const updated = widgets.filter((w) => w.id !== id);
@@ -182,11 +371,17 @@ export default function InstagramFeedPage() {
     setPreviewCode(generateEmbedCode(widget));
   }, []);
 
+  const layoutOptions: { value: LayoutType; label: string; icon: React.ReactNode }[] = [
+    { value: "grid", label: "Grid", icon: <LayoutGrid className="h-4 w-4" /> },
+    { value: "slider", label: "Slider", icon: <GalleryHorizontal className="h-4 w-4" /> },
+    { value: "carousel", label: "Carousel", icon: <Rows3 className="h-4 w-4" /> },
+  ];
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Instagram Feed Widget"
-        description="Generate custom, self-hosted Instagram feed widgets for client websites — no Elfsight subscription needed"
+        description="Generate custom Instagram feed widgets for client websites — no Elfsight needed"
       />
 
       {/* Create new widget */}
@@ -220,11 +415,36 @@ export default function InstagramFeedPage() {
             </div>
           </div>
 
+          {/* Layout selector */}
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
+              <LayoutGrid className="h-3 w-3" />
+              Layout
+            </p>
+            <div className="flex gap-2">
+              {layoutOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setConfig({ ...config, layout: opt.value })}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                    config.layout === opt.value
+                      ? "border-primary bg-primary/5 text-primary"
+                      : "border-input hover:bg-accent text-muted-foreground"
+                  }`}
+                >
+                  {opt.icon}
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Layout options */}
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <Settings2 className="h-3 w-3" />
-              Layout Settings
+              Settings
             </p>
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="space-y-1.5">
@@ -238,17 +458,19 @@ export default function InstagramFeedPage() {
                   onChange={(e) => setConfig({ ...config, postCount: Number(e.target.value) })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="columns" className="text-xs">Columns</Label>
-                <Input
-                  id="columns"
-                  type="number"
-                  min={1}
-                  max={6}
-                  value={config.columns}
-                  onChange={(e) => setConfig({ ...config, columns: Number(e.target.value) })}
-                />
-              </div>
+              {config.layout !== "carousel" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="columns" className="text-xs">Columns</Label>
+                  <Input
+                    id="columns"
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={config.columns}
+                    onChange={(e) => setConfig({ ...config, columns: Number(e.target.value) })}
+                  />
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="gap" className="text-xs">Gap (px)</Label>
                 <Input
@@ -278,7 +500,7 @@ export default function InstagramFeedPage() {
           <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-1.5">
               <Palette className="h-3 w-3" />
-              Style Settings
+              Style & Filters
             </p>
             <div className="flex flex-wrap gap-4">
               <div className="space-y-1.5">
@@ -314,18 +536,45 @@ export default function InstagramFeedPage() {
                   onChange={(e) => setConfig({ ...config, hoverEffect: e.target.checked })}
                   className="rounded border-input"
                 />
-                <span className="text-sm">Hover zoom effect</span>
+                <span className="text-sm">Hover effect</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer pt-5">
+                <input
+                  type="checkbox"
+                  checked={config.photosOnly}
+                  onChange={(e) => setConfig({ ...config, photosOnly: e.target.checked })}
+                  className="rounded border-input"
+                />
+                <span className="text-sm">Photos only</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer pt-5">
+                <input
+                  type="checkbox"
+                  checked={config.showHeader}
+                  onChange={(e) => setConfig({ ...config, showHeader: e.target.checked })}
+                  className="rounded border-input"
+                />
+                <span className="text-sm">Show header</span>
               </label>
             </div>
           </div>
 
           <Button
             onClick={addWidget}
-            disabled={!clientName.trim() || !username.trim()}
+            disabled={!clientName.trim() || !username.trim() || fetching}
             className="gap-2"
           >
-            <Plus className="h-4 w-4" />
-            Create Widget
+            {fetching ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Fetching Posts...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Create Widget
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
@@ -347,10 +596,28 @@ export default function InstagramFeedPage() {
                     <div className="min-w-0">
                       <p className="font-medium text-sm">{widget.clientName}</p>
                       <p className="text-xs text-muted-foreground">
-                        @{widget.username} &middot; {widget.postCount} posts &middot; {widget.columns} cols
+                        @{widget.username} &middot; {widget.posts?.length || 0} posts &middot;{" "}
+                        {widget.layout} &middot; {widget.columns} cols
+                        {widget.fetchedAt && (
+                          <> &middot; fetched {new Date(widget.fetchedAt).toLocaleDateString()}</>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => refreshWidget(widget.id)}
+                        disabled={fetching}
+                        className="gap-1.5 text-xs"
+                      >
+                        {fetching ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-3 w-3" />
+                        )}
+                        Refresh
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -388,6 +655,25 @@ export default function InstagramFeedPage() {
                       </Button>
                     </div>
                   </div>
+
+                  {/* Quick preview thumbnails */}
+                  {widget.posts && widget.posts.length > 0 && (
+                    <div className="flex gap-1.5 overflow-hidden">
+                      {widget.posts.slice(0, 6).map((post) => (
+                        <div
+                          key={post.id}
+                          className="w-14 h-14 rounded overflow-hidden shrink-0 bg-muted"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={post.imageUrl}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
                   {/* Expanded code view */}
                   {expandedWidget === widget.id && (
@@ -431,14 +717,11 @@ export default function InstagramFeedPage() {
               <iframe
                 srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:16px">${previewCode}</body></html>`}
                 className="w-full border-0"
-                style={{ minHeight: 400 }}
+                style={{ minHeight: 500 }}
                 sandbox="allow-scripts"
                 title="Instagram feed preview"
               />
             </div>
-            <p className="text-xs text-muted-foreground mt-3 text-center">
-              Preview may be limited due to Instagram&apos;s rate limiting. The widget will work on the client&apos;s domain.
-            </p>
           </div>
         </div>
       )}
@@ -451,7 +734,7 @@ export default function InstagramFeedPage() {
             <div>
               <p className="text-sm font-medium">No widgets created yet</p>
               <p className="text-xs text-muted-foreground">
-                Create your first custom Instagram feed widget above — no Elfsight subscription required
+                Create your first custom Instagram feed widget above
               </p>
             </div>
           </CardContent>
@@ -465,19 +748,19 @@ export default function InstagramFeedPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
           <ol className="list-decimal list-inside space-y-2">
-            <li>Enter the Instagram username and configure the widget appearance</li>
-            <li>Click &quot;Create Widget&quot; to generate the embed code</li>
+            <li>Enter the Instagram username and configure layout, style, and filters</li>
+            <li>Click &quot;Create Widget&quot; — posts are fetched and baked into the embed code</li>
             <li>Copy the embed code and paste it into the client&apos;s website HTML</li>
-            <li>The widget fetches Instagram posts directly and displays them in a responsive grid</li>
+            <li>Use &quot;Refresh&quot; to update with latest posts when needed</li>
           </ol>
           <div className="rounded-md bg-muted/50 p-3 mt-3">
-            <p className="text-xs font-medium mb-1">Benefits over Elfsight:</p>
+            <p className="text-xs font-medium mb-1">Features:</p>
             <ul className="list-disc list-inside text-xs space-y-1">
-              <li>No monthly subscription ($0 vs $5-15+/mo per widget)</li>
-              <li>No third-party branding or &quot;powered by&quot; badge</li>
-              <li>Self-contained — no external JS dependencies to slow down the site</li>
-              <li>Customisable layout, colours, and hover effects</li>
-              <li>Falls back gracefully with a link to the Instagram profile</li>
+              <li>3 layouts: Grid, Slider (scrollable), and Carousel (auto-advance)</li>
+              <li>Photos-only filter to exclude video posts</li>
+              <li>Show/hide header with profile picture</li>
+              <li>No monthly subscription, no third-party branding</li>
+              <li>Self-contained embed — no external JS dependencies</li>
             </ul>
           </div>
         </CardContent>
