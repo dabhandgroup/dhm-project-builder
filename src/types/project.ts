@@ -1,5 +1,6 @@
 import type { Database } from "./database";
 import type { CrawlData } from "@/components/projects/site-crawler";
+import type { FaviconVariant } from "@/lib/favicon-converter";
 
 export type Project = Database["public"]["Tables"]["projects"]["Row"];
 export type ProjectInsert = Database["public"]["Tables"]["projects"]["Insert"];
@@ -53,6 +54,7 @@ export interface ProjectFormData {
   template_id: string | null;
   deploy_provider: string | null;
   crawl_data: CrawlData | null;
+  favicon_variants: FaviconVariant[];
   preview_url: string;
   github_repo_url: string;
 }
@@ -90,6 +92,7 @@ export const defaultProjectFormData: ProjectFormData = {
   template_id: null,
   deploy_provider: null,
   crawl_data: null,
+  favicon_variants: [],
   preview_url: "",
   github_repo_url: "",
 };

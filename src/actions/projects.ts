@@ -34,6 +34,14 @@ export async function createProject(data: {
     Object.entries(data).filter(([key]) => !NON_DB_FIELDS.includes(key))
   );
 
+  // Convert empty strings to null for foreign key (UUID) fields
+  const UUID_FIELDS = ["client_id", "template_id"];
+  for (const field of UUID_FIELDS) {
+    if (field in filtered && !filtered[field]) {
+      filtered[field] = null;
+    }
+  }
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({
@@ -57,6 +65,7 @@ const NON_DB_FIELDS = [
   "include_in_financials", "is_manual", "client_name",
   "favicon", "og_image", "logo", "alt_logo",
   "square_images", "landscape_images", "crawl_data",
+  "favicon_variants",
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +75,14 @@ export async function updateProject(projectId: string, data: Record<string, any>
   const filtered = Object.fromEntries(
     Object.entries(data).filter(([key]) => !NON_DB_FIELDS.includes(key))
   );
+
+  // Convert empty strings to null for foreign key (UUID) fields
+  const UUID_FIELDS = ["client_id", "template_id"];
+  for (const field of UUID_FIELDS) {
+    if (field in filtered && !filtered[field]) {
+      filtered[field] = null;
+    }
+  }
 
   const { error } = await supabase
     .from("projects")
@@ -145,6 +162,7 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
     crawl_data: _cd,
     is_manual: _im,
     include_in_financials: _iif,
+    favicon_variants: _fv,
     ...dbFields
   } = data;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { SiteCrawler } from "@/components/projects/site-crawler";
 import type { CrawlData } from "@/components/projects/site-crawler";
 import { extractContactFromPages } from "@/lib/extract-contact";
+import { generateFaviconVariants, type FaviconVariant } from "@/lib/favicon-converter";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 
@@ -75,8 +76,28 @@ export function ProjectForm({
   const [isNewClient, setIsNewClient] = useState(false);
   const clientRef = useRef<HTMLDivElement>(null);
 
-  const { isSaving, lastSaved, isDirty } = useAutoSave({
-    data: form,
+  // Favicon variants
+  const [faviconVariants, setFaviconVariants] = useState<FaviconVariant[]>([]);
+
+  // Create serializable version of form for change detection (File objects can't be JSON.stringified)
+  const autoSaveData = useMemo(() => {
+    const { favicon, og_image, logo, alt_logo, square_images, landscape_images, crawl_data, favicon_variants, ...rest } = form;
+    return {
+      ...rest,
+      _favicon: favicon ? `${favicon.name}-${favicon.size}` : null,
+      _og_image: og_image ? `${og_image.name}-${og_image.size}` : null,
+      _logo: logo ? `${logo.name}-${logo.size}` : null,
+      _alt_logo: alt_logo ? `${alt_logo.name}-${alt_logo.size}` : null,
+      _square_images: square_images.map(f => `${f.name}-${f.size}`),
+      _landscape_images: landscape_images.map(f => `${f.name}-${f.size}`),
+      _has_crawl: !!crawl_data,
+      _favicon_variants: favicon_variants.length,
+    };
+  }, [form]);
+
+  const { isSaving, lastSaved, isDirty } = useAutoSave<ProjectFormData>({
+    data: autoSaveData,
+    saveData: form,
     onSave: async (data) => {
       if (onSaveDraft) await onSaveDraft(data);
     },
@@ -109,6 +130,16 @@ export function ProjectForm({
     },
     []
   );
+
+  // Auto-set sitemap URL when rebuild mode and domain are set
+  useEffect(() => {
+    if (form.is_rebuild && form.domain_name) {
+      const sitemapUrl = `https://${form.domain_name}/sitemap.xml`;
+      if (form.sitemap_url !== sitemapUrl) {
+        updateField("sitemap_url", sitemapUrl);
+      }
+    }
+  }, [form.is_rebuild, form.domain_name, form.sitemap_url, updateField]);
 
   const updateContactField = useCallback(
     (field: keyof ProjectFormData["contact_info"], value: string) => {
@@ -467,18 +498,12 @@ export function ProjectForm({
               </div>
             </div>
 
-            {/* Sitemap URL (shown for rebuilds) */}
-            {form.is_rebuild && (
-              <div className="space-y-2">
-                <Label htmlFor="sitemap_url">Existing Sitemap URL</Label>
-                <Input
-                  id="sitemap_url"
-                  value={form.sitemap_url}
-                  onChange={(e) => updateField("sitemap_url", e.target.value)}
-                  placeholder="e.g. https://example.com/sitemap.xml"
-                />
-                <p className="text-xs text-muted-foreground">
-                  The sitemap will be crawled to rebuild all existing pages
+            {/* Sitemap URL (auto-set for rebuilds) */}
+            {form.is_rebuild && form.domain_name && (
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Sitemap</Label>
+                <p className="text-sm font-mono text-muted-foreground">
+                  https://{form.domain_name}/sitemap.xml
                 </p>
               </div>
             )}
@@ -500,6 +525,15 @@ export function ProjectForm({
                   }
                   if (extracted.address && !form.contact_info.address) {
                     updateContactField("address", extracted.address);
+                    // Auto-populate target locations from address
+                    if (form.target_locations.length === 0) {
+                      const parts = extracted.address.split(",").map(p => p.trim()).filter(Boolean);
+                      // Use location parts (city/area names), skip house numbers and postcodes
+                      const locations = parts.filter(p => !/^\d/.test(p) && !/^[A-Z]{1,2}\d/.test(p));
+                      if (locations.length > 0) {
+                        updateField("target_locations", locations);
+                      }
+                    }
                   }
                 }}
               />
@@ -521,13 +555,42 @@ export function ProjectForm({
               <p className="text-xs text-muted-foreground mt-0.5">Favicon and Open Graph image used in the site build</p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <ImageUploadZone
-                label="Favicon"
-                value={form.favicon ? [form.favicon] : []}
-                onChange={(files) => updateField("favicon", files[0] || null)}
-                single
-                accept="image/*"
-              />
+              <div className="space-y-2">
+                <ImageUploadZone
+                  label="Favicon"
+                  value={form.favicon ? [form.favicon] : []}
+                  onChange={async (files) => {
+                    const file = files[0] || null;
+                    updateField("favicon", file);
+                    if (file) {
+                      try {
+                        const variants = await generateFaviconVariants(file);
+                        setFaviconVariants(variants);
+                        updateField("favicon_variants", variants);
+                      } catch {
+                        setFaviconVariants([]);
+                        updateField("favicon_variants", []);
+                      }
+                    } else {
+                      setFaviconVariants([]);
+                      updateField("favicon_variants", []);
+                    }
+                  }}
+                  single
+                  accept="image/*"
+                />
+                {faviconVariants.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs text-muted-foreground">Variants:</span>
+                    {faviconVariants.map((v) => (
+                      <div key={v.name} className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5">
+                        <Check className="h-3 w-3 text-green-500" />
+                        <span className="text-[10px] text-muted-foreground">{v.width}x{v.height}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <ImageUploadZone
                 label="Open Graph Image"
                 value={form.og_image ? [form.og_image] : []}
@@ -768,13 +831,13 @@ export function ProjectForm({
               label="Square Images"
               value={form.square_images}
               onChange={(files) => updateField("square_images", files)}
-              maxFiles={20}
+              maxFiles={50}
             />
             <ImageUploadZone
               label="Landscape Images"
               value={form.landscape_images}
               onChange={(files) => updateField("landscape_images", files)}
-              maxFiles={20}
+              maxFiles={50}
             />
           </div>
         </CardContent>
