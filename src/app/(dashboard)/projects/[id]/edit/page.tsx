@@ -52,6 +52,7 @@ export default async function EditProjectPage({
     title: project.title,
     domain_name: project.domain_name ?? "",
     is_rebuild: project.is_rebuild,
+    client_id: project.client_id ?? "",
     client_name: client?.name ?? "",
     pages_required: project.pages_required ?? "",
     brief: project.brief ?? "",
@@ -66,9 +67,13 @@ export default async function EditProjectPage({
     sitemap_url: project.sitemap_url ?? "",
     target_locations: project.target_locations ?? [],
     ai_model: project.ai_model ?? "orchids",
+    currency: (project.currency as "AUD" | "GBP" | "USD" | "CAD") ?? "AUD",
     one_off_revenue: Number(project.one_off_revenue),
     recurring_revenue: Number(project.recurring_revenue),
-    include_in_financials: project.include_in_financials ?? false,
+    template_id: project.template_id ?? null,
+    deploy_provider: project.deploy_provider ?? null,
+    preview_url: project.preview_url ?? "",
+    github_repo_url: project.github_repo_url ?? "",
   };
 
   return (

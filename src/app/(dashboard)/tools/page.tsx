@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, ImageIcon, ArrowRight } from "lucide-react";
+import { Gauge, ImageIcon, ArrowRight, Instagram } from "lucide-react";
 
 const tools = [
   {
@@ -17,6 +17,13 @@ const tools = [
       "Bulk compress, resize, and convert images to AVIF/WebP. Strips metadata automatically. Processed entirely in your browser.",
     href: "/tools/image-optimiser",
     icon: ImageIcon,
+  },
+  {
+    title: "Instagram Feed",
+    description:
+      "Generate Instagram feed embed widgets for client websites. Manage Elfsight embed codes for Webflow rebuilds.",
+    href: "/tools/instagram-feed",
+    icon: Instagram,
   },
 ];
 
