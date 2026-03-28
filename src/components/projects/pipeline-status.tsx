@@ -3,16 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CopyButton } from "@/components/shared/copy-button";
 import {
   Loader2,
   Play,
   CheckCircle2,
   XCircle,
   Globe,
-  Github,
   Cpu,
   Search,
-  Upload,
   Rocket,
   Download,
 } from "lucide-react";
@@ -29,15 +28,10 @@ const buildSteps: StepDef[] = [
   { key: "generating", label: "Building Site", icon: <Cpu className="h-4 w-4" /> },
 ];
 
-const deploySteps: StepDef[] = [
-  { key: "pushing", label: "Pushing to GitHub", icon: <Upload className="h-4 w-4" /> },
-  { key: "deploying", label: "Deploying", icon: <Rocket className="h-4 w-4" /> },
-];
+type StepStatus = "pending" | "scraping" | "generating" | "complete" | "failed" | "idle";
 
-type StepStatus = "pending" | "scraping" | "generating" | "pushing" | "deploying" | "complete" | "failed" | "idle";
-
-function getStepState(currentStep: StepStatus, stepKey: string, stepList: StepDef[]): "done" | "active" | "pending" | "failed" {
-  const order = [...stepList.map((s) => s.key), "complete"];
+function getStepState(currentStep: StepStatus, stepKey: string): "done" | "active" | "pending" | "failed" {
+  const order = [...buildSteps.map((s) => s.key), "complete"];
   const currentIdx = order.indexOf(currentStep);
   const stepIdx = order.indexOf(stepKey);
 
@@ -58,17 +52,11 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
     step: StepStatus;
     message: string;
     error?: string;
-    preview_url?: string;
-    github_repo_url?: string;
-    deploy_provider?: string;
     has_build_zip?: boolean;
   }>({ step: "idle", message: "" });
   const [starting, setStarting] = useState(false);
-  const [deploying, setDeploying] = useState(false);
 
-  // Determine if we're in deploy mode (pushing/deploying steps)
-  const isDeployMode = status.step === "pushing" || status.step === "deploying" ||
-    (status.step === "complete" && !!status.preview_url);
+  const previewUrl = `/preview/${projectId}`;
 
   const pollStatus = useCallback(async () => {
     try {
@@ -129,68 +117,10 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
     setStarting(false);
   }
 
-  async function startDeploy() {
-    setDeploying(true);
-    try {
-      const res = await fetch("/api/deploy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        setStatus({ step: "failed", message: data.error || "Failed to start deploy" });
-        setDeploying(false);
-        return;
-      }
-
-      setStatus({ step: "pushing", message: "Pushing to GitHub..." });
-
-      const poll = async () => {
-        const step = await pollStatus();
-        if (step && !["complete", "failed"].includes(step)) {
-          setTimeout(poll, 2000);
-        }
-      };
-      setTimeout(poll, 1000);
-    } catch {
-      setStatus({ step: "failed", message: "Failed to start deploy" });
-    }
-    setDeploying(false);
-  }
-
   const isRunning = !["idle", "complete", "failed"].includes(status.step);
   const isComplete = status.step === "complete";
   const isFailed = status.step === "failed";
   const hasBuild = status.has_build_zip;
-
-  // Determine which steps to show
-  const activeSteps = isDeployMode ? [...buildSteps, ...deploySteps] : buildSteps;
-
-  function renderSteps(stepsToRender: StepDef[]) {
-    return stepsToRender.map((step) => {
-      const state = getStepState(status.step, step.key, stepsToRender);
-      return (
-        <div key={step.key} className="flex items-center gap-3">
-          <div className="shrink-0">
-            {state === "done" && <CheckCircle2 className="h-5 w-5 text-green-500" />}
-            {state === "active" && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
-            {state === "pending" && <div className="h-5 w-5 rounded-full border-2 border-muted" />}
-            {state === "failed" && <XCircle className="h-5 w-5 text-red-500" />}
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            {step.icon}
-            <span className={state === "active" ? "font-medium" : state === "pending" ? "text-muted-foreground" : ""}>
-              {step.key === "deploying" && status.deploy_provider
-                ? `Deploying to ${status.deploy_provider.charAt(0).toUpperCase() + status.deploy_provider.slice(1)}`
-                : step.label}
-            </span>
-          </div>
-        </div>
-      );
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -199,7 +129,7 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <Rocket className="h-4 w-4" />
-              Site Generation Pipeline
+              Site Generation
             </CardTitle>
             {!isRunning && (
               <Button size="sm" onClick={startPipeline} disabled={starting}>
@@ -214,7 +144,25 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
             <>
               {/* Step indicators */}
               <div className="space-y-2">
-                {renderSteps(activeSteps)}
+                {buildSteps.map((step) => {
+                  const state = getStepState(status.step, step.key);
+                  return (
+                    <div key={step.key} className="flex items-center gap-3">
+                      <div className="shrink-0">
+                        {state === "done" && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                        {state === "active" && <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />}
+                        {state === "pending" && <div className="h-5 w-5 rounded-full border-2 border-muted" />}
+                        {state === "failed" && <XCircle className="h-5 w-5 text-red-500" />}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        {step.icon}
+                        <span className={state === "active" ? "font-medium" : state === "pending" ? "text-muted-foreground" : ""}>
+                          {step.label}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Status message */}
@@ -240,32 +188,27 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
                 </div>
               )}
 
-              {/* Complete — downloads + optional deploy */}
+              {/* Complete — preview link + downloads */}
               {isComplete && (
                 <div className="space-y-3">
-                  {/* External links (if deployed) */}
-                  {status.preview_url && (
+                  {/* Shareable preview link */}
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
+                    <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
                     <a
-                      href={status.preview_url}
+                      href={previewUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                      className="text-sm text-blue-600 hover:underline truncate flex-1"
                     >
-                      <Globe className="h-4 w-4" />
-                      {status.preview_url}
+                      {typeof window !== "undefined" ? `${window.location.origin}${previewUrl}` : previewUrl}
                     </a>
-                  )}
-                  {status.github_repo_url && (
-                    <a
-                      href={status.github_repo_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 text-sm text-blue-600 hover:underline"
-                    >
-                      <Github className="h-4 w-4" />
-                      {status.github_repo_url}
-                    </a>
-                  )}
+                    <CopyButton
+                      text={typeof window !== "undefined" ? `${window.location.origin}${previewUrl}` : previewUrl}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Share this link with your client to preview the site
+                  </p>
 
                   {/* Download links */}
                   <div className="flex flex-wrap gap-3">
@@ -286,30 +229,6 @@ export function PipelineStatus({ projectId }: { projectId: string }) {
                       Crawled site files
                     </a>
                   </div>
-
-                  {/* Optional deploy button */}
-                  {!status.preview_url && (
-                    <div className="pt-2 border-t">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-medium">Deploy to GitHub + Hosting</p>
-                          <p className="text-xs text-muted-foreground">
-                            Optionally push to GitHub and deploy to Vercel/Netlify
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={startDeploy}
-                          disabled={deploying}
-                          className="gap-1.5 shrink-0"
-                        >
-                          {deploying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                          Deploy
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </>

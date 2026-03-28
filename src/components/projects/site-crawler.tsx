@@ -25,6 +25,7 @@ import { toast } from "@/components/ui/toast";
 
 interface SiteCrawlerProps {
   domain: string;
+  initialData?: CrawlData | null;
   onCrawlComplete: (data: CrawlData) => void;
 }
 
@@ -36,13 +37,22 @@ export interface CrawlData {
 
 type CrawlState = "idle" | "mapping" | "crawling" | "complete" | "error";
 
-export function SiteCrawler({ domain, onCrawlComplete }: SiteCrawlerProps) {
-  const [state, setState] = useState<CrawlState>("idle");
+export function SiteCrawler({ domain, initialData, onCrawlComplete }: SiteCrawlerProps) {
+  const [state, setState] = useState<CrawlState>(initialData ? "complete" : "idle");
   const [progress, setProgress] = useState({ completed: 0, total: 0 });
-  const [crawlData, setCrawlData] = useState<CrawlData | null>(null);
+  const [crawlData, setCrawlData] = useState<CrawlData | null>(initialData ?? null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const initialDataFired = useRef(false);
+
+  // If we have initial data, fire onCrawlComplete once to populate form state
+  useEffect(() => {
+    if (initialData && !initialDataFired.current) {
+      initialDataFired.current = true;
+      onCrawlComplete(initialData);
+    }
+  }, [initialData, onCrawlComplete]);
 
   // Cleanup polling on unmount
   useEffect(() => {
