@@ -29,15 +29,17 @@ export function useAutoSave<T>({
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
 
-  const save = useCallback(async (saveData: T) => {
+  const save = useCallback(async (saveData: T, serialized: string) => {
     setIsSaving(true);
     try {
       await onSaveRef.current(saveData);
+      prevDataRef.current = serialized;
       setLastSaved(new Date());
       setIsDirty(false);
     } catch (err) {
       console.error("Auto-save failed:", err);
       // Keep isDirty true so the UI shows unsaved state
+      // Don't update prevDataRef so retry is triggered on next change
     } finally {
       setIsSaving(false);
     }
@@ -49,7 +51,6 @@ export function useAutoSave<T>({
     const serialized = JSON.stringify(data);
     if (serialized === prevDataRef.current) return;
 
-    prevDataRef.current = serialized;
     setIsDirty(true);
 
     if (timerRef.current) {
@@ -57,7 +58,7 @@ export function useAutoSave<T>({
     }
 
     timerRef.current = setTimeout(() => {
-      save(data);
+      save(data, serialized);
     }, delay);
 
     return () => {

@@ -63,10 +63,12 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     let projectId = draftIdRef.current;
 
     if (projectId) {
-      await updateProject(projectId, rest);
+      const result = await updateProject(projectId, rest);
+      if (result && "error" in result) throw new Error(result.error);
       await saveCrawlData(projectId, crawl_data);
     } else {
       const result = await createProject(rest);
+      if (result && "error" in result) throw new Error(result.error);
       if (result && "id" in result && result.id) {
         projectId = result.id;
         await saveCrawlData(result.id, crawl_data);
@@ -74,6 +76,13 @@ export function ProjectFormWrapper({ clients: initialClients, templates: initial
     }
 
     if (projectId) {
+      // Auto-start the build pipeline
+      fetch("/api/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      }).catch(() => {});
+
       router.push(`/projects/${projectId}?new=1`);
     }
   }
