@@ -5,7 +5,7 @@ import { getAllSettings } from "@/lib/queries/settings";
 import { createRepo, pushFiles } from "@/lib/github";
 import { crawlSite, generateRedirects, generateRedirectsCsv } from "@/lib/firecrawl";
 import { generateSiteFiles } from "@/lib/anthropic";
-import { createVercelProject, linkRepoToProject } from "@/lib/vercel";
+import { createVercelProject, linkRepoToProject, addCustomDomain } from "@/lib/vercel";
 import { createSite, linkRepoToSite } from "@/lib/netlify";
 import { loadTemplateFiles } from "@/lib/template-loader";
 import { loadProjectImages, getImageManifest } from "@/lib/image-loader";
@@ -387,8 +387,17 @@ export async function deployProject(projectId: string) {
     } else {
       const vercelProject = await createVercelProject(repoName);
       await linkRepoToProject(vercelProject.id, repoFullName);
-      previewUrl = `https://${repoName}.vercel.app`;
       vercelProjectId = vercelProject.id;
+
+      // Add custom subdomain (projectname.dabhandmarketing-demos.com)
+      const customDomain = `${repoName}.dabhandmarketing-demos.com`;
+      try {
+        await addCustomDomain(vercelProject.id, customDomain);
+        previewUrl = `https://${customDomain}`;
+      } catch {
+        // Fall back to default Vercel URL if custom domain fails
+        previewUrl = `https://${repoName}.vercel.app`;
+      }
     }
 
     await supabase

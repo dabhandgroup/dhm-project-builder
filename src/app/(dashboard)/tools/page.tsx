@@ -21,7 +21,7 @@ const tools = [
   {
     title: "Instagram Feed",
     description:
-      "Generate Instagram feed embed widgets for client websites. Manage Elfsight embed codes for Webflow rebuilds.",
+      "Generate custom Instagram feed widgets for client websites. No third-party subscriptions needed.",
     href: "/tools/instagram-feed",
     icon: Instagram,
   },
