@@ -231,7 +231,7 @@ export default async function ProjectDetailPage({
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{project.brief}</p>
+            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">{project.brief}</p>
             {project.brief_summary && (
               <div className="mt-4 rounded-md bg-muted/50 p-3">
                 <p className="text-xs font-medium text-muted-foreground mb-1">

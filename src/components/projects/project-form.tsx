@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ImageUploadZone } from "@/components/projects/image-upload-zone";
 import { SiteCrawler } from "@/components/projects/site-crawler";
+import { extractContactFromPages } from "@/lib/extract-contact";
 import { MicButton } from "@/components/voice/mic-button";
 import { useAutoSave } from "@/hooks/use-auto-save";
 
@@ -436,7 +437,20 @@ export function ProjectForm({
               {form.is_rebuild && form.domain_name && (
                 <SiteCrawler
                   domain={form.domain_name}
-                  onCrawlComplete={(data) => updateField("crawl_data", data)}
+                  onCrawlComplete={(data) => {
+                    updateField("crawl_data", data);
+                    // Auto-fill contact details from crawled content
+                    const extracted = extractContactFromPages(data.pages);
+                    if (extracted.email && !form.contact_info.email) {
+                      updateContactField("email", extracted.email);
+                    }
+                    if (extracted.phone && !form.contact_info.phone) {
+                      updateContactField("phone", extracted.phone);
+                    }
+                    if (extracted.address && !form.contact_info.address) {
+                      updateContactField("address", extracted.address);
+                    }
+                  }}
                 />
               )}
 
@@ -890,7 +904,7 @@ export function ProjectForm({
                 id="one_off_revenue"
                 type="number"
                 min={0}
-                step={1}
+                step={0.01}
                 value={form.one_off_revenue}
                 onChange={(e) => updateField("one_off_revenue", Number(e.target.value))}
               />
@@ -901,7 +915,7 @@ export function ProjectForm({
                 id="recurring_revenue"
                 type="number"
                 min={0}
-                step={1}
+                step={0.01}
                 value={form.recurring_revenue}
                 onChange={(e) => updateField("recurring_revenue", Number(e.target.value))}
               />
