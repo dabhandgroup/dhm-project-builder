@@ -12,6 +12,7 @@ import { currencies } from "@/constants/currencies";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { upsertFinancialTarget } from "@/actions/financials";
 import { toast } from "@/components/ui/toast";
+import { formatCurrency } from "@/lib/utils";
 import type { CurrencyCode } from "@/types/project";
 
 interface TargetData {
@@ -128,14 +129,17 @@ export function TargetsClient({ initialTargets }: { initialTargets: TargetData[]
                       type="number"
                       min={0}
                       step={100}
-                      value={target.monthlyMrrTarget}
+                      value={target.monthlyMrrTarget || ""}
                       onChange={(e) => updateTarget(target.id, "monthlyMrrTarget", Number(e.target.value))}
                       className="pl-7"
+                      placeholder="0"
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Recurring revenue you want to reach each month
-                  </p>
+                  {target.monthlyMrrTarget > 0 && (
+                    <p className="text-[10px] text-muted-foreground tabular-nums">
+                      {formatCurrency(target.monthlyMrrTarget, target.currency)}/mo
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Monthly One-Off Target</Label>
@@ -147,14 +151,17 @@ export function TargetsClient({ initialTargets }: { initialTargets: TargetData[]
                       type="number"
                       min={0}
                       step={100}
-                      value={target.monthlyOneOffTarget}
+                      value={target.monthlyOneOffTarget || ""}
                       onChange={(e) => updateTarget(target.id, "monthlyOneOffTarget", Number(e.target.value))}
                       className="pl-7"
+                      placeholder="0"
                     />
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    One-off project revenue target per month
-                  </p>
+                  {target.monthlyOneOffTarget > 0 && (
+                    <p className="text-[10px] text-muted-foreground tabular-nums">
+                      {formatCurrency(target.monthlyOneOffTarget, target.currency)}/mo
+                    </p>
+                  )}
                 </div>
               </div>
 

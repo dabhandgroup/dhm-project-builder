@@ -24,6 +24,9 @@ function ProgressBar({ current, target, currency, label }: {
   currency: string;
   label: string;
 }) {
+  // Don't render if target is not set
+  if (!target || target <= 0) return null;
+
   const pct = Math.min((current / target) * 100, 100);
   const isComplete = current >= target;
 
