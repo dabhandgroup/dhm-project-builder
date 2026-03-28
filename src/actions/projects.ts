@@ -29,10 +29,15 @@ export async function createProject(data: {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Strip any non-DB fields that may have leaked through
+  const filtered = Object.fromEntries(
+    Object.entries(data).filter(([key]) => !NON_DB_FIELDS.includes(key))
+  );
+
   const { data: project, error } = await supabase
     .from("projects")
     .insert({
-      ...data,
+      ...filtered,
       status: "lead" as ProjectStatus,
       created_by: user?.id,
       contact_info: data.contact_info ? JSON.parse(JSON.stringify(data.contact_info)) : null,
@@ -47,13 +52,24 @@ export async function createProject(data: {
   return { id: project.id };
 }
 
+// Fields that exist in ProjectFormData but NOT in the projects DB table
+const NON_DB_FIELDS = [
+  "include_in_financials", "is_manual", "client_name",
+  "favicon", "og_image", "logo", "alt_logo",
+  "square_images", "landscape_images", "crawl_data",
+];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateProject(projectId: string, data: Record<string, any>) {
   const supabase = await createClient();
 
+  const filtered = Object.fromEntries(
+    Object.entries(data).filter(([key]) => !NON_DB_FIELDS.includes(key))
+  );
+
   const { error } = await supabase
     .from("projects")
-    .update(data as Record<string, unknown>)
+    .update(filtered as Record<string, unknown>)
     .eq("id", projectId);
 
   if (error) return { error: error.message };
@@ -128,6 +144,7 @@ export async function saveDraft(data: Record<string, any>, projectId?: string) {
     landscape_images: _li,
     crawl_data: _cd,
     is_manual: _im,
+    include_in_financials: _iif,
     ...dbFields
   } = data;
 
