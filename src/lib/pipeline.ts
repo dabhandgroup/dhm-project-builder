@@ -29,6 +29,7 @@ export interface PipelineStatus {
   github_repo_url?: string;
   deploy_provider?: string;
   has_build_zip?: boolean;
+  completed_substeps?: string[];
 }
 
 // In-memory status store (for simplicity — could be Redis/DB in production)
@@ -61,6 +62,60 @@ async function loadCrawlData(projectId: string): Promise<{
   } catch {
     return null;
   }
+}
+
+// Save crawl data to Supabase storage (reusable by pipeline after live crawl)
+async function saveCrawlDataToStorage(
+  projectId: string,
+  domain: string,
+  pages: { url: string; markdown: string; html?: string; rawHtml?: string; links?: string[]; metadata?: Record<string, unknown>; screenshot?: string | null }[],
+  allUrls: string[],
+) {
+  const supabase = createAdminClient();
+
+  // Save main crawl JSON
+  const crawlJson = JSON.stringify({
+    domain,
+    allUrls,
+    crawledAt: new Date().toISOString(),
+    pages: pages.map((p) => ({
+      url: p.url,
+      markdown: p.markdown,
+      html: p.html || p.rawHtml || "",
+      links: p.links || [],
+      metadata: p.metadata || {},
+      hasScreenshot: !!p.screenshot,
+    })),
+  });
+
+  await supabase.storage
+    .from("project-assets")
+    .upload(`crawl-data/${projectId}.json`, crawlJson, {
+      contentType: "application/json",
+      upsert: true,
+    });
+
+  // Save site ZIP with markdown content
+  const zip = new JSZip();
+  for (const page of pages) {
+    let urlPath: string;
+    try {
+      urlPath = new URL(page.url).pathname.replace(/^\//, "") || "index";
+    } catch {
+      urlPath = "index";
+    }
+    urlPath = urlPath.replace(/\/$/, "");
+    const htmlContent = page.rawHtml || page.html;
+    if (htmlContent) zip.file(`${urlPath}/index.html`, htmlContent);
+    if (page.markdown) zip.file(`${urlPath}/index.md`, page.markdown);
+  }
+  const zipBlob = await zip.generateAsync({ type: "nodebuffer" });
+  await supabase.storage
+    .from("project-assets")
+    .upload(`crawl-data/${projectId}-site.zip`, zipBlob, {
+      contentType: "application/zip",
+      upsert: true,
+    });
 }
 
 // Load stored site ZIP and extract files for inclusion in the repo
@@ -102,8 +157,11 @@ export async function runPipeline(projectId: string) {
   const supabase = createAdminClient();
 
   try {
+    // Track completed substeps for live checklist
+    const substeps: string[] = [];
+
     // Load project
-    setStatus(projectId, { step: "pending", message: "Loading project data..." });
+    setStatus(projectId, { step: "pending", message: "Loading project data...", completed_substeps: substeps });
     const project = await getProjectById(projectId);
     if (!project) throw new Error("Project not found");
 
@@ -145,9 +203,15 @@ export async function runPipeline(projectId: string) {
       ];
     }
 
+    substeps.push("template");
+    setStatus(projectId, { step: "pending", message: "Loading project images...", completed_substeps: [...substeps] });
+
     // Load project images for inclusion in the repo
     const projectImages = await loadProjectImages(projectId);
     const imagePaths = projectImages.map((img) => img.path);
+
+    substeps.push("images");
+    setStatus(projectId, { step: "pending", message: "Project data loaded", completed_substeps: [...substeps] });
 
     // Step 1: Load crawl data or scrape existing site (if rebuild)
     let existingSiteContent = "";
@@ -155,23 +219,31 @@ export async function runPipeline(projectId: string) {
     let oldSiteFiles: { path: string; content: string; encoding: "utf-8" | "base64" }[] = [];
 
     if (project.is_rebuild && project.domain_name) {
-      setStatus(projectId, { step: "scraping", message: "Loading site data..." });
+      setStatus(projectId, { step: "scraping", message: "Checking for saved crawl data...", completed_substeps: [...substeps] });
 
       // Try loading pre-crawled data from storage first
       const storedCrawl = await loadCrawlData(projectId);
 
       if (storedCrawl && storedCrawl.pages.length > 0) {
+        setStatus(projectId, { step: "scraping", message: `Using saved crawl data (${storedCrawl.pages.length} pages)`, completed_substeps: [...substeps] });
         existingSiteContent = storedCrawl.pages
           .map((p) => `## ${p.url}\n${p.markdown}`)
           .join("\n\n");
         discoveredUrls = storedCrawl.allUrls;
       } else if (firecrawlKey) {
         // Fallback: live crawl
-        setStatus(projectId, { step: "scraping", message: "Scraping existing site..." });
+        setStatus(projectId, { step: "scraping", message: "No saved data — scraping existing site...", completed_substeps: [...substeps] });
         try {
           const result = await crawlSite(firecrawlKey, `https://${project.domain_name}`, 20);
           existingSiteContent = result.pages.map((p) => `## ${p.url}\n${p.markdown}`).join("\n\n");
           discoveredUrls = result.pages.map((p) => p.url);
+
+          // Save crawl data so future builds don't re-scrape
+          try {
+            await saveCrawlDataToStorage(projectId, project.domain_name, result.pages, discoveredUrls);
+          } catch (saveErr) {
+            console.error("Failed to save crawl data:", saveErr);
+          }
         } catch {
           existingSiteContent = "";
         }
@@ -179,10 +251,11 @@ export async function runPipeline(projectId: string) {
 
       // Load the crawled site ZIP for inclusion in the repo
       oldSiteFiles = await loadSiteZipFiles(projectId);
+      substeps.push("scrape");
     }
 
     // Step 2: Generate site files with AI
-    setStatus(projectId, { step: "generating", message: "Building site..." });
+    setStatus(projectId, { step: "generating", message: "Generating pages with AI...", completed_substeps: [...substeps] });
 
     const client = (project as Record<string, unknown>).clients as { name: string } | null;
 
@@ -198,17 +271,36 @@ export async function runPipeline(projectId: string) {
       }
     }
 
-    const generatedFiles = await generateSiteFiles(anthropicKey, {
+    const generateOpts = {
       templateFiles,
       brief: project.brief || project.title,
       clientName: client?.name || project.title,
       existingSiteContent: existingSiteContent || undefined,
       imagePaths: imagePaths.length > 0 ? imagePaths : undefined,
       oldSitePages,
-    });
+    };
+
+    let generatedFiles: { path: string; content: string }[];
+    try {
+      generatedFiles = await generateSiteFiles(anthropicKey, generateOpts);
+    } catch (err) {
+      // Retry once on failure
+      setStatus(projectId, { step: "generating", message: "Retrying site generation...", completed_substeps: [...substeps] });
+      try {
+        generatedFiles = await generateSiteFiles(anthropicKey, generateOpts);
+      } catch (retryErr) {
+        throw new Error(`AI generation failed: ${retryErr instanceof Error ? retryErr.message : "Unknown error"}`);
+      }
+    }
+
+    if (!generatedFiles.length) {
+      throw new Error("AI generated no files. Try simplifying the brief or reducing pages.");
+    }
+
+    substeps.push("generate");
 
     // Step 3: Create GitHub repo and push files
-    setStatus(projectId, { step: "pushing", message: "Pushing to GitHub..." });
+    setStatus(projectId, { step: "pushing", message: "Creating redirects...", completed_substeps: [...substeps] });
 
     const repoName = project.domain_name
       ? project.domain_name.replace(/\./g, "-")
@@ -262,6 +354,9 @@ export async function runPipeline(projectId: string) {
       }
     }
 
+    substeps.push("redirects");
+    setStatus(projectId, { step: "pushing", message: "Packaging ZIP...", completed_substeps: [...substeps] });
+
     // Combine generated text files, redirects, binary image files, and old site files
     const allFiles = [
       ...generatedFiles.map((f) => ({ path: f.path, content: f.content, encoding: "utf-8" as const })),
@@ -287,12 +382,24 @@ export async function runPipeline(projectId: string) {
         upsert: true,
       });
 
+    substeps.push("zip");
+    setStatus(projectId, { step: "pushing", message: "Pushing to GitHub...", completed_substeps: [...substeps] });
+
+    // Push files to GitHub
+    try {
+      await pushFiles(githubPat, githubOrg, repoName, allFiles);
+      substeps.push("push");
+    } catch (pushErr) {
+      console.error("GitHub push failed:", pushErr);
+      // Non-fatal — build ZIP already saved, user can still download
+    }
+
     // Pipeline complete — site is ready for preview and download
-    // GitHub push and deployment are now optional (triggered separately)
     setStatus(projectId, {
       step: "complete",
       message: "Site generated! Preview it below or download the ZIP.",
       has_build_zip: true,
+      completed_substeps: [...substeps],
     });
   } catch (err) {
     let message = err instanceof Error ? err.message : "Pipeline failed";

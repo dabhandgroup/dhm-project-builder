@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
+import { createClient } from "@/lib/supabase/server";
 import { BriefEditor } from "@/components/projects/brief-editor";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
 import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
@@ -46,15 +47,26 @@ export default async function ProjectDetailPage({
 
   if (!project) notFound();
 
+  // Check if a build ZIP exists (to conditionally show outreach message)
+  const supabase = await createClient();
+  const { data: buildFiles } = await supabase.storage
+    .from("project-assets")
+    .list("builds", { search: id });
+  const hasBuild = (buildFiles?.length ?? 0) > 0;
+
   const client = (project as Record<string, unknown>).clients as {
     id: string;
     name: string;
     company: string | null;
   } | null;
 
+  // Use the internal preview URL for the outreach message
+  // The user can edit the message to replace with a deployed URL later
+  const internalPreviewUrl = `PREVIEW_URL_PLACEHOLDER`;
+
   const outreachMessage = generateOutreachMessage({
     clientName: client?.name || "there",
-    previewUrl: project.preview_url || `https://${project.domain_name || "preview.dabhandmarketing.com"}`,
+    previewUrl: internalPreviewUrl,
     projectTitle: project.title,
   });
 
@@ -264,8 +276,10 @@ export default async function ProjectDetailPage({
         </Card>
       )}
 
-      {/* Outreach Message — full width, editable */}
-      <OutreachMessageEditor initialMessage={outreachMessage} />
+      {/* Outreach Message — only shown after site has been built */}
+      {hasBuild && (
+        <OutreachMessageEditor initialMessage={outreachMessage} internalPreviewUrl={`/preview/${id}`} />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +53,20 @@ export function NewContentPlanClient({
   const [isNewClient, setIsNewClient] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [newClientData, setNewClientData] = useState({ name: "", email: "", phone: "" });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setClientDropdownOpen(false);
+      }
+    }
+    if (clientDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [clientDropdownOpen]);
 
   const filteredClients = clientSearch.trim()
     ? clients.filter(
@@ -80,14 +94,9 @@ export function NewContentPlanClient({
       }
     }
 
-    if (!formData.project_id) {
-      toast({ title: "Please select a project to link this content plan to", variant: "destructive" });
-      return;
-    }
-
     setGenerating(true);
     const result = await createContentPlan({
-      project_id: formData.project_id,
+      project_id: formData.project_id || null,
       plan_data: [],
     });
 
@@ -117,7 +126,7 @@ export function NewContentPlanClient({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Client selector with inline creation */}
-          <div className="space-y-2 relative">
+          <div className="space-y-2 relative" ref={dropdownRef}>
             <Label>Client (optional)</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -233,7 +242,7 @@ export function NewContentPlanClient({
           </div>
 
           <div className="space-y-2">
-            <Label>Link to Project</Label>
+            <Label>Link to Project (optional)</Label>
             <Select
               value={formData.project_id}
               onChange={(e) => {

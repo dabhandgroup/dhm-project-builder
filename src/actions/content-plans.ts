@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Json } from "@/types/database";
 
 export async function createContentPlan(data: {
-  project_id: string;
+  project_id?: string | null;
   plan_data?: Json;
   google_sheet_url?: string;
   google_doc_url?: string;
