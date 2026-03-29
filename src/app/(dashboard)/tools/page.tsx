@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, ImageIcon, ArrowRight, Instagram, PenTool } from "lucide-react";
+import { Gauge, ImageIcon, ArrowRight, Instagram, PenTool, ArrowRightLeft } from "lucide-react";
 
 const tools = [
   {
@@ -24,6 +24,13 @@ const tools = [
       "Generate custom Instagram feed widgets for client websites. No third-party subscriptions needed.",
     href: "/tools/instagram-feed",
     icon: Instagram,
+  },
+  {
+    title: "Redirect Planner",
+    description:
+      "Crawl old + new sites, generate 301 redirect mappings with AI. Export to CSV or Google Sheets.",
+    href: "/tools/redirect-planner",
+    icon: ArrowRightLeft,
   },
   {
     title: "Content Planner",
