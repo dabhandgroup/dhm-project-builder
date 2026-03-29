@@ -488,6 +488,54 @@ export interface Database {
         };
         Relationships: [];
       };
+      redirect_plans: {
+        Row: {
+          id: string;
+          name: string;
+          original_url: string;
+          new_url: string;
+          comments: string | null;
+          original_pages: Json;
+          new_pages: Json;
+          original_urls: string[];
+          new_urls: string[];
+          redirects: Json;
+          status: string;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          original_url: string;
+          new_url: string;
+          comments?: string | null;
+          original_pages?: Json;
+          new_pages?: Json;
+          original_urls?: string[];
+          new_urls?: string[];
+          redirects?: Json;
+          status?: string;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          name?: string;
+          original_url?: string;
+          new_url?: string;
+          comments?: string | null;
+          original_pages?: Json;
+          new_pages?: Json;
+          original_urls?: string[];
+          new_urls?: string[];
+          redirects?: Json;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
