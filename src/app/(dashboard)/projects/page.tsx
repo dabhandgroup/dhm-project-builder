@@ -21,6 +21,7 @@ async function ProjectsList() {
     recurring_revenue: Number(p.recurring_revenue),
     ai_model: p.ai_model,
     preview_url: p.preview_url,
+    currency: p.currency ?? "AUD",
     created_at: p.created_at,
     clientName: (p as Record<string, unknown>).clients
       ? ((p as Record<string, unknown>).clients as { name: string })?.name ?? ""

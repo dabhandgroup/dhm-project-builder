@@ -173,13 +173,13 @@ export default async function ProjectDetailPage({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">One-off</span>
                 <span className="font-medium">
-                  {formatCurrency(Number(project.one_off_revenue))}
+                  {formatCurrency(Number(project.one_off_revenue), project.currency)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Monthly</span>
                 <span className="font-medium text-green-600">
-                  {formatCurrency(Number(project.recurring_revenue))}/mo
+                  {formatCurrency(Number(project.recurring_revenue), project.currency)}/mo
                 </span>
               </div>
             </CardContent>

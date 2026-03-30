@@ -13,6 +13,7 @@ interface KanbanColumnProps {
     domain_name: string | null;
     status: ProjectStatus;
     recurring_revenue: number;
+    currency?: string;
     ai_model: string | null;
     preview_url: string | null;
     clientName?: string | null;

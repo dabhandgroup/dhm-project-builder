@@ -30,7 +30,8 @@ export function useAutoSave<S>({
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const prevDataRef = useRef<string>("");
+  const initialDataRef = useRef(JSON.stringify(data));
+  const prevDataRef = useRef<string>(initialDataRef.current);
   const onSaveRef = useRef(onSave);
   onSaveRef.current = onSave;
   const saveDataRef = useRef(saveData);

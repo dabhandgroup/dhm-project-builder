@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { ArrowLeft, PenTool, Loader2, UserPlus, Search, Building2, X } from "lucide-react";
+import { ArrowLeft, PenTool, Loader2, UserPlus, Search, Building2, X, CloudOff, Cloud } from "lucide-react";
 import { createContentPlan } from "@/actions/content-plans";
 import { createClientAction } from "@/actions/clients";
 import { toast } from "@/components/ui/toast";
@@ -34,18 +34,22 @@ export function NewContentPlanClient({
   projects: ProjectOption[];
   clients: ClientOption[];
 }) {
+  const DRAFT_KEY = "dhm-content-plan-draft";
   const router = useRouter();
   const [generating, setGenerating] = useState(false);
   const [clients, setClients] = useState(initialClients);
-  const [formData, setFormData] = useState({
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  const defaultFormData = {
     project_id: "",
     client_name: "",
     business_type: "",
     target_audience: "",
     locations: "",
-    monthly_post_count: "4",
+    monthly_post_count: "1",
     notes: "",
-  });
+  };
+  const [formData, setFormData] = useState(defaultFormData);
 
   // Inline client creation state
   const [clientSearch, setClientSearch] = useState("");
@@ -54,6 +58,48 @@ export function NewContentPlanClient({
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [newClientData, setNewClientData] = useState({ name: "", email: "", phone: "" });
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Restore draft from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setFormData((prev) => ({ ...prev, ...parsed }));
+        if (parsed.client_name) {
+          setClientSearch(parsed.client_name);
+        }
+        setDraftRestored(true);
+        // Clear the flag after a few seconds
+        setTimeout(() => setDraftRestored(false), 3000);
+      }
+    } catch {
+      // ignore corrupt localStorage
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save draft to localStorage on form change
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const hasContent = formData.client_name || formData.business_type || formData.target_audience || formData.locations || formData.notes;
+      if (hasContent) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(formData));
+      }
+    }, 500);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [formData]);
+
+  const clearDraft = useCallback(() => {
+    localStorage.removeItem(DRAFT_KEY);
+    setFormData(defaultFormData);
+    setClientSearch("");
+    setIsNewClient(false);
+    setSelectedClientId(null);
+    setNewClientData({ name: "", email: "", phone: "" });
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -138,7 +184,8 @@ export function NewContentPlanClient({
         return;
       }
 
-      // Navigate to the new plan
+      // Clear draft and navigate to the new plan
+      localStorage.removeItem(DRAFT_KEY);
       if (result.id) {
         router.push(`/content/${result.id}`);
       } else {
@@ -159,6 +206,19 @@ export function NewContentPlanClient({
           </Button>
         </Link>
         <h1 className="text-xl font-bold tracking-tight">Create Content Plan</h1>
+        <div className="ml-auto flex items-center gap-2">
+          {draftRestored && (
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Cloud className="h-3 w-3" /> Draft restored
+            </span>
+          )}
+          {(formData.client_name || formData.business_type || formData.notes) && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={clearDraft}>
+              <CloudOff className="h-3 w-3" />
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
@@ -352,6 +412,7 @@ export function NewContentPlanClient({
               value={formData.monthly_post_count}
               onChange={(e) => setFormData((prev) => ({ ...prev, monthly_post_count: e.target.value }))}
               options={[
+                { value: "1", label: "1 post" },
                 { value: "2", label: "2 posts" },
                 { value: "3", label: "3 posts" },
                 { value: "4", label: "4 posts" },

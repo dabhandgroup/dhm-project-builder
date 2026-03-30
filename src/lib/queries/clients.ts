@@ -23,17 +23,20 @@ export async function getClientsWithStats() {
 
   const { data: projects, error: projectsError } = await supabase
     .from("projects")
-    .select("client_id, recurring_revenue, one_off_revenue, status");
+    .select("client_id, recurring_revenue, one_off_revenue, currency, status");
 
   if (projectsError) throw projectsError;
 
   return clients.map((client) => {
     const clientProjects = projects.filter((p) => p.client_id === client.id);
+    // Use currency from the highest-MRR project, fallback to AUD
+    const topProject = clientProjects.sort((a, b) => Number(b.recurring_revenue) - Number(a.recurring_revenue))[0];
     return {
       ...client,
       project_count: clientProjects.length,
       total_mrr: clientProjects.reduce((sum, p) => sum + Number(p.recurring_revenue), 0),
       total_one_off: clientProjects.reduce((sum, p) => sum + Number(p.one_off_revenue), 0),
+      currency: topProject?.currency ?? "AUD",
     };
   });
 }

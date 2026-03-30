@@ -22,6 +22,7 @@ interface ProjectCardProps {
   domain_name: string | null;
   status: ProjectStatus;
   recurring_revenue: number;
+  currency?: string;
   ai_model: string | null;
   preview_url: string | null;
   clientName?: string | null;
@@ -35,6 +36,7 @@ export function ProjectCard({
   recurring_revenue,
   preview_url,
   clientName,
+  currency,
 }: ProjectCardProps) {
   const router = useRouter();
   const statusConfig = projectStatuses[status];
@@ -112,7 +114,7 @@ export function ProjectCard({
 
             <div className="flex items-center justify-between pt-2 border-t border-dashed">
               <span className="text-sm font-bold text-green-600">
-                {formatCurrency(recurring_revenue)}/mo
+                {formatCurrency(recurring_revenue, currency)}/mo
               </span>
             </div>
           </Link>

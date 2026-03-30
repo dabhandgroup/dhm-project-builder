@@ -14,6 +14,7 @@ interface ProjectData {
   status: ProjectStatus;
   one_off_revenue: number;
   recurring_revenue: number;
+  currency: string;
   ai_model: string | null;
   preview_url: string | null;
   created_at: string;
