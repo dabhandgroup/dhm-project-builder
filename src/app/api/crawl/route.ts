@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { url, maxPages = 50, projectId } = await req.json();
+  const { url, maxPages = 50, projectId, mobile } = await req.json();
   if (!url) {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
   }
@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
     // First, map the site to discover all URLs
     const allUrls = await mapSite(apiKey, url);
 
-    // Start the full crawl with all formats
-    const crawlId = await startCrawl(apiKey, url, maxPages);
+    // Start the full crawl with all formats (desktop or mobile)
+    const crawlId = await startCrawl(apiKey, url, maxPages, { mobile: !!mobile });
 
     return NextResponse.json({
       crawlId,

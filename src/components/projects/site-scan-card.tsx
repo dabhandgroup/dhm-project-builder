@@ -13,6 +13,8 @@ import {
   FileText,
   Code,
   Camera,
+  Monitor,
+  Smartphone,
   Link2,
   Download,
   Github,
@@ -28,7 +30,9 @@ interface CrawlPage {
   html?: string;
   rawHtml?: string;
   screenshot?: string | null;
+  mobileScreenshot?: string | null;
   hasScreenshot?: boolean;
+  hasMobileScreenshot?: boolean;
   links?: string[];
   metadata?: { title?: string; description?: string; [key: string]: unknown };
 }
@@ -59,6 +63,7 @@ export function SiteScanCard({
   const [crawlProgress, setCrawlProgress] = useState<{
     completed: number;
     total: number;
+    label?: string;
   } | null>(null);
   const [pushingGithub, setPushingGithub] = useState(false);
   const [githubRepoUrl, setGithubRepoUrl] = useState<string | null>(null);
@@ -86,7 +91,33 @@ export function SiteScanCard({
     loadCrawlData();
   }, [loadCrawlData]);
 
-  // Run Firecrawl
+  // Poll a crawl until complete, returns pages array
+  async function pollCrawl(
+    crawlId: string,
+    totalHint: number,
+    label: string,
+  ): Promise<CrawlPage[] | null> {
+    while (true) {
+      await new Promise((r) => setTimeout(r, 3000));
+      const statusRes = await fetch(`/api/crawl/${crawlId}`);
+      if (!statusRes.ok) continue;
+      const statusData = await statusRes.json();
+
+      setCrawlProgress({
+        completed: statusData.completed || 0,
+        total: statusData.total || totalHint,
+        label,
+      });
+
+      if (statusData.status === "completed") {
+        return statusData.data || [];
+      } else if (statusData.status === "failed") {
+        return null;
+      }
+    }
+  }
+
+  // Run Firecrawl — desktop + mobile
   async function handleCrawl() {
     if (!domainName) {
       toast({
@@ -98,71 +129,76 @@ export function SiteScanCard({
 
     setCrawling(true);
     setCrawlProgress(null);
+    const cleanUrl = `https://${domainName.replace(/^https?:\/\//, "")}`;
+
     try {
+      // --- Desktop crawl ---
       const startRes = await fetch("/api/crawl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://${domainName.replace(/^https?:\/\//, "")}`,
-          maxPages: 50,
-          projectId,
-        }),
+        body: JSON.stringify({ url: cleanUrl, maxPages: 50, projectId }),
       });
 
       if (!startRes.ok) {
         const err = await startRes.json();
-        toast({
-          title: err.error || "Failed to start crawl",
-          variant: "destructive",
-        });
+        toast({ title: err.error || "Failed to start crawl", variant: "destructive" });
         setCrawling(false);
         return;
       }
 
       const { crawlId, allUrls } = await startRes.json();
+      const desktopPages = await pollCrawl(crawlId, allUrls?.length || 0, "Desktop");
 
-      // Poll for completion
-      let complete = false;
-      while (!complete) {
-        await new Promise((r) => setTimeout(r, 3000));
-        const statusRes = await fetch(`/api/crawl/${crawlId}`);
-        if (!statusRes.ok) continue;
-        const statusData = await statusRes.json();
+      if (!desktopPages) {
+        toast({ title: "Desktop crawl failed", variant: "destructive" });
+        setCrawling(false);
+        return;
+      }
 
-        setCrawlProgress({
-          completed: statusData.completed || 0,
-          total: statusData.total || allUrls?.length || 0,
-        });
+      // --- Mobile crawl (screenshots) ---
+      setCrawlProgress({ completed: 0, total: desktopPages.length, label: "Mobile" });
+      const mobileRes = await fetch("/api/crawl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: cleanUrl, maxPages: desktopPages.length, projectId, mobile: true }),
+      });
 
-        if (statusData.status === "completed") {
-          complete = true;
-          const crawlPayload: CrawlData = {
-            pages: statusData.data || [],
-            allUrls: allUrls || [],
-            domain: domainName,
-            crawledAt: new Date().toISOString(),
-          };
-
-          // Save to Supabase storage
-          await fetch("/api/crawl/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId,
-              crawlData: crawlPayload,
-            }),
-          });
-
-          setCrawlData(crawlPayload);
-          onCrawlComplete?.(crawlPayload);
-          toast({
-            title: `Crawled ${statusData.data?.length || 0} pages from ${domainName}`,
-          });
-        } else if (statusData.status === "failed") {
-          complete = true;
-          toast({ title: "Crawl failed", variant: "destructive" });
+      let mobileScreenshots: Record<string, string> = {};
+      if (mobileRes.ok) {
+        const { crawlId: mobileCrawlId } = await mobileRes.json();
+        const mobilePages = await pollCrawl(mobileCrawlId, desktopPages.length, "Mobile");
+        if (mobilePages) {
+          for (const p of mobilePages) {
+            if (p.screenshot) {
+              mobileScreenshots[p.url] = p.screenshot as string;
+            }
+          }
         }
       }
+
+      // Merge mobile screenshots into desktop pages
+      const mergedPages = desktopPages.map((p) => ({
+        ...p,
+        mobileScreenshot: mobileScreenshots[p.url] || null,
+      }));
+
+      const crawlPayload: CrawlData = {
+        pages: mergedPages,
+        allUrls: allUrls || [],
+        domain: domainName,
+        crawledAt: new Date().toISOString(),
+      };
+
+      // Save to Supabase storage
+      await fetch("/api/crawl/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId, crawlData: crawlPayload }),
+      });
+
+      setCrawlData(crawlPayload);
+      onCrawlComplete?.(crawlPayload);
+      toast({ title: `Crawled ${desktopPages.length} pages (desktop + mobile) from ${domainName}` });
     } catch {
       toast({ title: "Crawl failed", variant: "destructive" });
     } finally {
@@ -216,6 +252,9 @@ export function SiteScanCard({
         withScreenshots: crawlData.pages.filter(
           (p) => p.screenshot || p.hasScreenshot,
         ).length,
+        withMobileScreenshots: crawlData.pages.filter(
+          (p) => p.mobileScreenshot || p.hasMobileScreenshot,
+        ).length,
         totalLinks: new Set(crawlData.pages.flatMap((p) => p.links || [])).size,
       }
     : null;
@@ -267,7 +306,7 @@ export function SiteScanCard({
         {crawling && crawlProgress && (
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Crawling {domainName}...</span>
+              <span>{crawlProgress.label ? `${crawlProgress.label} — ` : ""}Crawling {domainName}...</span>
               <span>
                 {crawlProgress.completed}/{crawlProgress.total} pages
               </span>
@@ -302,7 +341,7 @@ export function SiteScanCard({
           <>
             {/* Stats grid */}
             {pageStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                   <FileText className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-semibold">
@@ -322,12 +361,21 @@ export function SiteScanCard({
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                  <Camera className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <Monitor className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                   <p className="text-lg font-semibold">
                     {pageStats.withScreenshots}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    Screenshots
+                    Desktop Shots
+                  </p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-2.5 text-center">
+                  <Smartphone className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-lg font-semibold">
+                    {pageStats.withMobileScreenshots}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    Mobile Shots
                   </p>
                 </div>
                 <div className="rounded-lg bg-muted/50 p-2.5 text-center">

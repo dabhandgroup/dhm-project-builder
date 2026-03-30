@@ -84,6 +84,7 @@ export async function startCrawl(
   apiKey: string,
   url: string,
   maxPages = 50,
+  options?: { mobile?: boolean },
 ): Promise<string> {
   const res = await fetch(`${FIRECRAWL_API}/crawl`, {
     method: "POST",
@@ -92,8 +93,9 @@ export async function startCrawl(
       url,
       limit: maxPages,
       scrapeOptions: {
-        formats: ["markdown", "html", "rawHtml", "screenshot", "links"],
+        formats: ["markdown", "html", "rawHtml", "screenshot@fullPage", "links"],
         waitFor: 1000,
+        ...(options?.mobile ? { mobile: true } : {}),
       },
     }),
   });
