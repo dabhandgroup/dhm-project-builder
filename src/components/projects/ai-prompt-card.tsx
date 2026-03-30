@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { Sparkles, Copy, Check, RefreshCw, Loader2, Globe, Search } from "lucide-react";
+import { Sparkles, Copy, Check, RefreshCw, Loader2, Globe } from "lucide-react";
 import { updateProject } from "@/actions/projects";
 
 interface CrawlPage {
@@ -144,10 +144,6 @@ export function AiPromptCard(props: AiPromptCardProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptInitializedRef = useRef(false);
 
-  // Crawl state
-  const [crawling, setCrawling] = useState(false);
-  const [crawlProgress, setCrawlProgress] = useState<{ completed: number; total: number } | null>(null);
-
   const fetchCrawlData = useCallback(async () => {
     setLoading(true);
     try {
@@ -165,17 +161,18 @@ export function AiPromptCard(props: AiPromptCardProps) {
   }, [props.projectId]);
 
   // Generate and set prompt from data
-  const regeneratePrompt = useCallback((data: CrawlData | null) => {
-    const generated = buildPrompt(props, data);
-    setPrompt(generated);
-    // Auto-save the generated prompt
-    updateProject(props.projectId, { ai_prompt: generated }).catch(() => {});
-  }, [props]);
+  const regeneratePrompt = useCallback(
+    (data: CrawlData | null) => {
+      const generated = buildPrompt(props, data);
+      setPrompt(generated);
+      updateProject(props.projectId, { ai_prompt: generated }).catch(() => {});
+    },
+    [props],
+  );
 
   useEffect(() => {
     fetchCrawlData().then((data) => {
       setLoading(false);
-      // If user has a saved prompt, use it. Otherwise generate.
       if (props.initialPrompt && !promptInitializedRef.current) {
         promptInitializedRef.current = true;
         setPrompt(props.initialPrompt);
@@ -219,83 +216,6 @@ export function AiPromptCard(props: AiPromptCardProps) {
     }, 1000);
   }
 
-  // Start a crawl
-  async function handleCrawl() {
-    if (!props.domainName) {
-      toast({ title: "No domain set for this project", variant: "destructive" });
-      return;
-    }
-
-    setCrawling(true);
-    setCrawlProgress(null);
-    try {
-      // Start crawl
-      const startRes = await fetch("/api/crawl", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://${props.domainName.replace(/^https?:\/\//, "")}`,
-          maxPages: 50,
-          projectId: props.projectId,
-        }),
-      });
-
-      if (!startRes.ok) {
-        const err = await startRes.json();
-        toast({ title: err.error || "Failed to start crawl", variant: "destructive" });
-        setCrawling(false);
-        return;
-      }
-
-      const { crawlId, allUrls } = await startRes.json();
-
-      // Poll for completion
-      let complete = false;
-      while (!complete) {
-        await new Promise((r) => setTimeout(r, 3000));
-        const statusRes = await fetch(`/api/crawl/${crawlId}`);
-        if (!statusRes.ok) continue;
-        const statusData = await statusRes.json();
-
-        setCrawlProgress({
-          completed: statusData.completed || 0,
-          total: statusData.total || allUrls?.length || 0,
-        });
-
-        if (statusData.status === "completed") {
-          complete = true;
-          // Save crawl data
-          const crawlDataPayload = {
-            pages: statusData.data || [],
-            allUrls: allUrls || [],
-            domain: props.domainName,
-          };
-
-          await fetch("/api/crawl/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId: props.projectId,
-              crawlData: crawlDataPayload,
-            }),
-          });
-
-          setCrawlData(crawlDataPayload);
-          regeneratePrompt(crawlDataPayload);
-          toast({ title: `Crawled ${statusData.data?.length || 0} pages` });
-        } else if (statusData.status === "failed") {
-          complete = true;
-          toast({ title: "Crawl failed", variant: "destructive" });
-        }
-      }
-    } catch (err) {
-      toast({ title: "Crawl failed", variant: "destructive" });
-    } finally {
-      setCrawling(false);
-      setCrawlProgress(null);
-    }
-  }
-
   const handleCopy = async () => {
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
@@ -312,46 +232,25 @@ export function AiPromptCard(props: AiPromptCardProps) {
           <CardTitle className="text-base flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             AI Prompt
-            {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            {saving && (
+              <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+            )}
             {saved && <Check className="h-3 w-3 text-green-500" />}
           </CardTitle>
           <div className="flex items-center gap-1.5">
-            {/* Crawl button */}
-            {props.domainName && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCrawl}
-                disabled={crawling || loading}
-                className="h-7 text-xs gap-1"
-              >
-                {crawling ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    {crawlProgress
-                      ? `${crawlProgress.completed}/${crawlProgress.total}`
-                      : "Crawling..."}
-                  </>
-                ) : (
-                  <>
-                    <Search className="h-3 w-3" />
-                    {hasCrawlData ? "Re-crawl" : "Crawl Site"}
-                  </>
-                )}
-              </Button>
-            )}
-            {/* Regenerate */}
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => regeneratePrompt(crawlData)}
+              onClick={() => {
+                // Re-fetch crawl data then regenerate
+                fetchCrawlData().then((data) => regeneratePrompt(data));
+              }}
               disabled={loading}
               className="h-7 text-xs gap-1"
             >
               <RefreshCw className="h-3 w-3" />
               Regenerate
             </Button>
-            {/* Copy */}
             <Button
               variant="outline"
               size="sm"
@@ -379,15 +278,16 @@ export function AiPromptCard(props: AiPromptCardProps) {
           {hasCrawlData ? (
             <span className="flex items-center gap-1">
               <Globe className="h-3 w-3 text-green-500" />
-              {crawlData.pages.length} page{crawlData.pages.length === 1 ? "" : "s"} crawled
+              Includes {crawlData.pages.length} crawled page
+              {crawlData.pages.length === 1 ? "" : "s"} from the existing site
             </span>
           ) : props.domainName ? (
             <span className="flex items-center gap-1 text-amber-600">
               <Globe className="h-3 w-3" />
-              No crawl data — click &quot;Crawl Site&quot; to fetch content from {props.domainName}
+              No crawl data — run a Site Scan first, then Regenerate
             </span>
           ) : (
-            <span>No domain set</span>
+            <span>Copy this prompt into a Claude session to build the website.</span>
           )}
         </div>
 
@@ -400,7 +300,8 @@ export function AiPromptCard(props: AiPromptCardProps) {
           style={{ minHeight: "200px", maxHeight: "600px" }}
         />
         <p className="text-xs text-muted-foreground">
-          Click to edit. Changes save automatically. Use &quot;Regenerate&quot; to rebuild from project data.
+          Click to edit. Changes save automatically. Use &quot;Regenerate&quot;
+          to rebuild from project data + scan results.
         </p>
       </CardContent>
     </Card>
