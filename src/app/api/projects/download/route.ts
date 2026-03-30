@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import JSZip from "jszip";
 
 export async function GET(request: NextRequest) {
   const projectId = request.nextUrl.searchParams.get("projectId");
@@ -20,6 +21,48 @@ export async function GET(request: NextRequest) {
     .select("title")
     .eq("id", projectId)
     .single();
+
+  const slug = (project?.title || "project")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+
+  // Screenshots: build a ZIP from stored screenshot JSON (base64 images)
+  if (type === "screenshots") {
+    const { data: screenshotBlob, error: ssErr } = await supabase.storage
+      .from("project-assets")
+      .download(`crawl-data/${projectId}-screenshots.json`);
+
+    if (ssErr || !screenshotBlob) {
+      return NextResponse.json({ error: "No screenshots found. Run a site scan first." }, { status: 404 });
+    }
+
+    const screenshots: { url: string; screenshot: string }[] = JSON.parse(await screenshotBlob.text());
+    const zip = new JSZip();
+
+    for (const ss of screenshots) {
+      let pagePath: string;
+      try {
+        pagePath = new URL(ss.url).pathname.replace(/^\//, "") || "home";
+      } catch {
+        pagePath = "home";
+      }
+      pagePath = pagePath.replace(/\/$/, "") || "home";
+
+      const base64Match = ss.screenshot.match(/^data:image\/\w+;base64,(.+)$/);
+      if (base64Match) {
+        zip.file(`${pagePath}/screenshot.png`, base64Match[1], { base64: true });
+      }
+    }
+
+    const zipBuffer = Buffer.from(await zip.generateAsync({ type: "nodebuffer" }));
+    return new NextResponse(zipBuffer, {
+      headers: {
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="${slug}-screenshots.zip"`,
+      },
+    });
+  }
 
   let storagePath: string;
   let contentType = "application/zip";
@@ -47,11 +90,6 @@ export async function GET(request: NextRequest) {
         : "No build zip found. Run the pipeline first.";
     return NextResponse.json({ error: msg }, { status: 404 });
   }
-
-  const slug = (project?.title || "project")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 
   const suffix = type === "crawl" ? "-crawl" : "";
   const filename = type === "redirects" ? `${slug}${fileExt}` : `${slug}${suffix}.zip`;

@@ -471,6 +471,16 @@ export function SiteScanCard({
                 <Download className="h-3.5 w-3.5" />
                 Download Site ZIP
               </a>
+              {pageStats && pageStats.withScreenshots > 0 && (
+                <a
+                  href={`/api/projects/download?projectId=${projectId}&type=screenshots`}
+                  download
+                  className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline bg-blue-50 dark:bg-blue-950 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-900"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  Download Screenshots
+                </a>
+              )}
               <a
                 href={`/api/projects/download?projectId=${projectId}&type=redirects`}
                 download
