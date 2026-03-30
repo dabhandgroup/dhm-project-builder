@@ -21,6 +21,7 @@ interface ListProject {
   status: ProjectStatus;
   one_off_revenue: number;
   recurring_revenue: number;
+  currency?: string;
   preview_url: string | null;
   created_at: string;
   clientName?: string | null;
@@ -201,7 +202,7 @@ export function ProjectListView({
               </td>
               <td className="px-3 py-2 text-right hidden md:table-cell">
                 <span className="text-xs font-medium text-green-600">
-                  {formatCurrency(project.recurring_revenue)}
+                  {formatCurrency(project.recurring_revenue, project.currency)}
                 </span>
               </td>
               <td className="px-3 py-2 text-xs text-muted-foreground hidden lg:table-cell">

@@ -5,8 +5,29 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Users, Mail, Phone, FolderKanban } from "lucide-react";
+import { Plus, Users, Mail, Phone, FolderKanban, ChevronRight } from "lucide-react";
 import { getClientsWithStats } from "@/lib/queries/clients";
+import { formatCurrency } from "@/lib/utils";
+
+const avatarColors = [
+  "bg-blue-100 text-blue-700",
+  "bg-emerald-100 text-emerald-700",
+  "bg-purple-100 text-purple-700",
+  "bg-amber-100 text-amber-700",
+  "bg-rose-100 text-rose-700",
+  "bg-cyan-100 text-cyan-700",
+  "bg-indigo-100 text-indigo-700",
+  "bg-orange-100 text-orange-700",
+];
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
 
 async function ClientsList() {
   const formattedClients = await getClientsWithStats();
@@ -24,12 +45,22 @@ async function ClientsList() {
   return (
     <Card>
       <CardContent className="p-0 divide-y">
-        {formattedClients.map((client) => (
+        {formattedClients.map((client, i) => (
           <Link key={client.id} href={`/clients/${client.id}`} className="block">
-            <div className="flex items-center gap-4 px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3 px-4 py-3.5 hover:bg-accent/50 transition-colors cursor-pointer">
+              {/* Avatar */}
+              <div
+                className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
+                  avatarColors[i % avatarColors.length]
+                }`}
+              >
+                {getInitials(client.name)}
+              </div>
+
+              {/* Name & contact */}
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm truncate">{client.name}</h3>
+                <div className="flex items-baseline gap-2">
+                  <h3 className="font-semibold text-sm truncate">{client.name}</h3>
                   {client.company && (
                     <span className="text-xs text-muted-foreground truncate hidden sm:inline">
                       {client.company}
@@ -49,16 +80,19 @@ async function ClientsList() {
                   )}
                 </div>
               </div>
+
+              {/* Stats */}
               <div className="flex items-center gap-3 shrink-0 text-xs">
                 {client.total_mrr > 0 && (
-                  <span className="font-medium text-green-600">
-                    ${client.total_mrr}/mo
+                  <span className="font-semibold text-green-600">
+                    {formatCurrency(client.total_mrr, client.currency)}/mo
                   </span>
                 )}
-                <span className="flex items-center gap-1 text-muted-foreground">
+                <span className="flex items-center gap-1 text-muted-foreground rounded-full bg-muted px-2 py-0.5">
                   <FolderKanban className="h-3 w-3" />
                   {client.project_count}
                 </span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground hidden sm:block" />
               </div>
             </div>
           </Link>
@@ -73,7 +107,8 @@ function ClientsListLoading() {
     <Card>
       <CardContent className="p-0 divide-y">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-3">
+          <div key={i} className="flex items-center gap-3 px-4 py-3.5">
+            <Skeleton className="h-9 w-9 rounded-full shrink-0" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-32" />
               <Skeleton className="h-3 w-48" />
