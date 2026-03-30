@@ -25,6 +25,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { generateOutreachMessage } from "@/constants/message-templates";
 import { getProjectById } from "@/lib/queries/projects";
+import { getSetting } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 import { BriefEditor } from "@/components/projects/brief-editor";
 import { AiPromptCard } from "@/components/projects/ai-prompt-card";
@@ -64,6 +65,8 @@ export default async function ProjectDetailPage({
   // Use the internal preview URL for the outreach message
   // The user can edit the message to replace with a deployed URL later
   const internalPreviewUrl = `PREVIEW_URL_PLACEHOLDER`;
+
+  const globalPrompt = await getSetting("global_prompt");
 
   const outreachMessage = generateOutreachMessage({
     clientName: client?.name || "there",
@@ -256,6 +259,8 @@ export default async function ProjectDetailPage({
         targetLocations={project.target_locations}
         additionalNotes={project.additional_notes}
         contactInfo={contactInfo}
+        initialPrompt={project.ai_prompt}
+        globalPrompt={globalPrompt}
       />
 
       {/* Pages Required — full width with copy */}

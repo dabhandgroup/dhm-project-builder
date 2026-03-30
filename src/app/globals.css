@@ -103,3 +103,13 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-\[shimmer_2s_infinite\] {
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
+}

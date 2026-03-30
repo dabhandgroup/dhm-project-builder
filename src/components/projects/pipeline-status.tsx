@@ -234,6 +234,30 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
         <CardContent className="space-y-4">
           {status.step !== "idle" && (
             <>
+              {/* Overall progress bar */}
+              {isRunning && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-medium">Building...</span>
+                    <span>{Math.round(((status.completed_substeps?.length ?? 0) / buildSubsteps.length) * 100)}%</span>
+                  </div>
+                  <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                    {/* Completed portion */}
+                    <div
+                      className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all duration-700 ease-out"
+                      style={{ width: `${((status.completed_substeps?.length ?? 0) / buildSubsteps.length) * 100}%` }}
+                    />
+                    {/* Animated shimmer on top */}
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-full overflow-hidden transition-all duration-700 ease-out"
+                      style={{ width: `${Math.min(((status.completed_substeps?.length ?? 0) + 1) / buildSubsteps.length * 100, 100)}%` }}
+                    >
+                      <div className="h-full w-full bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 animate-[shimmer_2s_infinite]" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Live build checklist */}
               <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Build Progress</p>
@@ -246,10 +270,20 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
                       isComplete,
                     );
                     return (
-                      <div key={substep.key} className="flex items-center gap-2.5 text-xs">
+                      <div
+                        key={substep.key}
+                        className={`flex items-center gap-2.5 text-xs transition-all duration-300 ${
+                          state === "active" ? "bg-blue-50 dark:bg-blue-950/30 -mx-2 px-2 py-1 rounded-md" : ""
+                        }`}
+                      >
                         <div className="shrink-0">
                           {state === "done" && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                          {state === "active" && <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />}
+                          {state === "active" && (
+                            <div className="relative">
+                              <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                              <div className="absolute inset-0 h-4 w-4 rounded-full bg-blue-400/20 animate-ping" />
+                            </div>
+                          )}
                           {state === "pending" && <div className="h-4 w-4 rounded-full border-2 border-muted" />}
                         </div>
                         <span className={state === "done" ? "text-foreground" : state === "active" ? "text-foreground font-medium" : "text-muted-foreground"}>
@@ -258,6 +292,12 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
                         <span className={state === "done" ? "text-foreground" : state === "active" ? "text-foreground font-medium" : "text-muted-foreground"}>
                           {substep.label}
                         </span>
+                        {state === "active" && (
+                          <span className="ml-auto text-[10px] text-blue-500 animate-pulse">In progress</span>
+                        )}
+                        {state === "done" && (
+                          <CheckCircle2 className="ml-auto h-3 w-3 text-green-400" />
+                        )}
                       </div>
                     );
                   })}
@@ -335,7 +375,7 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
 
           {status.step === "idle" && (
             <p className="text-sm text-muted-foreground">
-              Click &quot;Build Site&quot; to generate the website.
+              Click &quot;Build Site&quot; to generate the website with AI.
               {isRebuild && " The existing site will be crawled first to preserve content and structure."}
               {" "}You can preview it and download the ZIP to deploy manually.
             </p>

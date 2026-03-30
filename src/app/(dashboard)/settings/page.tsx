@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@/hooks/use-user";
 import { toast } from "@/components/ui/toast";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Loader2,
   Save,
@@ -21,6 +22,7 @@ import {
   Bot,
   Flame,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 import { updateProfile } from "@/actions/users";
 import { updatePassword } from "@/actions/auth";
@@ -88,6 +90,9 @@ export default function SettingsPage() {
   const [testingAnthropic, setTestingAnthropic] = useState(false);
   const [testingFirecrawl, setTestingFirecrawl] = useState(false);
 
+  const [globalPrompt, setGlobalPrompt] = useState("");
+  const [savingGlobalPrompt, setSavingGlobalPrompt] = useState(false);
+
   // Track which integrations have been verified (saved + loaded from DB)
   const [connectedServices, setConnectedServices] = useState<Record<string, boolean>>({});
 
@@ -109,6 +114,7 @@ export default function SettingsPage() {
       if (settings.netlify_token) setNetlifyToken(settings.netlify_token);
       if (settings.anthropic_api_key) setAnthropicKey(settings.anthropic_api_key);
       if (settings.firecrawl_api_key) setFirecrawlKey(settings.firecrawl_api_key);
+      if (settings.global_prompt) setGlobalPrompt(settings.global_prompt);
 
       // Mark services as connected if they have saved keys
       setConnectedServices({
@@ -415,6 +421,45 @@ export default function SettingsPage() {
           <Button onClick={handleChangePassword} disabled={changingPassword} size="sm">
             {changingPassword ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Change Password
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Global Prompt */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Global Prompt
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            This text is injected at the top of every AI prompt generated for projects. Use it to set consistent instructions for Claude — e.g. output format, tech stack preferences, or export requirements.
+          </p>
+          <Textarea
+            value={globalPrompt}
+            onChange={(e) => setGlobalPrompt(e.target.value)}
+            placeholder="e.g. When complete, run export as HTML. Give me a link on GitHub that I can download as a zip folder with all the HTML files (not as Next.js)..."
+            rows={5}
+            className="text-sm font-mono"
+          />
+          <Button
+            size="sm"
+            onClick={async () => {
+              setSavingGlobalPrompt(true);
+              const result = await saveSettings({ global_prompt: globalPrompt });
+              if (result.error) {
+                toast({ title: result.error, variant: "destructive" });
+              } else {
+                toast({ title: "Global prompt saved" });
+              }
+              setSavingGlobalPrompt(false);
+            }}
+            disabled={savingGlobalPrompt}
+          >
+            {savingGlobalPrompt ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save Global Prompt
           </Button>
         </CardContent>
       </Card>
