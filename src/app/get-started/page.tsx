@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -15,14 +15,13 @@ import {
   CheckCircle2,
   Globe,
   Star,
-  MapPin,
-  Search,
-  MessageSquare,
 } from "lucide-react";
+import confetti from "canvas-confetti";
 
 function LeftPanel() {
   return (
-    <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] flex-col justify-between bg-zinc-950 text-white p-10 sticky top-0 h-screen overflow-y-auto">
+    <div className="hidden lg:flex lg:w-[520px] xl:w-[600px] flex-col bg-zinc-950 text-white p-10 sticky top-0 h-screen overflow-y-auto">
+      {/* Logo + branding */}
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-zinc-950 text-sm font-bold">
           DH
@@ -32,21 +31,21 @@ function LeftPanel() {
         </span>
       </div>
 
-      <div className="flex-1 flex flex-col justify-center space-y-8 py-10">
-        {/* Hero */}
-        <div className="space-y-4">
-          <h1 className="text-3xl font-semibold tracking-tight leading-tight">
-            Let&apos;s build your<br />
-            dream website.
-          </h1>
-          <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md">
-            Fill in the details below and we&apos;ll take it from here.
-            The more info you give us, the better the result.
-          </p>
-        </div>
+      {/* Hero — centered */}
+      <div className="flex-1 flex flex-col justify-center space-y-4 py-10">
+        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-[1.1]">
+          Let&apos;s build your<br />
+          dream website.
+        </h1>
+        <p className="text-zinc-400 text-[15px] leading-relaxed max-w-md">
+          Fill in the details below and we&apos;ll take it from here.
+          The more info you give us, the better the result.
+        </p>
+      </div>
 
-        {/* Google Testimonial */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 space-y-3">
+      {/* Google Testimonial — pinned to bottom */}
+      <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center gap-1">
             {[...Array(5)].map((_, i) => (
               <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -71,54 +70,10 @@ function LeftPanel() {
           </div>
         </div>
 
-        {/* Google Services */}
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-5 space-y-4">
-          <h3 className="text-sm font-semibold">Also available</h3>
-          <div className="grid grid-cols-1 gap-3">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 shrink-0">
-                <MapPin className="h-4 w-4 text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Google Maps Listing</p>
-                <p className="text-xs text-zinc-500">Get your business on Google Maps so customers can find you</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10 shrink-0">
-                <Search className="h-4 w-4 text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Local Search Optimisation</p>
-                <p className="text-xs text-zinc-500">Rank higher in local search results and get more traffic</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-yellow-500/10 shrink-0">
-                <MessageSquare className="h-4 w-4 text-yellow-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Google Reviews Management</p>
-                <p className="text-xs text-zinc-500">Build trust with automated review collection and responses</p>
-              </div>
-            </div>
-          </div>
-          <div className="pt-2 space-y-2">
-            <Button
-              variant="outline"
-              className="w-full bg-white text-zinc-950 hover:bg-zinc-100 border-0 font-semibold"
-              size="sm"
-            >
-              Buy Now &mdash; $199/mo
-            </Button>
-            <p className="text-[10px] text-center text-zinc-600">No lock-in subscriptions. Cancel anytime.</p>
-          </div>
-        </div>
+        <p className="text-xs text-zinc-600">
+          &copy; {new Date().getFullYear()} dab hand marketing
+        </p>
       </div>
-
-      <p className="text-xs text-zinc-600">
-        &copy; {new Date().getFullYear()} dab hand marketing
-      </p>
     </div>
   );
 }
@@ -219,6 +174,18 @@ export default function GetStartedPage() {
       setIsSubmitting(false);
     }
   }
+
+  // Fire confetti on submission
+  useEffect(() => {
+    if (!submitted) return;
+    const end = Date.now() + 1200;
+    function frame() {
+      confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.7 } });
+      confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.7 } });
+      if (Date.now() < end) requestAnimationFrame(frame);
+    }
+    frame();
+  }, [submitted]);
 
   if (submitted) {
     return (
