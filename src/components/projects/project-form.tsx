@@ -975,7 +975,7 @@ export function ProjectForm({
           {isSubmitting ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              {isEditing ? "Saving..." : "Building..."}
+              {isEditing ? "Saving..." : "Creating..."}
             </>
           ) : isEditing ? (
             <>
@@ -985,7 +985,7 @@ export function ProjectForm({
           ) : (
             <>
               <Rocket className="h-4 w-4" />
-              Build Site
+              Create Project
             </>
           )}
         </Button>

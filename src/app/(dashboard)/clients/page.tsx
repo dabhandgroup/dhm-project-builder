@@ -2,12 +2,12 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Users, Mail, Phone, FolderKanban, ChevronRight } from "lucide-react";
+import { Users, Mail, Phone, FolderKanban, ChevronRight } from "lucide-react";
 import { getClientsWithStats } from "@/lib/queries/clients";
 import { formatCurrency } from "@/lib/utils";
+import { AddClientDialog } from "@/components/clients/add-client-dialog";
 
 const avatarColors = [
   "bg-blue-100 text-blue-700",
@@ -125,12 +125,7 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Clients" description="Manage your clients">
-        <Link href="/clients?new=true">
-          <Button>
-            <Plus className="h-4 w-4" />
-            Add Client
-          </Button>
-        </Link>
+        <AddClientDialog />
       </PageHeader>
 
       <Suspense fallback={<ClientsListLoading />}>
