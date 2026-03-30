@@ -239,9 +239,6 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {/* Pipeline */}
-      <PipelineStatus projectId={id} isRebuild={project.is_rebuild} />
-
       {/* Brief — full width, editable */}
       <BriefEditor
         projectId={id}
@@ -271,23 +268,6 @@ export default async function ProjectDetailPage({
         globalPrompt={globalPrompt}
       />
 
-      {/* Pages Required — full width with copy */}
-      {project.pages_required && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Pages Required</CardTitle>
-              <CopyButton text={project.pages_required} />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">
-              {project.pages_required}
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Additional Notes */}
       {project.additional_notes && (
         <Card>
@@ -302,6 +282,9 @@ export default async function ProjectDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Site Generation */}
+      <PipelineStatus projectId={id} isRebuild={project.is_rebuild} />
 
       {/* Outreach Message */}
       <OutreachMessageEditor

@@ -35,14 +35,6 @@ interface AiPromptCardProps {
 function buildPrompt(props: AiPromptCardProps, crawlData: CrawlData | null): string {
   const lines: string[] = [];
 
-  // Global prompt at the top if set
-  if (props.globalPrompt?.trim()) {
-    lines.push(props.globalPrompt.trim());
-    lines.push("");
-    lines.push("---");
-    lines.push("");
-  }
-
   lines.push("You are building a website for a client. Use the information below to create a complete, modern, responsive website.");
   lines.push("");
   lines.push("## Project");
@@ -128,6 +120,15 @@ function buildPrompt(props: AiPromptCardProps, crawlData: CrawlData | null): str
     lines.push("9. Use the existing content as a starting point but improve where needed");
   }
 
+  // Global prompt at the bottom as "Important Instructions"
+  if (props.globalPrompt?.trim()) {
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+    lines.push("## Important Instructions");
+    lines.push(props.globalPrompt.trim());
+  }
+
   return lines.join("\n");
 }
 
@@ -188,7 +189,7 @@ export function AiPromptCard(props: AiPromptCardProps) {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 600)}px`;
+    el.style.height = `${Math.min(el.scrollHeight, 800)}px`;
   }, []);
 
   useEffect(() => {
@@ -296,8 +297,8 @@ export function AiPromptCard(props: AiPromptCardProps) {
           ref={textareaRef}
           value={prompt}
           onChange={(e) => handlePromptChange(e.target.value)}
-          className="w-full rounded-md border border-input bg-muted/30 p-3 text-xs font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none overflow-hidden"
-          style={{ minHeight: "200px", maxHeight: "600px" }}
+          className="w-full rounded-md border border-input bg-muted/30 p-3 text-xs font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y overflow-auto"
+          style={{ minHeight: "200px", maxHeight: "800px" }}
         />
         <p className="text-xs text-muted-foreground">
           Click to edit. Changes save automatically. Use &quot;Regenerate&quot;
