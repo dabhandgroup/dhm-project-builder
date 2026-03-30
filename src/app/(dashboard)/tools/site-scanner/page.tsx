@@ -239,6 +239,62 @@ export default function SiteScannerPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  async function handleDownloadScreenshots() {
+    if (!crawlData) return;
+    try {
+      const JSZip = (await import("jszip")).default;
+      const zip = new JSZip();
+      const desktopFolder = zip.folder("desktop")!;
+      const mobileFolder = zip.folder("mobile")!;
+
+      // Fetch all screenshot URLs in parallel
+      const tasks: Promise<void>[] = [];
+      for (const page of crawlData.pages) {
+        let pagePath: string;
+        try {
+          pagePath = new URL(page.url).pathname.replace(/^\//, "") || "home";
+          pagePath = pagePath.replace(/\/$/, "") || "home";
+        } catch {
+          pagePath = "home";
+        }
+
+        if (page.screenshot) {
+          tasks.push(
+            fetch(page.screenshot)
+              .then((r) => r.blob())
+              .then((blob) => {
+                desktopFolder.file(`${pagePath}.png`, blob);
+              })
+              .catch(() => {}),
+          );
+        }
+        if (page.mobileScreenshot) {
+          tasks.push(
+            fetch(page.mobileScreenshot)
+              .then((r) => r.blob())
+              .then((blob) => {
+                mobileFolder.file(`${pagePath}.png`, blob);
+              })
+              .catch(() => {}),
+          );
+        }
+      }
+
+      toast({ title: "Downloading screenshots..." });
+      await Promise.allSettled(tasks);
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${crawlData.domain}-screenshots.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast({ title: "Screenshots downloaded" });
+    } catch {
+      toast({ title: "Failed to download screenshots", variant: "destructive" });
+    }
+  }
+
   function handleDownloadSitemap() {
     if (!crawlData) return;
     const lines = crawlData.allUrls.join("\n");
@@ -481,6 +537,16 @@ export default function SiteScannerPage() {
                   <Download className="h-3.5 w-3.5" />
                   Download Content
                 </button>
+                {pageStats && (pageStats.withScreenshots > 0 || pageStats.withMobileScreenshots > 0) && (
+                  <button
+                    type="button"
+                    onClick={handleDownloadScreenshots}
+                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline bg-blue-50 dark:bg-blue-950 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-900"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    Download Screenshots
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={handleDownloadSitemap}
