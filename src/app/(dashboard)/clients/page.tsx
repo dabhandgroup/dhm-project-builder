@@ -4,7 +4,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Users, Mail, Phone, FolderKanban, ChevronRight } from "lucide-react";
+import { Users, Mail, Phone, FolderKanban, ChevronRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { getClientsWithStats } from "@/lib/queries/clients";
 import { formatCurrency } from "@/lib/utils";
 import { AddClientDialog } from "@/components/clients/add-client-dialog";
@@ -125,7 +126,9 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Clients" description="Manage your clients">
-        <AddClientDialog />
+        <Suspense fallback={<Button disabled><Plus className="h-4 w-4" /> Add Client</Button>}>
+          <AddClientDialog />
+        </Suspense>
       </PageHeader>
 
       <Suspense fallback={<ClientsListLoading />}>
