@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import JSZip from "jszip";
 
 export async function GET(request: NextRequest) {
   const projectId = request.nextUrl.searchParams.get("projectId");
@@ -27,36 +26,18 @@ export async function GET(request: NextRequest) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 
-  // Screenshots: build a ZIP from stored screenshot JSON (base64 images)
+  // Screenshots: serve the pre-built screenshots ZIP
   if (type === "screenshots") {
-    const { data: screenshotBlob, error: ssErr } = await supabase.storage
+    const { data: ssData, error: ssErr } = await supabase.storage
       .from("project-assets")
-      .download(`crawl-data/${projectId}-screenshots.json`);
+      .download(`crawl-data/${projectId}-screenshots.zip`);
 
-    if (ssErr || !screenshotBlob) {
+    if (ssErr || !ssData) {
       return NextResponse.json({ error: "No screenshots found. Run a site scan first." }, { status: 404 });
     }
 
-    const screenshots: { url: string; screenshot: string }[] = JSON.parse(await screenshotBlob.text());
-    const zip = new JSZip();
-
-    for (const ss of screenshots) {
-      let pagePath: string;
-      try {
-        pagePath = new URL(ss.url).pathname.replace(/^\//, "") || "home";
-      } catch {
-        pagePath = "home";
-      }
-      pagePath = pagePath.replace(/\/$/, "") || "home";
-
-      const base64Match = ss.screenshot.match(/^data:image\/\w+;base64,(.+)$/);
-      if (base64Match) {
-        zip.file(`${pagePath}/screenshot.png`, base64Match[1], { base64: true });
-      }
-    }
-
-    const zipBuffer = Buffer.from(await zip.generateAsync({ type: "nodebuffer" }));
-    return new NextResponse(zipBuffer, {
+    const buffer = Buffer.from(await ssData.arrayBuffer());
+    return new NextResponse(buffer, {
       headers: {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${slug}-screenshots.zip"`,
