@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Gauge, ImageIcon, ArrowRight, Instagram, PenTool, ArrowRightLeft, Search } from "lucide-react";
+import { Gauge, ImageIcon, ArrowRight, Instagram, PenTool, ArrowRightLeft, Search, Hexagon } from "lucide-react";
 
 const tools = [
   {
@@ -38,6 +38,13 @@ const tools = [
       "Crawl any website with Firecrawl. Download the full site, screenshots (desktop + mobile), sitemap, and get an AI prompt with all the content.",
     href: "/tools/site-scanner",
     icon: Search,
+  },
+  {
+    title: "Favicon Generator",
+    description:
+      "Upload a square image and generate all favicon sizes needed for Next.js. Downloads as a ready-to-use ZIP.",
+    href: "/tools/favicon-generator",
+    icon: Hexagon,
   },
   {
     title: "Content Planner",
