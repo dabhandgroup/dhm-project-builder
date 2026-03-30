@@ -29,6 +29,7 @@ import { getSetting } from "@/lib/queries/settings";
 import { createClient } from "@/lib/supabase/server";
 import { BriefEditor } from "@/components/projects/brief-editor";
 import { AiPromptCard } from "@/components/projects/ai-prompt-card";
+import { SiteScanCard } from "@/components/projects/site-scan-card";
 import { PipelineStatus } from "@/components/projects/pipeline-status";
 import { ConfettiTrigger } from "@/components/shared/confetti-trigger";
 import { Suspense } from "react";
@@ -246,6 +247,13 @@ export default async function ProjectDetailPage({
         projectId={id}
         initialBrief={project.brief || ""}
         briefSummary={project.brief_summary}
+      />
+
+      {/* Site Scan */}
+      <SiteScanCard
+        projectId={id}
+        projectTitle={project.title}
+        domainName={project.domain_name}
       />
 
       {/* AI Prompt */}

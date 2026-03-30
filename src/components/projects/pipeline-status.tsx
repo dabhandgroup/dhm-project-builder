@@ -3,26 +3,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CopyButton } from "@/components/shared/copy-button";
 import {
   Loader2,
   Play,
   CheckCircle2,
-  XCircle,
   Globe,
   Cpu,
   Search,
   Rocket,
   Download,
-  FileText,
   Code,
-  Camera,
-  Link2,
-  ChevronDown,
-  ChevronUp,
-  ExternalLink,
-  FileSpreadsheet,
   Package,
   Shield,
   Image as ImageIcon,
@@ -47,23 +38,6 @@ const buildSubsteps: SubstepDef[] = [
 ];
 
 type StepStatus = "pending" | "scraping" | "generating" | "pushing" | "complete" | "failed" | "idle";
-
-interface CrawlPage {
-  url: string;
-  markdown: string;
-  html: string;
-  rawHtml: string;
-  screenshot: string | null;
-  links: string[];
-  metadata: { title?: string; description?: string; [key: string]: unknown };
-}
-
-interface CrawlDataResponse {
-  pages: CrawlPage[];
-  allUrls: string[];
-  domain: string;
-  crawledAt?: string;
-}
 
 function getSubstepState(
   substepKey: string,
@@ -93,9 +67,6 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
   const [starting, setStarting] = useState(false);
   // Prevents polling from resetting status to "idle" right after we click Build
   const justStartedRef = useRef(false);
-  const [crawlData, setCrawlData] = useState<CrawlDataResponse | null>(null);
-  const [crawlExpanded, setCrawlExpanded] = useState(false);
-  const [pagesExpanded, setPagesExpanded] = useState(true);
 
   const previewUrl = `/preview/${projectId}`;
 
@@ -120,21 +91,6 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
     return justStartedRef.current ? "pending" : "idle";
   }, [projectId]);
 
-  // Load crawl data for display
-  const loadCrawlData = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/crawl/load?projectId=${projectId}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.crawlData) {
-          setCrawlData(data.crawlData);
-        }
-      }
-    } catch {
-      // Non-fatal
-    }
-  }, [projectId]);
-
   useEffect(() => {
     let timer: NodeJS.Timeout;
     let cancelled = false;
@@ -147,20 +103,14 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
       if (step && !["idle", "complete", "failed"].includes(step)) {
         timer = setTimeout(poll, 2000);
       }
-      // Load crawl data when scraping completes or pipeline is done
-      if (step === "generating" || step === "complete") {
-        loadCrawlData();
-      }
     }
 
     poll();
-    // Also try loading crawl data on mount (might already exist from a previous build)
-    loadCrawlData();
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [pollStatus, loadCrawlData]);
+  }, [pollStatus]);
 
   async function startPipeline() {
     setStarting(true);
@@ -188,9 +138,6 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
         if (step && !["complete", "failed"].includes(step)) {
           setTimeout(poll, 2000);
         }
-        if (step === "generating" || step === "complete") {
-          loadCrawlData();
-        }
       };
       setTimeout(poll, 1000);
     } catch {
@@ -204,15 +151,6 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
   const isComplete = status.step === "complete";
   const isFailed = status.step === "failed";
   const hasBuild = status.has_build_zip;
-
-  const pageStats = crawlData
-    ? {
-        withMarkdown: crawlData.pages.filter((p) => p.markdown).length,
-        withHtml: crawlData.pages.filter((p) => p.html || p.rawHtml).length,
-        withScreenshots: crawlData.pages.filter((p) => p.screenshot).length,
-        totalLinks: new Set(crawlData.pages.flatMap((p) => p.links)).size,
-      }
-    : null;
 
   return (
     <div className="space-y-4">
@@ -382,154 +320,6 @@ export function PipelineStatus({ projectId, isRebuild }: { projectId: string; is
           )}
         </CardContent>
       </Card>
-
-      {/* Crawl Results (shown when crawl data exists) */}
-      {crawlData && crawlData.pages.length > 0 && (
-        <Card className="border-green-500/30">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              Site Crawl Results
-              <Badge variant="secondary" className="ml-auto text-green-600 bg-green-50 dark:bg-green-950">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
-                {crawlData.pages.length} pages
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Stats grid */}
-            {pageStats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                  <FileText className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-lg font-semibold">{pageStats.withMarkdown}</p>
-                  <p className="text-[10px] text-muted-foreground">Content Pages</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                  <Code className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-lg font-semibold">{pageStats.withHtml}</p>
-                  <p className="text-[10px] text-muted-foreground">HTML Captured</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                  <Camera className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-lg font-semibold">{pageStats.withScreenshots}</p>
-                  <p className="text-[10px] text-muted-foreground">Screenshots</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-2.5 text-center">
-                  <Link2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-lg font-semibold">{pageStats.totalLinks}</p>
-                  <p className="text-[10px] text-muted-foreground">Links Found</p>
-                </div>
-              </div>
-            )}
-
-            {/* All discovered URLs (expandable) */}
-            {crawlData.allUrls.length > 0 && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setCrawlExpanded(!crawlExpanded)}
-                  className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full"
-                >
-                  {crawlExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  {crawlData.allUrls.length} URLs discovered
-                </button>
-                {crawlExpanded && (
-                  <div className="rounded-lg border bg-muted/30 p-3 max-h-[300px] overflow-auto space-y-1">
-                    {crawlData.allUrls.map((url) => (
-                      <div key={url} className="flex items-center gap-2 text-xs group">
-                        <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="truncate text-muted-foreground group-hover:text-foreground transition-colors">
-                          {url}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Scraped pages with screenshots */}
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => setPagesExpanded(!pagesExpanded)}
-                className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors w-full"
-              >
-                {pagesExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Scraped Pages
-              </button>
-              {pagesExpanded && (
-                <div className="grid gap-2">
-                  {crawlData.pages.slice(0, 12).map((page) => (
-                    <div
-                      key={page.url}
-                      className="flex items-center gap-3 rounded-lg border p-2.5 text-sm"
-                    >
-                      {page.screenshot ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={page.screenshot}
-                          alt={page.metadata?.title || page.url}
-                          className="h-12 w-20 rounded object-cover border shrink-0"
-                        />
-                      ) : (
-                        <div className="h-12 w-20 rounded bg-muted flex items-center justify-center shrink-0">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium truncate text-xs">
-                          {page.metadata?.title || "Untitled"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {page.url}
-                        </p>
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        {page.markdown && (
-                          <Badge variant="outline" className="text-[10px] px-1.5">MD</Badge>
-                        )}
-                        {(page.html || page.rawHtml) && (
-                          <Badge variant="outline" className="text-[10px] px-1.5">HTML</Badge>
-                        )}
-                        {page.screenshot && (
-                          <Badge variant="outline" className="text-[10px] px-1.5">IMG</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {crawlData.pages.length > 12 && (
-                    <p className="text-xs text-muted-foreground text-center py-1">
-                      +{crawlData.pages.length - 12} more pages
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Download actions */}
-            <div className="flex justify-end gap-2 pt-1 border-t">
-              <a
-                href={`/api/projects/download?projectId=${projectId}&type=crawl`}
-                download
-                className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-medium px-2 py-1"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Original Site ZIP
-              </a>
-              <a
-                href={`/api/projects/download?projectId=${projectId}&type=redirects`}
-                download
-                className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline font-medium px-2 py-1"
-              >
-                <FileSpreadsheet className="h-3.5 w-3.5" />
-                Redirects CSV
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Site Preview (shown when build is complete) */}
       {isComplete && hasBuild && (
