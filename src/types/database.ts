@@ -539,6 +539,33 @@ export interface Database {
         };
         Relationships: [];
       };
+      scans: {
+        Row: {
+          id: string;
+          user_id: string;
+          domain: string;
+          url: string;
+          page_count: number;
+          image_count: number;
+          storage_key: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          domain: string;
+          url: string;
+          page_count?: number;
+          image_count?: number;
+          storage_key: string;
+          created_at?: string;
+        };
+        Update: {
+          page_count?: number;
+          image_count?: number;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
