@@ -151,11 +151,12 @@ export default function SiteScannerPage() {
     return lines.join("\n");
   }, []);
 
-  // Poll a crawl until complete
-  async function pollCrawl(crawlId: string, totalHint: number, label: string): Promise<CrawlPage[] | null> {
+  // Poll a crawl/batch scrape until complete
+  async function pollCrawl(crawlId: string, totalHint: number, label: string, type?: string): Promise<CrawlPage[] | null> {
+    const typeParam = type ? `?type=${type}` : "";
     while (true) {
       await new Promise((r) => setTimeout(r, 3000));
-      const statusRes = await fetch(`/api/crawl/${crawlId}`);
+      const statusRes = await fetch(`/api/crawl/${crawlId}${typeParam}`);
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
       setCrawlProgress({ completed: statusData.completed || 0, total: statusData.total || totalHint, label });
@@ -223,8 +224,8 @@ export default function SiteScannerPage() {
         return;
       }
 
-      const { crawlId, allUrls } = await startRes.json();
-      const desktopPages = await pollCrawl(crawlId, allUrls?.length || 0, "Desktop");
+      const { crawlId, allUrls, type } = await startRes.json();
+      const desktopPages = await pollCrawl(crawlId, allUrls?.length || 0, "Desktop", type);
 
       if (!desktopPages) {
         toast({ title: "Desktop scan failed", variant: "destructive" });
@@ -243,8 +244,8 @@ export default function SiteScannerPage() {
       });
 
       if (mobileRes.ok) {
-        const { crawlId: mobileCrawlId } = await mobileRes.json();
-        const mobilePages = await pollCrawl(mobileCrawlId, desktopPages.length, "Mobile");
+        const { crawlId: mobileCrawlId, type: mobileType } = await mobileRes.json();
+        const mobilePages = await pollCrawl(mobileCrawlId, desktopPages.length, "Mobile", mobileType);
         if (mobilePages) {
           for (const p of mobilePages) {
             if (p.screenshot) mobileScreenshots[p.url] = p.screenshot as string;

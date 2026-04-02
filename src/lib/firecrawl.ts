@@ -170,6 +170,73 @@ export async function getCrawlStatus(
   };
 }
 
+// ---------- Batch scrape: scrape specific URLs ----------
+
+export async function startBatchScrape(
+  apiKey: string,
+  urls: string[],
+  options?: { mobile?: boolean },
+): Promise<string> {
+  const res = await fetch(`${FIRECRAWL_API}/batch/scrape`, {
+    method: "POST",
+    headers: getHeaders(apiKey),
+    body: JSON.stringify({
+      urls,
+      formats: ["markdown", "html", "rawHtml", "screenshot@fullPage", "links"],
+      waitFor: 1000,
+      ...(options?.mobile ? { mobile: true } : {}),
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to start batch scrape");
+  }
+
+  const data = await res.json();
+  return data.id;
+}
+
+export async function getBatchScrapeStatus(
+  apiKey: string,
+  batchId: string,
+): Promise<CrawlStatus> {
+  const res = await fetch(`${FIRECRAWL_API}/batch/scrape/${batchId}`, {
+    headers: getHeaders(apiKey),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to get batch scrape status");
+  }
+
+  const data = await res.json();
+
+  let allRawPages: Record<string, unknown>[] = data.data ?? [];
+
+  // Follow pagination
+  if (data.status === "completed" && data.next) {
+    let nextUrl: string | null = data.next;
+    while (nextUrl) {
+      const nextRes = await fetch(nextUrl, { headers: getHeaders(apiKey) });
+      if (!nextRes.ok) break;
+      const nextData = await nextRes.json();
+      allRawPages = allRawPages.concat(nextData.data ?? []);
+      nextUrl = nextData.next ?? null;
+    }
+  }
+
+  const pages = mapRawPages(allRawPages);
+
+  return {
+    status: data.status,
+    total: data.total ?? 0,
+    completed: data.completed ?? pages.length,
+    creditsUsed: data.creditsUsed ?? 0,
+    expiresAt: data.expiresAt ?? "",
+    data: pages.length > 0 ? pages : undefined,
+  };
+}
+
 // ---------- Full crawl with polling (legacy compat) ----------
 
 export async function crawlSite(

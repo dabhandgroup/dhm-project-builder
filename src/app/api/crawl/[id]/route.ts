@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSetting } from "@/lib/queries/settings";
-import { getCrawlStatus } from "@/lib/firecrawl";
+import { getCrawlStatus, getBatchScrapeStatus } from "@/lib/firecrawl";
 
 export async function GET(
   _req: NextRequest,
@@ -23,7 +23,10 @@ export async function GET(
   }
 
   try {
-    const status = await getCrawlStatus(apiKey, id);
+    const type = new URL(_req.url).searchParams.get("type");
+    const status = type === "batch"
+      ? await getBatchScrapeStatus(apiKey, id)
+      : await getCrawlStatus(apiKey, id);
     return NextResponse.json(status);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to check status";
