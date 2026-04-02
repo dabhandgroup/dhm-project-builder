@@ -91,15 +91,17 @@ export function SiteScanCard({
     loadCrawlData();
   }, [loadCrawlData]);
 
-  // Poll a crawl until complete, returns pages array
+  // Poll a crawl/batch scrape until complete, returns pages array
   async function pollCrawl(
     crawlId: string,
     totalHint: number,
     label: string,
+    type?: string,
   ): Promise<CrawlPage[] | null> {
+    const typeParam = type ? `?type=${type}` : "";
     while (true) {
       await new Promise((r) => setTimeout(r, 3000));
-      const statusRes = await fetch(`/api/crawl/${crawlId}`);
+      const statusRes = await fetch(`/api/crawl/${crawlId}${typeParam}`);
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
 
@@ -146,8 +148,8 @@ export function SiteScanCard({
         return;
       }
 
-      const { crawlId, allUrls } = await startRes.json();
-      const desktopPages = await pollCrawl(crawlId, allUrls?.length || 0, "Desktop");
+      const { crawlId, allUrls, type } = await startRes.json();
+      const desktopPages = await pollCrawl(crawlId, allUrls?.length || 0, "Desktop", type);
 
       if (!desktopPages) {
         toast({ title: "Desktop crawl failed", variant: "destructive" });
@@ -165,8 +167,8 @@ export function SiteScanCard({
 
       let mobileScreenshots: Record<string, string> = {};
       if (mobileRes.ok) {
-        const { crawlId: mobileCrawlId } = await mobileRes.json();
-        const mobilePages = await pollCrawl(mobileCrawlId, desktopPages.length, "Mobile");
+        const { crawlId: mobileCrawlId, type: mobileType } = await mobileRes.json();
+        const mobilePages = await pollCrawl(mobileCrawlId, desktopPages.length, "Mobile", mobileType);
         if (mobilePages) {
           for (const p of mobilePages) {
             if (p.screenshot) {
