@@ -350,6 +350,120 @@ export default function SiteScannerPage() {
     a.click();
   }
 
+  // Client-side ZIP downloads — work without Supabase
+  function urlToPath(pageUrl: string): string {
+    try {
+      const p = new URL(pageUrl).pathname.replace(/^\//, "") || "home";
+      return p.replace(/\/$/, "") || "home";
+    } catch {
+      return "home";
+    }
+  }
+
+  async function downloadZipFromMemory(filter?: "content" | "html" | "screenshots" | "images") {
+    if (!crawlData) return;
+    const JSZip = (await import("jszip")).default;
+    const zip = new JSZip();
+
+    for (const page of crawlData.pages) {
+      const pagePath = urlToPath(page.url);
+
+      if (!filter || filter === "content") {
+        if (page.markdown) {
+          zip.file(`pages/${pagePath}/content.md`, page.markdown);
+        }
+      }
+
+      if (!filter || filter === "html") {
+        const htmlContent = page.rawHtml || page.html;
+        if (htmlContent) {
+          zip.file(`pages/${pagePath}/source.html`, htmlContent);
+        }
+      }
+
+      if (!filter || filter === "screenshots") {
+        if (page.screenshot) {
+          const base64Match = page.screenshot.match(/^data:image\/\w+;base64,(.+)$/);
+          if (base64Match) {
+            zip.file(`pages/${pagePath}/screenshot-desktop.png`, base64Match[1], { base64: true });
+          }
+        }
+        if (page.mobileScreenshot) {
+          const base64Match = page.mobileScreenshot.match(/^data:image\/\w+;base64,(.+)$/);
+          if (base64Match) {
+            zip.file(`pages/${pagePath}/screenshot-mobile.png`, base64Match[1], { base64: true });
+          }
+        }
+      }
+
+      if (!filter || filter === "images") {
+        // Extract image URLs from HTML and include them
+        const htmlContent = page.rawHtml || page.html;
+        if (htmlContent) {
+          const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+          let match;
+          const seen = new Set<string>();
+          let imgIdx = 0;
+          while ((match = imgRegex.exec(htmlContent)) !== null && imgIdx < 30) {
+            let src = match[1];
+            if (src.startsWith("data:") || seen.has(src)) continue;
+            try {
+              src = new URL(src, page.url).href;
+            } catch { continue; }
+            if (seen.has(src)) continue;
+            seen.add(src);
+            try {
+              const res = await fetch(src);
+              if (!res.ok) continue;
+              const ct = res.headers.get("content-type") || "";
+              if (!ct.startsWith("image/")) continue;
+              const ext = ct.includes("png") ? "png" : ct.includes("gif") ? "gif" : ct.includes("webp") ? "webp" : ct.includes("svg") ? "svg" : "jpg";
+              const buf = await res.arrayBuffer();
+              if (buf.byteLength < 100 || buf.byteLength > 5_000_000) continue;
+              zip.file(`pages/${pagePath}/images/image-${imgIdx}.${ext}`, buf);
+              imgIdx++;
+            } catch { /* skip */ }
+          }
+        }
+      }
+    }
+
+    if (!filter) {
+      // Include sitemap
+      if (crawlData.allUrls.length > 0) {
+        zip.file("sitemap.txt", crawlData.allUrls.join("\n"));
+      }
+      // Include manifest
+      zip.file("data.json", JSON.stringify({
+        domain: crawlData.domain,
+        crawledAt: crawlData.crawledAt,
+        pageCount: crawlData.pages.length,
+        pages: crawlData.pages.map(p => ({
+          url: p.url,
+          title: p.metadata?.title || null,
+        })),
+      }, null, 2));
+    }
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    const suffix = filter || "all";
+    a.href = URL.createObjectURL(blob);
+    a.download = `${crawlData.domain}-${suffix}.zip`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function downloadSitemapFromMemory() {
+    if (!crawlData?.allUrls.length) return;
+    const blob = new Blob([crawlData.allUrls.join("\n")], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${crawlData.domain}-sitemap.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -635,67 +749,61 @@ export default function SiteScannerPage() {
                 )}
               </div>
 
-              {/* Download buttons */}
-              {activeScanId ? (
-                <div className="space-y-3 pt-2 border-t">
-                  {/* Primary: Download All */}
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => downloadUrl(activeScanId, "all")}
-                  >
-                    <Package className="h-4 w-4" />
-                    Download All (MD + HTML + Screenshots + Images + Sitemap)
-                  </Button>
+              {/* Download buttons — always available from in-memory data */}
+              <div className="space-y-3 pt-2 border-t">
+                {/* Primary: Download All */}
+                <Button
+                  className="w-full gap-2"
+                  onClick={() => downloadZipFromMemory()}
+                >
+                  <Package className="h-4 w-4" />
+                  Download All (MD + HTML + Screenshots + Sitemap)
+                </Button>
 
-                  {/* Individual downloads */}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => downloadUrl(activeScanId, "content")}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                    >
-                      <FileText className="h-3.5 w-3.5" />
-                      Content (MD)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadUrl(activeScanId, "html")}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                    >
-                      <Code className="h-3.5 w-3.5" />
-                      HTML Source
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadUrl(activeScanId, "screenshots")}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                    >
-                      <Camera className="h-3.5 w-3.5" />
-                      Screenshots
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadUrl(activeScanId, "images")}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                    >
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      Page Images
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => downloadUrl(activeScanId, "sitemap")}
-                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                    >
-                      <Globe className="h-3.5 w-3.5" />
-                      Sitemap
-                    </button>
-                  </div>
+                {/* Individual downloads */}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => downloadZipFromMemory("content")}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                  >
+                    <FileText className="h-3.5 w-3.5" />
+                    Content (MD)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadZipFromMemory("html")}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                  >
+                    <Code className="h-3.5 w-3.5" />
+                    HTML Source
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadZipFromMemory("screenshots")}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    Screenshots
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadZipFromMemory("images")}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    Page Images
+                  </button>
+                  <button
+                    type="button"
+                    onClick={downloadSitemapFromMemory}
+                    className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                  >
+                    <Globe className="h-3.5 w-3.5" />
+                    Sitemap
+                  </button>
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground pt-2 border-t">
-                  Saving scan data... downloads will be available shortly.
-                </p>
-              )}
+              </div>
             </CardContent>
           </Card>
 
