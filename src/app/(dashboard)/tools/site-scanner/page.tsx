@@ -73,7 +73,7 @@ function timeAgo(dateStr: string): string {
 
 export default function SiteScannerPage() {
   const [url, setUrl] = useState("");
-  const [maxPages, setMaxPages] = useState(50);
+  const [maxPages, setMaxPages] = useState(200);
   const [crawling, setCrawling] = useState(false);
   const [saving, setSaving] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState<{

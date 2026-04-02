@@ -83,7 +83,7 @@ export async function mapSite(
 export async function startCrawl(
   apiKey: string,
   url: string,
-  maxPages = 50,
+  maxPages = 200,
   options?: { mobile?: boolean },
 ): Promise<string> {
   const res = await fetch(`${FIRECRAWL_API}/crawl`, {
@@ -109,21 +109,8 @@ export async function startCrawl(
   return data.id;
 }
 
-export async function getCrawlStatus(
-  apiKey: string,
-  crawlId: string,
-): Promise<CrawlStatus> {
-  const res = await fetch(`${FIRECRAWL_API}/crawl/${crawlId}`, {
-    headers: getHeaders(apiKey),
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to get crawl status");
-  }
-
-  const data = await res.json();
-
-  const pages: CrawlPage[] = (data.data ?? []).map((page: Record<string, unknown>) => {
+function mapRawPages(raw: Record<string, unknown>[]): CrawlPage[] {
+  return raw.map((page) => {
     const meta = (page.metadata ?? {}) as Record<string, unknown>;
     return {
       url: (meta.sourceURL as string) ?? (meta.url as string) ?? "",
@@ -141,6 +128,37 @@ export async function getCrawlStatus(
       },
     };
   });
+}
+
+export async function getCrawlStatus(
+  apiKey: string,
+  crawlId: string,
+): Promise<CrawlStatus> {
+  const res = await fetch(`${FIRECRAWL_API}/crawl/${crawlId}`, {
+    headers: getHeaders(apiKey),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to get crawl status");
+  }
+
+  const data = await res.json();
+
+  let allRawPages: Record<string, unknown>[] = data.data ?? [];
+
+  // Follow pagination — Firecrawl returns ~10MB per response chunk
+  if (data.status === "completed" && data.next) {
+    let nextUrl: string | null = data.next;
+    while (nextUrl) {
+      const nextRes = await fetch(nextUrl, { headers: getHeaders(apiKey) });
+      if (!nextRes.ok) break;
+      const nextData = await nextRes.json();
+      allRawPages = allRawPages.concat(nextData.data ?? []);
+      nextUrl = nextData.next ?? null;
+    }
+  }
+
+  const pages = mapRawPages(allRawPages);
 
   return {
     status: data.status,
