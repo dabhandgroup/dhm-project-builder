@@ -99,41 +99,41 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < crawlData.pages.length; i += 5) {
       const batch = crawlData.pages.slice(i, i + 5);
 
-      await Promise.all(batch.map(async (page) => {
+      const batchResults = await Promise.all(batch.map(async (page) => {
         const pagePath = urlToPath(page.url);
         const prefix = `${storageKey}/pages/${pagePath}`;
+        const files: { path: string; data: Buffer | string }[] = [];
 
         // Markdown
         if (page.markdown) {
-          allFiles.push({ path: `${prefix}/content.md`, data: page.markdown });
+          files.push({ path: `${prefix}/content.md`, data: page.markdown });
         }
 
         // HTML source
         const htmlContent = page.rawHtml || page.html;
         if (htmlContent) {
-          allFiles.push({ path: `${prefix}/source.html`, data: htmlContent });
+          files.push({ path: `${prefix}/source.html`, data: htmlContent });
         }
 
         // Desktop screenshot
         if (page.screenshot) {
           const buf = await fetchScreenshot(page.screenshot);
-          if (buf) allFiles.push({ path: `${prefix}/screenshot-desktop.png`, data: buf });
+          if (buf) files.push({ path: `${prefix}/screenshot-desktop.png`, data: buf });
         }
 
         // Mobile screenshot
         if (page.mobileScreenshot) {
           const buf = await fetchScreenshot(page.mobileScreenshot);
-          if (buf) allFiles.push({ path: `${prefix}/screenshot-mobile.png`, data: buf });
+          if (buf) files.push({ path: `${prefix}/screenshot-mobile.png`, data: buf });
         }
 
         // Extract images from HTML
         const images = await extractPageImages(htmlContent || "", page.url);
         for (const img of images) {
-          allFiles.push({ path: `${prefix}/images/${img.filename}`, data: img.buffer });
+          files.push({ path: `${prefix}/images/${img.filename}`, data: img.buffer });
         }
-        totalImages += images.length;
 
-        pageManifests.push({
+        const manifest = {
           url: page.url,
           path: pagePath,
           title: (page.metadata as Record<string, unknown>)?.title || null,
@@ -143,8 +143,17 @@ export async function POST(req: NextRequest) {
           hasMobileScreenshot: !!page.mobileScreenshot,
           imageCount: images.length,
           imageFilenames: images.map((img) => img.filename),
-        });
+        };
+
+        return { files, manifest, imageCount: images.length };
       }));
+
+      // Merge batch results into shared state (sequentially, no race)
+      for (const result of batchResults) {
+        allFiles.push(...result.files);
+        pageManifests.push(result.manifest);
+        totalImages += result.imageCount;
+      }
     }
 
     // Save data.json manifest
