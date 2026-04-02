@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { url, maxPages = 50, projectId, mobile } = await req.json();
+  const { url, maxPages = 200, projectId, mobile } = await req.json();
   if (!url) {
     return NextResponse.json({ error: "URL is required" }, { status: 400 });
   }

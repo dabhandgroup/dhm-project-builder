@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import {
   Search,
@@ -24,6 +25,12 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
+  Sparkles,
+  ImageIcon,
+  Trash2,
+  Eye,
+  Clock,
+  Package,
   Camera,
 } from "lucide-react";
 
@@ -45,21 +52,55 @@ interface CrawlData {
   crawledAt: string;
 }
 
+interface ScanSummary {
+  id: string;
+  domain: string;
+  url: string;
+  page_count: number;
+  image_count: number;
+  storage_key: string;
+  created_at: string;
+}
+
+function timeAgo(dateStr: string): string {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return "just now";
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
 export default function SiteScannerPage() {
   const [url, setUrl] = useState("");
-  const [maxPages, setMaxPages] = useState(50);
+  const [maxPages, setMaxPages] = useState(200);
   const [crawling, setCrawling] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [crawlProgress, setCrawlProgress] = useState<{
     completed: number;
     total: number;
     label?: string;
   } | null>(null);
   const [crawlData, setCrawlData] = useState<CrawlData | null>(null);
+  const [activeScanId, setActiveScanId] = useState<string | null>(null);
   const [urlsExpanded, setUrlsExpanded] = useState(false);
   const [pagesExpanded, setPagesExpanded] = useState(true);
   const [copied, setCopied] = useState(false);
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Scan history
+  const [pastScans, setPastScans] = useState<ScanSummary[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Load scan history on mount
+  useEffect(() => {
+    fetch("/api/scans")
+      .then((r) => r.json())
+      .then((d) => setPastScans(d.scans || []))
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
+  }, []);
 
   const hasCrawlData = crawlData?.pages?.length && crawlData.pages.length > 0;
 
@@ -84,11 +125,7 @@ export default function SiteScannerPage() {
 
     lines.push("## Sitemap");
     for (const pageUrl of data.allUrls) {
-      try {
-        lines.push(`- ${new URL(pageUrl).pathname}`);
-      } catch {
-        lines.push(`- ${pageUrl}`);
-      }
+      try { lines.push(`- ${new URL(pageUrl).pathname}`); } catch { lines.push(`- ${pageUrl}`); }
     }
     lines.push("");
 
@@ -107,11 +144,7 @@ export default function SiteScannerPage() {
       lines.push("## 301 Redirects");
       lines.push("Create 301 redirects from these old URLs to their equivalent new pages:");
       for (const u of data.allUrls) {
-        try {
-          lines.push(`- ${new URL(u).pathname}`);
-        } catch {
-          lines.push(`- ${u}`);
-        }
+        try { lines.push(`- ${new URL(u).pathname}`); } catch { lines.push(`- ${u}`); }
       }
     }
 
@@ -119,28 +152,47 @@ export default function SiteScannerPage() {
   }, []);
 
   // Poll a crawl until complete
-  async function pollCrawl(
-    crawlId: string,
-    totalHint: number,
-    label: string,
-  ): Promise<CrawlPage[] | null> {
+  async function pollCrawl(crawlId: string, totalHint: number, label: string): Promise<CrawlPage[] | null> {
     while (true) {
       await new Promise((r) => setTimeout(r, 3000));
       const statusRes = await fetch(`/api/crawl/${crawlId}`);
       if (!statusRes.ok) continue;
       const statusData = await statusRes.json();
+      setCrawlProgress({ completed: statusData.completed || 0, total: statusData.total || totalHint, label });
+      if (statusData.status === "completed") return statusData.data || [];
+      if (statusData.status === "failed") return null;
+    }
+  }
 
-      setCrawlProgress({
-        completed: statusData.completed || 0,
-        total: statusData.total || totalHint,
-        label,
+  // Save scan to backend
+  async function saveScan(data: CrawlData): Promise<string | null> {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/scans/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ crawlData: data }),
       });
-
-      if (statusData.status === "completed") {
-        return statusData.data || [];
-      } else if (statusData.status === "failed") {
+      if (!res.ok) {
+        toast({ title: "Failed to save scan", variant: "destructive" });
         return null;
       }
+      const { scanId } = await res.json();
+
+      // Refresh history
+      const histRes = await fetch("/api/scans");
+      if (histRes.ok) {
+        const d = await histRes.json();
+        setPastScans(d.scans || []);
+      }
+
+      toast({ title: "Scan saved" });
+      return scanId;
+    } catch {
+      toast({ title: "Failed to save scan", variant: "destructive" });
+      return null;
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -152,10 +204,9 @@ export default function SiteScannerPage() {
     setCrawlProgress(null);
     setCrawlData(null);
     setPrompt("");
+    setActiveScanId(null);
 
-    const cleanUrl = url.trim().startsWith("http")
-      ? url.trim()
-      : `https://${url.trim()}`;
+    const cleanUrl = url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`;
 
     try {
       // Desktop crawl
@@ -183,7 +234,7 @@ export default function SiteScannerPage() {
 
       // Mobile crawl (screenshots)
       setCrawlProgress({ completed: 0, total: desktopPages.length, label: "Mobile" });
-      let mobileScreenshots: Record<string, string> = {};
+      const mobileScreenshots: Record<string, string> = {};
 
       const mobileRes = await fetch("/api/crawl", {
         method: "POST",
@@ -201,18 +252,13 @@ export default function SiteScannerPage() {
         }
       }
 
-      // Merge
       const mergedPages = desktopPages.map((p) => ({
         ...p,
         mobileScreenshot: mobileScreenshots[p.url] || null,
       }));
 
       let domain: string;
-      try {
-        domain = new URL(cleanUrl).hostname;
-      } catch {
-        domain = cleanUrl;
-      }
+      try { domain = new URL(cleanUrl).hostname; } catch { domain = cleanUrl; }
 
       const data: CrawlData = {
         pages: mergedPages,
@@ -223,12 +269,68 @@ export default function SiteScannerPage() {
 
       setCrawlData(data);
       setPrompt(buildPrompt(data));
-      toast({ title: `Scanned ${desktopPages.length} pages (desktop + mobile) from ${domain}` });
-    } catch {
-      toast({ title: "Scan failed", variant: "destructive" });
-    } finally {
       setCrawling(false);
       setCrawlProgress(null);
+
+      toast({ title: `Scanned ${desktopPages.length} pages from ${domain}` });
+
+      // Auto-save
+      setCrawlProgress({ completed: 0, total: 1, label: "Saving" });
+      const scanId = await saveScan(data);
+      if (scanId) setActiveScanId(scanId);
+      setCrawlProgress(null);
+    } catch {
+      toast({ title: "Scan failed", variant: "destructive" });
+      setCrawling(false);
+      setCrawlProgress(null);
+    }
+  }
+
+  // Load a past scan
+  async function loadScan(scanId: string) {
+    try {
+      const res = await fetch(`/api/scans/${scanId}`);
+      if (!res.ok) {
+        toast({ title: "Failed to load scan", variant: "destructive" });
+        return;
+      }
+      const { data } = await res.json();
+      // Reconstruct crawl data from manifest for display
+      setCrawlData({
+        pages: (data.pages || []).map((p: Record<string, unknown>) => ({
+          url: p.url,
+          markdown: p.hasMarkdown ? "(saved)" : undefined,
+          html: p.hasHtml ? "(saved)" : undefined,
+          screenshot: p.hasDesktopScreenshot ? "(saved)" : null,
+          mobileScreenshot: p.hasMobileScreenshot ? "(saved)" : null,
+          metadata: { title: p.title as string },
+          links: [],
+        })),
+        allUrls: data.allUrls || [],
+        domain: data.domain,
+        crawledAt: data.crawledAt,
+      });
+      setActiveScanId(scanId);
+      setPrompt(""); // Prompt not available from saved data
+      toast({ title: `Loaded scan of ${data.domain}` });
+    } catch {
+      toast({ title: "Failed to load scan", variant: "destructive" });
+    }
+  }
+
+  // Delete a scan
+  async function deleteScan(scanId: string) {
+    try {
+      await fetch(`/api/scans/${scanId}`, { method: "DELETE" });
+      setPastScans((prev) => prev.filter((s) => s.id !== scanId));
+      if (activeScanId === scanId) {
+        setCrawlData(null);
+        setActiveScanId(null);
+        setPrompt("");
+      }
+      toast({ title: "Scan deleted" });
+    } catch {
+      toast({ title: "Failed to delete scan", variant: "destructive" });
     }
   }
 
@@ -239,100 +341,98 @@ export default function SiteScannerPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleDownloadScreenshots() {
-    if (!crawlData) return;
-    try {
-      const JSZip = (await import("jszip")).default;
-      const zip = new JSZip();
-      const desktopFolder = zip.folder("desktop")!;
-      const mobileFolder = zip.folder("mobile")!;
-
-      // Fetch all screenshot URLs in parallel
-      const tasks: Promise<void>[] = [];
-      for (const page of crawlData.pages) {
-        let pagePath: string;
-        try {
-          pagePath = new URL(page.url).pathname.replace(/^\//, "") || "home";
-          pagePath = pagePath.replace(/\/$/, "") || "home";
-        } catch {
-          pagePath = "home";
-        }
-
-        if (page.screenshot) {
-          tasks.push(
-            fetch(page.screenshot)
-              .then((r) => r.blob())
-              .then((blob) => {
-                desktopFolder.file(`${pagePath}.png`, blob);
-              })
-              .catch(() => {}),
-          );
-        }
-        if (page.mobileScreenshot) {
-          tasks.push(
-            fetch(page.mobileScreenshot)
-              .then((r) => r.blob())
-              .then((blob) => {
-                mobileFolder.file(`${pagePath}.png`, blob);
-              })
-              .catch(() => {}),
-          );
-        }
-      }
-
-      toast({ title: "Downloading screenshots..." });
-      await Promise.allSettled(tasks);
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${crawlData.domain}-screenshots.zip`;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      toast({ title: "Screenshots downloaded" });
-    } catch {
-      toast({ title: "Failed to download screenshots", variant: "destructive" });
-    }
-  }
-
-  function handleDownloadSitemap() {
-    if (!crawlData) return;
-    const lines = crawlData.allUrls.join("\n");
-    const blob = new Blob([lines], { type: "text/plain" });
+  // Download helper for saved scans
+  function downloadUrl(scanId: string, type: string) {
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${crawlData.domain}-sitemap.txt`;
+    a.href = `/api/scans/${scanId}/download?type=${type}`;
+    a.download = "";
     a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  function handleDownloadSiteZip() {
-    if (!crawlData) return;
-    // Build and download a ZIP client-side using the page data
-    // For simplicity, trigger a download of markdown content
-    const lines: string[] = [];
-    for (const page of crawlData.pages) {
-      if (!page.markdown) continue;
-      lines.push(`# ${page.metadata?.title || page.url}`);
-      lines.push(`URL: ${page.url}`);
-      lines.push("");
-      lines.push(page.markdown);
-      lines.push("\n---\n");
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${crawlData.domain}-content.md`;
-    a.click();
-    URL.revokeObjectURL(a.href);
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Site Scanner"
-        description="Crawl any website to extract content, screenshots, and generate an AI prompt"
+        description="Crawl any website to extract content, screenshots, images, and generate an AI prompt"
       />
+
+      {/* Past Scans */}
+      {(loadingHistory || pastScans.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Past Scans
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingHistory ? (
+              <div className="space-y-2">
+                {[1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-3 p-2">
+                    <Skeleton className="h-8 w-8 rounded" />
+                    <div className="flex-1 space-y-1">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="divide-y">
+                {pastScans.map((scan) => (
+                  <div key={scan.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex h-8 w-8 items-center justify-center rounded bg-muted shrink-0">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{scan.domain}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{timeAgo(scan.created_at)}</span>
+                        <span>&middot;</span>
+                        <span>{scan.page_count} pages</span>
+                        {scan.image_count > 0 && (
+                          <>
+                            <span>&middot;</span>
+                            <span>{scan.image_count} images</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => loadScan(scan.id)}
+                      >
+                        <Eye className="h-3 w-3" />
+                        View
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => downloadUrl(scan.id, "all")}
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs gap-1 text-red-500 hover:text-red-600"
+                        onClick={() => deleteScan(scan.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* URL Input */}
       <Card>
@@ -349,7 +449,7 @@ export default function SiteScannerPage() {
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="example.com"
                     className="pl-10"
-                    disabled={crawling}
+                    disabled={crawling || saving}
                   />
                 </div>
               </div>
@@ -362,17 +462,22 @@ export default function SiteScannerPage() {
                   onChange={(e) => setMaxPages(Number(e.target.value))}
                   min={1}
                   max={200}
-                  disabled={crawling}
+                  disabled={crawling || saving}
                 />
               </div>
             </div>
-            <Button type="submit" disabled={crawling || !url.trim()}>
+            <Button type="submit" disabled={crawling || saving || !url.trim()}>
               {crawling ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   {crawlProgress
                     ? `${crawlProgress.label || "Scanning"} ${crawlProgress.completed}/${crawlProgress.total}...`
                     : "Starting scan..."}
+                </>
+              ) : saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving scan data...
                 </>
               ) : (
                 <>
@@ -383,7 +488,7 @@ export default function SiteScannerPage() {
             </Button>
 
             {/* Progress bar */}
-            {crawling && crawlProgress && (
+            {(crawling || saving) && crawlProgress && crawlProgress.label !== "Saving" && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>{crawlProgress.label} — Scanning...</span>
@@ -392,9 +497,7 @@ export default function SiteScannerPage() {
                 <div className="relative h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="absolute inset-y-0 left-0 rounded-full overflow-hidden transition-all duration-700 ease-out"
-                    style={{
-                      width: `${crawlProgress.total > 0 ? (crawlProgress.completed / crawlProgress.total) * 100 : 0}%`,
-                    }}
+                    style={{ width: `${crawlProgress.total > 0 ? (crawlProgress.completed / crawlProgress.total) * 100 : 0}%` }}
                   >
                     <div className="h-full w-full bg-gradient-to-r from-blue-500 via-blue-400 to-blue-500 animate-[shimmer_2s_infinite]" />
                   </div>
@@ -414,7 +517,7 @@ export default function SiteScannerPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Scan Results
+                  Scan Results — {crawlData.domain}
                   <Badge variant="secondary" className="text-green-600 bg-green-50 dark:bg-green-950">
                     {crawlData.pages.length} pages
                   </Badge>
@@ -427,31 +530,31 @@ export default function SiteScannerPage() {
             <CardContent className="space-y-4">
               {/* Stats grid */}
               {pageStats && (
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <FileText className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-semibold">{pageStats.withMarkdown}</p>
-                    <p className="text-[10px] text-muted-foreground">Content Pages</p>
+                    <p className="text-[10px] text-muted-foreground">Content</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Code className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-semibold">{pageStats.withHtml}</p>
-                    <p className="text-[10px] text-muted-foreground">HTML Captured</p>
+                    <p className="text-[10px] text-muted-foreground">HTML</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Monitor className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-semibold">{pageStats.withScreenshots}</p>
-                    <p className="text-[10px] text-muted-foreground">Desktop Shots</p>
+                    <p className="text-[10px] text-muted-foreground">Desktop</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Smartphone className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-semibold">{pageStats.withMobileScreenshots}</p>
-                    <p className="text-[10px] text-muted-foreground">Mobile Shots</p>
+                    <p className="text-[10px] text-muted-foreground">Mobile</p>
                   </div>
                   <div className="rounded-lg bg-muted/50 p-2.5 text-center">
                     <Link2 className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
                     <p className="text-lg font-semibold">{pageStats.totalLinks}</p>
-                    <p className="text-[10px] text-muted-foreground">Links Found</p>
+                    <p className="text-[10px] text-muted-foreground">Links</p>
                   </div>
                 </div>
               )}
@@ -494,7 +597,7 @@ export default function SiteScannerPage() {
                   <div className="grid gap-2">
                     {crawlData.pages.slice(0, 12).map((page) => (
                       <div key={page.url} className="flex items-center gap-3 rounded-lg border p-2.5 text-sm">
-                        {page.screenshot ? (
+                        {page.screenshot && page.screenshot !== "(saved)" ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={page.screenshot}
@@ -503,7 +606,11 @@ export default function SiteScannerPage() {
                           />
                         ) : (
                           <div className="h-12 w-20 rounded bg-muted flex items-center justify-center shrink-0">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            {page.screenshot === "(saved)" ? (
+                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                            )}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
@@ -527,73 +634,107 @@ export default function SiteScannerPage() {
                 )}
               </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2 pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={handleDownloadSiteZip}
-                  className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline bg-blue-50 dark:bg-blue-950 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-900"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Download Content
-                </button>
-                {pageStats && (pageStats.withScreenshots > 0 || pageStats.withMobileScreenshots > 0) && (
-                  <button
-                    type="button"
-                    onClick={handleDownloadScreenshots}
-                    className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:underline bg-blue-50 dark:bg-blue-950 rounded-lg px-3 py-2 border border-blue-200 dark:border-blue-900"
+              {/* Download buttons */}
+              {activeScanId ? (
+                <div className="space-y-3 pt-2 border-t">
+                  {/* Primary: Download All */}
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => downloadUrl(activeScanId, "all")}
                   >
-                    <Camera className="h-3.5 w-3.5" />
-                    Download Screenshots
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleDownloadSitemap}
-                  className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                  Download Sitemap
-                </button>
-              </div>
+                    <Package className="h-4 w-4" />
+                    Download All (MD + HTML + Screenshots + Images + Sitemap)
+                  </Button>
+
+                  {/* Individual downloads */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => downloadUrl(activeScanId, "content")}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Content (MD)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadUrl(activeScanId, "html")}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                    >
+                      <Code className="h-3.5 w-3.5" />
+                      HTML Source
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadUrl(activeScanId, "screenshots")}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                    >
+                      <Camera className="h-3.5 w-3.5" />
+                      Screenshots
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadUrl(activeScanId, "images")}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                    >
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      Page Images
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => downloadUrl(activeScanId, "sitemap")}
+                      className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground bg-muted/50 rounded-lg px-3 py-2 border"
+                    >
+                      <Globe className="h-3.5 w-3.5" />
+                      Sitemap
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-2 border-t">
+                  Saving scan data... downloads will be available shortly.
+                </p>
+              )}
             </CardContent>
           </Card>
 
           {/* AI Prompt */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
-                  AI Prompt
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="h-7 text-xs gap-1"
-                >
-                  {copied ? (
-                    <><Check className="h-3 w-3" /> Copied</>
-                  ) : (
-                    <><Copy className="h-3 w-3" /> Copy</>
-                  )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">
-                Paste this prompt into Claude to rebuild the site. Includes all crawled content, sitemap, and redirect mappings.
-              </p>
-              <textarea
-                ref={textareaRef}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="w-full rounded-md border border-input bg-muted/30 p-3 text-xs font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y overflow-auto"
-                style={{ minHeight: "200px", maxHeight: "800px" }}
-              />
-            </CardContent>
-          </Card>
+          {prompt && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    AI Prompt
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopy}
+                    className="h-7 text-xs gap-1"
+                  >
+                    {copied ? (
+                      <><Check className="h-3 w-3" /> Copied</>
+                    ) : (
+                      <><Copy className="h-3 w-3" /> Copy</>
+                    )}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Paste this prompt into Claude to rebuild the site. Includes all crawled content, sitemap, and redirect mappings.
+                </p>
+                <textarea
+                  ref={textareaRef}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="w-full rounded-md border border-input bg-muted/30 p-3 text-xs font-mono leading-relaxed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y overflow-auto"
+                  style={{ minHeight: "200px", maxHeight: "800px" }}
+                />
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
     </div>
