@@ -395,45 +395,46 @@ export default function SiteScannerPage() {
           }
         }
       }
+    }
 
-      if (!filter || filter === "images") {
-        // Extract image URLs from HTML and include them
+    // For "images" filter, fetch images from HTML (separate from "all" to avoid blocking)
+    if (filter === "images") {
+      for (const page of crawlData.pages) {
+        const pagePath = urlToPath(page.url);
         const htmlContent = page.rawHtml || page.html;
-        if (htmlContent) {
-          const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
-          let match;
-          const seen = new Set<string>();
-          let imgIdx = 0;
-          while ((match = imgRegex.exec(htmlContent)) !== null && imgIdx < 30) {
-            let src = match[1];
-            if (src.startsWith("data:") || seen.has(src)) continue;
-            try {
-              src = new URL(src, page.url).href;
-            } catch { continue; }
-            if (seen.has(src)) continue;
-            seen.add(src);
-            try {
-              const res = await fetch(src);
-              if (!res.ok) continue;
-              const ct = res.headers.get("content-type") || "";
-              if (!ct.startsWith("image/")) continue;
-              const ext = ct.includes("png") ? "png" : ct.includes("gif") ? "gif" : ct.includes("webp") ? "webp" : ct.includes("svg") ? "svg" : "jpg";
-              const buf = await res.arrayBuffer();
-              if (buf.byteLength < 100 || buf.byteLength > 5_000_000) continue;
-              zip.file(`pages/${pagePath}/images/image-${imgIdx}.${ext}`, buf);
-              imgIdx++;
-            } catch { /* skip */ }
-          }
+        if (!htmlContent) continue;
+        const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+        let match;
+        const seen = new Set<string>();
+        let imgIdx = 0;
+        while ((match = imgRegex.exec(htmlContent)) !== null && imgIdx < 30) {
+          let src = match[1];
+          if (src.startsWith("data:") || seen.has(src)) continue;
+          try {
+            src = new URL(src, page.url).href;
+          } catch { continue; }
+          if (seen.has(src)) continue;
+          seen.add(src);
+          try {
+            const res = await fetch(src);
+            if (!res.ok) continue;
+            const ct = res.headers.get("content-type") || "";
+            if (!ct.startsWith("image/")) continue;
+            const ext = ct.includes("png") ? "png" : ct.includes("gif") ? "gif" : ct.includes("webp") ? "webp" : ct.includes("svg") ? "svg" : "jpg";
+            const buf = await res.arrayBuffer();
+            if (buf.byteLength < 100 || buf.byteLength > 5_000_000) continue;
+            zip.file(`pages/${pagePath}/images/image-${imgIdx}.${ext}`, buf);
+            imgIdx++;
+          } catch { /* skip */ }
         }
       }
     }
 
+    // Include sitemap + manifest in "all" downloads
     if (!filter) {
-      // Include sitemap
       if (crawlData.allUrls.length > 0) {
         zip.file("sitemap.txt", crawlData.allUrls.join("\n"));
       }
-      // Include manifest
       zip.file("data.json", JSON.stringify({
         domain: crawlData.domain,
         crawledAt: crawlData.crawledAt,
@@ -443,6 +444,24 @@ export default function SiteScannerPage() {
           title: p.metadata?.title || null,
         })),
       }, null, 2));
+    }
+
+    // For "content" filter, also include a combined full-site markdown
+    if (filter === "content" || !filter) {
+      const combined: string[] = [];
+      combined.push(`# ${crawlData.domain}\n`);
+      combined.push(`Crawled: ${crawlData.crawledAt}\n`);
+      combined.push(`Pages: ${crawlData.pages.length}\n`);
+      combined.push("---\n");
+      for (const page of crawlData.pages) {
+        if (!page.markdown) continue;
+        const title = page.metadata?.title || page.url;
+        combined.push(`\n## ${title}\n`);
+        combined.push(`URL: ${page.url}\n`);
+        combined.push(page.markdown);
+        combined.push("\n\n---\n");
+      }
+      zip.file("full-site.md", combined.join("\n"));
     }
 
     const blob = await zip.generateAsync({ type: "blob" });
