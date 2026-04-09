@@ -360,12 +360,33 @@ export default function SiteScannerPage() {
     }
   }
 
+  async function screenshotToBuffer(screenshot: string): Promise<Uint8Array | null> {
+    // Handle base64 data URI
+    const base64Match = screenshot.match(/^data:image\/\w+;base64,(.+)$/);
+    if (base64Match) {
+      const binary = atob(base64Match[1]);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return bytes;
+    }
+    // Handle plain URL
+    if (screenshot.startsWith("http")) {
+      try {
+        const res = await fetch(screenshot);
+        if (!res.ok) return null;
+        return new Uint8Array(await res.arrayBuffer());
+      } catch { return null; }
+    }
+    return null;
+  }
+
   async function downloadZipFromMemory(filter?: "content" | "html" | "screenshots" | "images") {
     if (!crawlData) return;
     const JSZip = (await import("jszip")).default;
     const zip = new JSZip();
 
-    for (const page of crawlData.pages) {
+    // Process pages in parallel (especially important for screenshot URL fetches)
+    await Promise.all(crawlData.pages.map(async (page) => {
       const pagePath = urlToPath(page.url);
 
       if (!filter || filter === "content") {
@@ -382,20 +403,16 @@ export default function SiteScannerPage() {
       }
 
       if (!filter || filter === "screenshots") {
-        if (page.screenshot) {
-          const base64Match = page.screenshot.match(/^data:image\/\w+;base64,(.+)$/);
-          if (base64Match) {
-            zip.file(`pages/${pagePath}/screenshot-desktop.png`, base64Match[1], { base64: true });
-          }
+        if (page.screenshot && page.screenshot !== "(saved)") {
+          const buf = await screenshotToBuffer(page.screenshot);
+          if (buf) zip.file(`pages/${pagePath}/screenshot-desktop.png`, buf);
         }
-        if (page.mobileScreenshot) {
-          const base64Match = page.mobileScreenshot.match(/^data:image\/\w+;base64,(.+)$/);
-          if (base64Match) {
-            zip.file(`pages/${pagePath}/screenshot-mobile.png`, base64Match[1], { base64: true });
-          }
+        if (page.mobileScreenshot && page.mobileScreenshot !== "(saved)") {
+          const buf = await screenshotToBuffer(page.mobileScreenshot);
+          if (buf) zip.file(`pages/${pagePath}/screenshot-mobile.png`, buf);
         }
       }
-    }
+    }));
 
     // For "images" filter, fetch images from HTML (separate from "all" to avoid blocking)
     if (filter === "images") {
