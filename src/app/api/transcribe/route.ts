@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getGroqClient } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
+import { applyCorrections } from "@/lib/transcription-corrections";
 
 // Allow up to 25MB uploads (long voice memos) and 60s execution
 export const maxDuration = 60;
@@ -16,6 +17,9 @@ export async function POST(request: NextRequest) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // ?partial=true — transcribe only, no DB save, no AI summary (for live preview)
+  const isPartial = request.nextUrl.searchParams.get("partial") === "true";
 
   try {
     const formData = await request.formData();
@@ -39,15 +43,22 @@ export async function POST(request: NextRequest) {
       response_format: "text",
     });
 
-    const transcriptionText =
+    const rawText =
       typeof transcription === "string"
         ? transcription
         : (transcription as { text?: string }).text ?? String(transcription);
 
+    // Apply smart corrections (XJS → Next.js, project names, etc.)
+    const transcriptionText = await applyCorrections(rawText);
+
+    // Partial mode: return transcription only, skip summary + DB insert
+    if (isPartial) {
+      return NextResponse.json({ transcription: transcriptionText });
+    }
+
     // Generate actionable summary for AI consumption
     let summary: string | null = null;
     const wordCount = transcriptionText.split(/\s+/).length;
-
     let title: string | null = null;
 
     if (wordCount > 5) {
@@ -69,7 +80,6 @@ export async function POST(request: NextRequest) {
       const rawSummary = summaryResponse.choices[0]?.message?.content ?? null;
 
       if (rawSummary) {
-        // Parse title from first line, rest is summary
         const firstBreak = rawSummary.indexOf("\n\n");
         if (firstBreak > 0 && firstBreak < 100) {
           title = rawSummary.slice(0, firstBreak).trim();
@@ -79,11 +89,9 @@ export async function POST(request: NextRequest) {
         }
       }
     } else if (wordCount > 0) {
-      // Short memo — use first few words as title
       title = transcriptionText.split(/\s+/).slice(0, 6).join(" ");
     }
 
-    // Combine title + summary for storage (parsed on frontend via separator)
     const storedSummary = title && summary
       ? `[title]${title}[/title]\n${summary}`
       : title
